@@ -6,9 +6,9 @@ export interface HttpHandler {
 }
 
 export interface HttpMessage {
-    headers: OutgoingHttpHeaders | IncomingHttpHeaders
+    headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: { [name: string]: string }
-    body: stream.Duplex | string
+    body?: stream.Duplex | string
 }
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'CONNECT' | 'HEAD' | 'OPTIONS';
@@ -23,15 +23,15 @@ export interface Req extends HttpMessage {
 export interface Res extends HttpMessage {
     headers: OutgoingHttpHeaders
     status: number
-    statusText: string
+    statusText?: string
 }
 
 export function res(res?: Partial<Res>): Res {
-    return {status: 200, statusText: "OK", body: '', headers: {}, trailers: {}, ...res}
+    return {status: 200, statusText: res.statusText, headers: {}, ...res}
 }
 
 export function req(req?: Partial<Req>): Req {
-    return {method: 'GET', path: '/', body: '', headers: {}, trailers: {}, ...req}
+    return {method: 'GET', path: '/', headers: {}, ...req}
 }
 
 

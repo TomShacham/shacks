@@ -6,7 +6,6 @@ export async function httpServer(handler: HttpHandler, port = 0) {
     const server = http.createServer()
     const listening = server.listen({port: port ?? 0, host: '127.0.0.1'})
     await new Promise(res => server.on('listening', e => {
-        console.log(`listening on ${JSON.stringify(listening.address())}`);
         port = (listening.address() as AddressInfo).port
         res(e)
     }))

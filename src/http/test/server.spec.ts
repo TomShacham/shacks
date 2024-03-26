@@ -8,7 +8,7 @@ describe('client / server', () => {
     it('send / receive request / response', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
-                return res({body: JSON.stringify(req)})
+                return res({status: 201, headers: {foo: 'bar'}, body: JSON.stringify(req)})
             }
         };
         const {port, close} = await httpServer(handler);
@@ -18,18 +18,12 @@ describe('client / server', () => {
             headers: {},
             body: 'blah'
         });
-        expect(response).to.deep.eq({
-                status: 200,
-                statusText: 'OK',
-                body: `{"method":"POST","path":"/","headers":{"host":"localhost:${port}","connection":"close","transfer-encoding":"chunked"},"trailers":{}}`,
-                headers: {
-                    date: 'Tue, 26 Mar 2024 10:27:59 GMT',
-                    connection: 'close',
-                    'transfer-encoding': 'chunked'
-                },
-                trailers: {}
-            }
-        )
+        expect(response.status).to.eq(201);
+        expect(response.statusText).to.eq("Created");
+        expect(response.headers.foo).to.eq('bar')
+        expect(response.body).to.eq(
+            `{"method":"POST","path":"/","headers":{"host":"localhost:${port}","connection":"close","transfer-encoding":"chunked"}}`
+        );
         await close()
-    });
+    })
 })

@@ -18,15 +18,14 @@ export class HttpClient implements HttpHandler {
                 method: req.method,
                 headers: req.headers
             }, nodeResponse => {
-                const {statusCode, headers} = nodeResponse;
+                const {statusCode, statusMessage, headers} = nodeResponse;
                 let body = '';
                 nodeResponse.setEncoding('utf8');
                 nodeResponse.on('data', (chunk) => {
                     body += chunk;
                 });
                 nodeResponse.on('end', () => {
-                    const res1 = res({status: statusCode, body, headers});
-                    resolve(res1)
+                    resolve(res({status: statusCode, statusText: statusMessage, body, headers}))
                 });
             });
             nodeRequest.write(req.body)
