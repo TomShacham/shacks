@@ -7,7 +7,7 @@ export interface HttpHandler {
 
 export interface HttpMessage {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
-    trailers?: { [name: string]: string }
+    trailers?: NodeJS.Dict<string>
     body?: stream.Duplex | string
 }
 
@@ -27,7 +27,7 @@ export interface Res extends HttpMessage {
 }
 
 export function res(res?: Partial<Res>): Res {
-    return {status: 200, statusText: res.statusText, headers: {}, ...res}
+    return {status: 200, headers: {}, ...res}
 }
 
 export function req(req?: Partial<Req>): Req {

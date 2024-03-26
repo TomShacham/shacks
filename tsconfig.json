@@ -1,12 +1,20 @@
 {
   "ts-node": {
-    "files": true
+    "files": true,
+    "compilerOptions": {
+      "strict": false
+    }
   },
   "compilerOptions": {
     "jsx": "react",
+    "strict": true,
     "module": "commonjs",
     "importHelpers": true,
     "target": "ES6",
-    "moduleDetection": "force"
-  }
+    "moduleDetection": "force",
+    "noEmitOnError": true
+  },
+  "exclude": [
+    "node_modules"
+  ]
 }

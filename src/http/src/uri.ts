@@ -15,14 +15,15 @@ export function uri(from: string): Uri {
     const match = uriRegex.exec(from);
 
     if (match) {
-        const protocol = match.groups.protocol;
-        const username = match.groups.username;
-        const password = match.groups.password;
-        const hostname = match.groups.hostname;
-        const port = match.groups.port;
-        const path = match.groups.path;
-        const query = match.groups.query;
-        const fragment = match.groups.fragment;
+        const groups = match.groups!;
+        const protocol = groups.protocol;
+        const username = groups.username;
+        const password = groups.password;
+        const hostname = groups.hostname;
+        const port = groups.port;
+        const path = groups.path;
+        const query = groups.query;
+        const fragment = groups.fragment;
 
         return {protocol, username, password, hostname, port, path, query, fragment}
     } else {
@@ -30,7 +31,7 @@ export function uri(from: string): Uri {
     }
 }
 
-export function uriString(parsedUri) {
+export function uriString(parsedUri: Uri) {
     let uriString = `${parsedUri.protocol}//`;
 
     if (parsedUri.username) {

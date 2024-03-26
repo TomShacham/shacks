@@ -5,19 +5,25 @@ import {AddressInfo} from "node:net";
 export async function httpServer(handler: HttpHandler, port = 0) {
     const server = http.createServer()
     const listening = server.listen({port: port ?? 0, host: '127.0.0.1'})
-    await new Promise(res => server.on('listening', e => {
+    await new Promise(res => server.on('listening', (e: Event) => {
         port = (listening.address() as AddressInfo).port
         res(e)
     }))
     server.on('request', async (nodeReq: http.IncomingMessage, nodeRes: http.ServerResponse) => {
         const {headers, method} = nodeReq;
-        let body;
+        let body: string | undefined;
         nodeReq.on('data', chunk => {
             body += chunk.toString('utf-8');
         })
         const res = await handler.handle(req({body, headers, method: method as Method}));
         nodeRes.writeHead(res.status, res.headers)
-        nodeRes.end(res.body);
+        if (res.trailers) {
+            nodeRes.write(res.body);
+            nodeRes.addTrailers(res.trailers)
+            nodeRes.end()
+        } else {
+            nodeRes.end(res.body)
+        }
     })
 
     server.on('clientError', (err, socket) => {
