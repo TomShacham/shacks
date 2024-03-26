@@ -9,21 +9,15 @@ export async function httpServer(handler: HttpHandler, port = 0) {
         port = (listening.address() as AddressInfo).port
         res(e)
     }))
-    server.on('request', async (nodeReq: http.IncomingMessage, nodeRes: http.ServerResponse) => {
+    server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {
         const {headers, method} = nodeReq;
-        let body: string | undefined;
-        nodeReq.on('data', chunk => {
-            body += chunk.toString('utf-8');
-        })
-        const res = await handler.handle(req({body, headers, method: method as Method}));
-        nodeRes.writeHead(res.status, res.headers)
-        if (res.trailers) {
-            nodeRes.write(res.body);
-            nodeRes.addTrailers(res.trailers)
-            nodeRes.end()
-        } else {
-            nodeRes.end(res.body)
-        }
+        const res = await handler.handle(req({body: nodeReq, headers, method: method as Method}));
+        nodeResponse.writeHead(res.status, res.headers)
+        nodeResponse.end(res.body)
+    })
+
+    server.on('error', (err) => {
+        console.log(err);
     })
 
     server.on('clientError', (err, socket) => {

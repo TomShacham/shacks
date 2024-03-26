@@ -8,7 +8,7 @@ export class HttpClient implements HttpHandler {
 
     handle(req: Req): Promise<Res> {
         const parsedUri = uri(req.path)
-        return new Promise(resolve => {
+        return new Promise(async resolve => {
             const nodeRequest = http.request({
                 hostname: parsedUri.hostname,
                 port: parsedUri.port,
@@ -28,7 +28,11 @@ export class HttpClient implements HttpHandler {
                     resolve(res({status: statusCode, statusText: statusMessage, body, headers, trailers}))
                 });
             });
-            nodeRequest.write(req.body)
+            if (typeof req.body === 'string' || req.body instanceof Uint8Array) {
+                return nodeRequest.end(req.body)
+            } else if (req.body) {
+                for await (const chunk of req.body) nodeRequest.write(chunk)
+            }
             nodeRequest.end()
         })
 
