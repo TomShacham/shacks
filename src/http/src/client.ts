@@ -19,13 +19,8 @@ export class HttpClient implements HttpHandler {
                 headers: req.headers
             }, nodeResponse => {
                 const {statusCode, statusMessage, headers, trailers} = nodeResponse;
-                let body = '';
-                nodeResponse.setEncoding('utf8');
-                nodeResponse.on('data', (chunk) => {
-                    body += chunk;
-                });
-                nodeResponse.on('end', () => {
-                    resolve(res({status: statusCode, statusText: statusMessage, body, headers, trailers}))
+                nodeResponse.on('readable', () => {
+                    resolve(res({status: statusCode, statusText: statusMessage, body: nodeResponse, headers, trailers}))
                 });
             });
             if (typeof req.body === 'string' || req.body instanceof Uint8Array) {

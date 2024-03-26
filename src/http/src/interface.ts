@@ -5,11 +5,12 @@ export interface HttpHandler {
 }
 
 type Payload = string | Uint8Array;
+export type HttpMessageBody<TBody extends Payload = string | Uint8Array> = AsyncIterable<TBody> | TBody;
 
-export interface HttpMessage<TBody extends Payload> {
+export interface HttpMessage<TBody extends Payload = string> {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: NodeJS.Dict<string>
-    body?: AsyncIterable<TBody> | TBody
+    body?: HttpMessageBody<TBody>
 }
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'CONNECT' | 'HEAD' | 'OPTIONS';
