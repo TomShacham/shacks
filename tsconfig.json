@@ -1,0 +1,12 @@
+{
+  "ts-node": {
+    "files": true
+  },
+  "compilerOptions": {
+    "jsx": "react",
+    "module": "commonjs",
+    "importHelpers": true,
+    "target": "ES6",
+    "moduleDetection": "force"
+  }
+}
