@@ -1,11 +1,15 @@
 import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
+import * as stream from "stream";
 
 export interface HttpHandler {
     handle(req: Req): Promise<Res>
 }
 
 type Payload = string | Uint8Array;
-export type HttpMessageBody<TBody extends Payload = string | Uint8Array> = AsyncIterable<TBody> | TBody;
+export type HttpMessageBody<TBody extends Payload = string | Uint8Array> =
+    | stream.Readable
+    | AsyncIterable<TBody>
+    | TBody;
 
 export interface HttpMessage<TBody extends Payload = string> {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
