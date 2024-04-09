@@ -21,24 +21,15 @@ export class HttpClient implements HttpHandler {
             const nodeRequest = http.request(options, nodeResponse => {
                 const {statusCode, statusMessage, headers, trailers} = nodeResponse;
                 nodeResponse.once('readable', () => {
-                    console.log('resolving res');
                     resolve(res({status: statusCode, statusText: statusMessage, body: nodeResponse, headers, trailers}))
                 });
-                nodeResponse.on('finish', () => console.log('node response finish'))
-                nodeResponse.on('close', () => console.log('node response close'))
-                nodeResponse.on('end', () => console.log('node response end'))
             });
             if (typeof req.body === 'string' || req.body instanceof Uint8Array) {
-                console.log('request start writing body STRING');
                 nodeRequest.write(req.body)
-                console.log('request DONE writing body STRING');
             } else if (req.body) {
-                console.log('request START writing body STREAM');
                 for await (const chunk of req.body) nodeRequest.write(chunk)
-                console.log('request DONE writing body STREAM');
             }
             nodeRequest.end()
-            console.log('request end');
         })
 
     }

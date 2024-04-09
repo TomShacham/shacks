@@ -18,5 +18,8 @@ Simple:
 
 ## Todo
 
-- client sends trailers
-- 
+- performance test
+- multipart form data
+    - handle output stream ie parse while going along
+- security like header obfuscation etc. (node should handle this?)
+- trailers

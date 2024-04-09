@@ -1,9 +1,12 @@
 import {client} from "../src/client";
 import {Req, res, Res} from "../src/interface";
 import {httpServer} from "../src/server";
-import {expect} from "chai";
+import {assert, expect} from "chai";
 import * as fs from "fs";
 import {Wire} from "../src/wire";
+import * as stream from "stream";
+import * as zlib from "zlib";
+import * as process from "process";
 
 describe('client / server', function () {
     it('send / receive request / response', async () => {
@@ -71,7 +74,47 @@ describe('client / server', function () {
         }
     })
 
-    it('proxies stream', async function () {
+    it('multipart form data', async () => {
+        const handler = {
+            async handle(req: Req): Promise<Res> {
+                return res({status: 200, body: req.body})
+            }
+        };
+
+        const {port, close: closeServer} = await httpServer(handler);
+
+        const fileName = 'data-streaming-one-way.txt';
+
+        try {
+            const size = 10 * 1024 * 1024;
+            // payload has two input fields, one is text field "name", one is file field
+            const payload = `------WebKitFormBoundary5TIW9pTKMB25OROE
+Content-Disposition: form-data; name="name"
+
+Tommy
+------WebKitFormBoundary5TIW9pTKMB25OROE
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Upload test file
+------WebKitFormBoundary5TIW9pTKMB25OROE--
+
+`
+            const response = await client().handle({
+                method: 'POST',
+                path: `http://localhost:${port}/`,
+                headers: {'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryF0Nj67HEBBHHIhcv'},
+                body: payload
+            });
+            expect(response.status).to.eq(200);
+            expect(response.statusText).to.eq("OK");
+            expect(await Wire.text(response)).to.eq('testing file uploads');
+        } finally {
+            await closeServer()
+        }
+    })
+
+    it('proxies stream - can do on the fly compression', async function () {
         const proxyPort = 1234;
 
         const handler = {
@@ -91,11 +134,11 @@ describe('client / server', function () {
 
         const proxyHandler = {
             async handle(req: Req): Promise<Res> {
-                console.log('proxy handling request');
+                const body = (req.body as stream.Readable).pipe(zlib.createGzip());
                 return res({
                     status: 201,
                     headers: {foo: 'bar'},
-                    body: req.body,
+                    body: body,
                 })
             }
         };
@@ -108,6 +151,9 @@ describe('client / server', function () {
 
         try {
             const size = 10 * 1024 * 1024;
+            setInterval(() => {
+                console.log(Object.entries(process.memoryUsage()).map(p => [p[0], Number(p[1]) / (1024 * 1024)]));
+            }, 1)
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
             const response = await client().handle({
@@ -117,10 +163,15 @@ describe('client / server', function () {
                 body: fileStream
             });
             expect(response.status).to.eq(200)
-
+            let text = ''
+            for await (const chunk of response.body ?? []) {
+                text += chunk.toString()
+            }
+            // compressed
+            assert(text.length < size)
         } finally {
             // delete file and close server
-            // fs.unlinkSync(filePath)
+            fs.unlinkSync(filePath)
             await closeServer()
             await closeProxy()
         }

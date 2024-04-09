@@ -41,6 +41,14 @@ export function req(req?: Partial<Req>): Req {
     return {method: 'GET', path: '/', headers: {}, ...req}
 }
 
+export function isReq(msg: HttpMessage): msg is Req {
+    return 'method' in msg;
+}
+
+export function isRes(msg: HttpMessage): msg is Res {
+    return 'status' in msg;
+}
+
 /*
  The Trailer response header allows the sender to include additional fields at the end of chunked messages
  in order to supply metadata that might be dynamically generated while the message body is sent,

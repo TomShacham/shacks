@@ -10,7 +10,7 @@
     "strict": true,
     "module": "commonjs",
     "importHelpers": true,
-    "target": "ES6",
+    "target": "esnext",
     "moduleDetection": "force",
     "noEmitOnError": true
   },
