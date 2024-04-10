@@ -11,14 +11,14 @@ export class Body {
         return text;
     }
 
-    static async multipartForm(msg: Req) {
+    static async multipartForm(msg: Req): Promise<MultipartFormPart[]> {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
             const boundary = /boundary=(?<boundary>(.+))/.exec(contentType)?.groups?.boundary
             const doubleHyphenPlusBoundary = '--' + boundary!;
             return Body.parseMultipartForm(msg.body!, doubleHyphenPlusBoundary)
         } else {
-            return Body.text(msg)
+            return []
         }
     }
 
@@ -48,12 +48,11 @@ export class Body {
          */
         if (!boundary.startsWith('--')) throw new Error('Boundary must start with --');
 
-        const fileParts: { headers: MultipartFormHeader[]; body: string }[] = []
+        const fileParts: Filepart[] = []
         let i = 0;
         let headers: MultipartFormHeader[] = [];
         let header: string = '';
         let body: string = '';
-        let bodyEnd = boundary + '\r\n';
 
         // the last 4 bytes are used to see if it is the end of the headers
         let lastFourChars: string[] = ['x', 'x', 'x', 'x'] // start with some dummy chars
@@ -89,19 +88,19 @@ export class Body {
         }
 
         for await (const chunk of bodyStream) {
-            const string = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+            const bytes = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
 
-            for (let j = 0; j < string.length; j++) {
-                const char = string[j];
+            for (let j = 0; j < bytes.length; j++) {
+                const byte = bytes[j];
                 lastFourChars.shift();
-                lastFourChars.push(char);
+                lastFourChars.push(byte);
                 lastCharsOfSameLengthAsBoundary.shift()
-                lastCharsOfSameLengthAsBoundary.push(char)
+                lastCharsOfSameLengthAsBoundary.push(byte)
                 countdownToCheckBoundary--;
 
                 // when parsing body we don't do anything except add the chars to our body state
                 if (parsingState === 'body') {
-                    body += char
+                    body += byte
                 }
                 // if at the end of the boundary then switch to parsing headers
                 if (parsingState === 'boundary' && i === boundary.length) {
@@ -110,7 +109,7 @@ export class Body {
 
                 // parse initial boundary
                 if (parsingState === 'boundary') {
-                    if (!(char === boundary[i])) {
+                    if (!(byte === boundary[i])) {
                         throw new Error(`Expected boundary to match boundary value in content disposition header`)
                     }
                 }
@@ -144,8 +143,8 @@ export class Body {
                 }
 
                 if (parsingState === 'headers') {
-                    if (char !== '\n') {
-                        header += char;
+                    if (byte !== '\n') {
+                        header += byte;
                     } else {
                         if (header !== '') {
                             const parsed = parseHeader(header)
@@ -166,4 +165,6 @@ export class Body {
 export type MultipartFormHeader =
     | { headerName: 'content-disposition'; fieldName: string; filename?: string; }
     | { headerName: 'content-type', value: 'text/plain' | string }
-export type MultipartFormPart = | { headers: MultipartFormHeader[]; body: string; }
+export type MultipartFormPart = | { headers: MultipartFormHeader[]; body: Bodypart; }
+type Bodypart = string;
+type Filepart = { headers: MultipartFormHeader[]; body: Bodypart };

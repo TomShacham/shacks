@@ -1,14 +1,18 @@
 import {httpServer} from "../../src/server";
 import {Req, res, Res} from "../../src/interface";
-import {Body} from "../../src/body";
+import {Body, MultipartFormPart} from "../../src/body";
+import * as fs from "fs";
 
 async function multipartFormServer() {
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
-            const data = await Body.multipartForm(req);
-            console.log('**********');
-            console.log(JSON.stringify(data));
-            console.log('**********');
+            const fileparts = await Body.multipartForm(req);
+            const filePart = (fileparts as MultipartFormPart[]).find(part => part.headers.some(h => h['filename'] !== undefined))
+            if (filePart) {
+                console.log('here');
+                console.log({filePart});
+                fs.writeFileSync('./hbg.txt', filePart!.body);
+            }
             if (req.method === 'GET') {
                 return res({
                     body: html(), status: 200
