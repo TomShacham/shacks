@@ -1,11 +1,11 @@
-import {httpServer} from "../http/src/server";
-import {Req, res, Res} from "../http/src/interface";
-import {Wire} from "../http/src/wire";
+import {httpServer} from "../../src/server";
+import {Req, res, Res} from "../../src/interface";
+import {Body} from "../../src/body";
 
-async function main() {
+async function multipartFormServer() {
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
-            const data = await Wire.text(req);
+            const data = await Body.multipartForm(req);
             console.log('**********');
             console.log(JSON.stringify(data));
             console.log('**********');
@@ -72,4 +72,4 @@ function html() {
 `;
 }
 
-main()
+multipartFormServer();

@@ -3,7 +3,7 @@ import {Req, res, Res} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
-import {Wire} from "../src/wire";
+import {Body} from "../src/body";
 import * as stream from "stream";
 import * as zlib from "zlib";
 import * as process from "process";
@@ -12,7 +12,7 @@ describe('client / server', function () {
     it('send / receive request / response', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
-                return res({status: 201, headers: req.headers, body: await Wire.text(req)})
+                return res({status: 201, headers: req.headers, body: await Body.text(req)})
             }
         };
         const {port, close} = await httpServer(handler);
@@ -43,7 +43,7 @@ describe('client / server', function () {
                 return res({
                     status: 201,
                     headers: {foo: 'bar'},
-                    body: JSON.stringify({size: (await Wire.text(req)).length})
+                    body: JSON.stringify({size: (await Body.text(req)).length})
                 })
             }
         };
@@ -66,7 +66,7 @@ describe('client / server', function () {
             expect(response.status).to.eq(201);
             expect(response.statusText).to.eq("Created");
             expect(response.headers.foo).to.eq('bar')
-            expect(await Wire.text(response)).to.eq(JSON.stringify({size}));
+            expect(await Body.text(response)).to.eq(JSON.stringify({size}));
         } finally {
             // delete file and close server
             fs.unlinkSync(filePath)
@@ -108,7 +108,7 @@ Upload test file
             });
             expect(response.status).to.eq(200);
             expect(response.statusText).to.eq("OK");
-            expect(await Wire.text(response)).to.eq('testing file uploads');
+            expect(await Body.text(response)).to.eq('testing file uploads');
         } finally {
             await closeServer()
         }
