@@ -122,6 +122,18 @@ ${boundary}--\r
             ]);
         })
 
+        it('if boundary doesnt start with -- then error', async () => {
+            const boundary = 'nope';
+            let exampleMultipartFormData = `whatever`
+            const multipartFormBodyStream = stream.Readable.from(exampleMultipartFormData)
+
+            try {
+                await Body.parseMultipartForm(multipartFormBodyStream, boundary);
+            } catch (e) {
+                expect((e as Error).message).eq('Boundary must start with --')
+            }
+        })
+
         it('a text input and multiple files', async () => {
             const boundary = '------WebKitFormBoundaryQmshvAjyLS077cbB';
 

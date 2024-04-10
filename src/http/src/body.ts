@@ -46,6 +46,8 @@ export class Body {
          *     the N bytes we just added to the body, because they are the boundary not the body!
          *   - we return "file parts" that represent the headers and body of each part sent in the request
          */
+        if (!boundary.startsWith('--')) throw new Error('Boundary must start with --');
+
         const fileParts: { headers: MultipartFormHeader[]; body: string }[] = []
         let i = 0;
         let headers: MultipartFormHeader[] = [];
