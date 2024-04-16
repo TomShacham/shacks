@@ -21,6 +21,8 @@ Simple:
 - performance test
 - multipart form data
     - handle output stream ie parse while going along
+  - client sends multipart form data
+  - should we just use busboy lol ?
   - handle images (dont Text decode!)
   - max file size so you don't get DOS'd
 - handle application/x-www-form-urlencoded

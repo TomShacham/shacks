@@ -1,6 +1,7 @@
 import * as stream from "stream";
 import {expect} from "chai";
 import {Body} from "../src/body";
+import * as fs from "fs";
 
 describe('body', () => {
 
@@ -368,6 +369,28 @@ ${boundary}--\r
                     }
                 ]
             }]);
+        })
+
+        it('handles png', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+
+            const preFile = `${boundary}\r
+Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
+Content-Type: image/png\r
+\r
+`
+            const postFile = `\r
+${boundary}--\r
+`
+            const inputStream = async function* () {
+                yield Buffer.concat([
+                    Buffer.from(preFile, 'binary'),
+                    fs.readFileSync('./src/http/test/resources/hamburger.png'),
+                    Buffer.from(postFile, 'binary')])
+            }()
+            const fileparts = await Body.parseMultipartForm(inputStream, boundary)
+
+            fs.writeFileSync('./src/http/test/resources/hamburger-out.png', fileparts[0].body)
         })
 
     })

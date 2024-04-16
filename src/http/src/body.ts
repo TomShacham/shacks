@@ -88,19 +88,28 @@ export class Body {
         }
 
         for await (const chunk of bodyStream) {
-            const bytes = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+            let buf = Buffer.alloc(chunk.length)
+            let bufferPointer = 0;
+            let mode: 'buffer' | 'string' = 'buffer';
+            if (typeof chunk === "string") {
+                mode = 'string'
+            }
 
-            for (let j = 0; j < bytes.length; j++) {
-                const byte = bytes[j];
+            for (let j = 0; j < chunk.length; j++) {
+                const byte = chunk[j];
+                const char = String.fromCharCode(byte)
                 lastFourChars.shift();
-                lastFourChars.push(byte);
+                const byteOrChar = mode === 'string' ? byte : char;
+                lastFourChars.push(byteOrChar);
                 lastCharsOfSameLengthAsBoundary.shift()
-                lastCharsOfSameLengthAsBoundary.push(byte)
+                lastCharsOfSameLengthAsBoundary.push(byteOrChar)
                 countdownToCheckBoundary--;
 
                 // when parsing body we don't do anything except add the chars to our body state
                 if (parsingState === 'body') {
-                    body += byte
+                    body += byteOrChar
+                    buf[bufferPointer] = byte;
+                    bufferPointer++
                 }
                 // if at the end of the boundary then switch to parsing headers
                 if (parsingState === 'boundary' && i === boundary.length) {
@@ -109,7 +118,7 @@ export class Body {
 
                 // parse initial boundary
                 if (parsingState === 'boundary') {
-                    if (!(byte === boundary[i])) {
+                    if (!(byteOrChar === boundary[i])) {
                         throw new Error(`Expected boundary to match boundary value in content disposition header`)
                     }
                 }
@@ -135,16 +144,19 @@ export class Body {
                         }
                         const extraToChopOff = delimiter.length
                         body = body.slice(0, body.length - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
-                        fileParts.push({headers, body})
+                        buf = buf.subarray(0, bufferPointer - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
+                        fileParts.push({headers, body: (mode === 'string' ? body : buf)})
                         headers = [];
                         body = '';
+                        buf = Buffer.alloc(0);
+                        bufferPointer = 0;
                         parsingState = 'headers'
                     }
                 }
 
                 if (parsingState === 'headers') {
-                    if (byte !== '\n') {
-                        header += byte;
+                    if (byteOrChar !== '\n') {
+                        header += byteOrChar;
                     } else {
                         if (header !== '') {
                             const parsed = parseHeader(header)
@@ -156,6 +168,8 @@ export class Body {
 
                 i++
             }
+
+
         }
 
         return fileParts;
@@ -166,5 +180,5 @@ export type MultipartFormHeader =
     | { headerName: 'content-disposition'; fieldName: string; filename?: string; }
     | { headerName: 'content-type', value: 'text/plain' | string }
 export type MultipartFormPart = | { headers: MultipartFormHeader[]; body: Bodypart; }
-type Bodypart = string;
+type Bodypart = string | Buffer;
 type Filepart = { headers: MultipartFormHeader[]; body: Bodypart };
