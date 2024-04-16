@@ -7,7 +7,7 @@ export interface HttpHandler {
 
 type Payload = string | Uint8Array;
 export type HttpMessageBody<TBody extends Payload = string | Uint8Array> =
-    | stream.Readable
+    | stream.Duplex
     | AsyncIterable<TBody>
     | TBody;
 

@@ -19,13 +19,15 @@ Simple:
 ## Todo
 
 - performance test
+- routing
 - multipart form data
   - document
   - get rid of one public method (change tests)
-  - refactor into buffer or string streaming
+  - handle multiple chunks (atm buffer gets reassigned each chunk!)
   - handle output stream ie parse while going along
   - test multiple file types in one upload
   - client sends multipart form data
+  - handle content encoding!
   - max file size so you don't get DOS'd
 - handle application/x-www-form-urlencoded
 - security like header obfuscation etc. (node should handle this?)
