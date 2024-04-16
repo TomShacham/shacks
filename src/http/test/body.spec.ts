@@ -35,10 +35,10 @@ ${boundary}--\r
                     {
                         "filename": "test.txt",
                         "fieldName": "file",
-                        "headerName": "content-disposition"
+                        "name": "content-disposition"
                     },
                     {
-                        "headerName": "content-type",
+                        "name": "content-type",
                         "value": "text/plain"
                     }
                 ]
@@ -66,7 +66,7 @@ ${boundary}--\r
                     "body": "tom",
                     "headers": [
                         {
-                            "headerName": "content-disposition",
+                            "name": "content-disposition",
                             "fieldName": "name"
                         }
                     ]
@@ -102,7 +102,7 @@ ${boundary}--\r
                     "headers": [
                         {
                             "fieldName": "name",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         }
                     ]
                 },
@@ -112,10 +112,10 @@ ${boundary}--\r
                         {
                             "filename": "test.txt",
                             "fieldName": "file",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         },
                         {
-                            "headerName": "content-type",
+                            "name": "content-type",
                             "value": "text/plain"
                         }
                     ]
@@ -170,7 +170,7 @@ ${boundary}--\r
                     "headers": [
                         {
                             "fieldName": "name",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         }
                     ]
                 },
@@ -180,10 +180,10 @@ ${boundary}--\r
                         {
                             "fieldName": "file",
                             "filename": "test.txt",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         },
                         {
-                            "headerName": "content-type",
+                            "name": "content-type",
                             "value": "text/plain"
                         }
                     ]
@@ -194,10 +194,10 @@ ${boundary}--\r
                         {
                             "fieldName": "bio",
                             "filename": "test.txt",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         },
                         {
-                            "headerName": "content-type",
+                            "name": "content-type",
                             "value": "text/plain"
                         }
                     ]
@@ -244,7 +244,7 @@ ${boundary}--\r
                     "headers": [
                         {
                             "fieldName": "name",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         }
                     ]
                 },
@@ -254,10 +254,10 @@ ${boundary}--\r
                         {
                             "fieldName": "file",
                             "filename": "test.txt",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         },
                         {
-                            "headerName": "content-type",
+                            "name": "content-type",
                             "value": "text/plain"
                         }
                     ]
@@ -267,7 +267,7 @@ ${boundary}--\r
                     "headers": [
                         {
                             "fieldName": "title",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         }
                     ]
                 },
@@ -277,10 +277,10 @@ ${boundary}--\r
                         {
                             "fieldName": "bio",
                             "filename": "test.txt",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         },
                         {
-                            "headerName": "content-type",
+                            "name": "content-type",
                             "value": "text/plain"
                         }
                     ]
@@ -316,7 +316,7 @@ ${boundary}--
                     "headers": [
                         {
                             "fieldName": "name",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         }
                     ]
                 },
@@ -326,10 +326,10 @@ ${boundary}--
                         {
                             "filename": "test.txt",
                             "fieldName": "file",
-                            "headerName": "content-disposition"
+                            "name": "content-disposition"
                         },
                         {
-                            "headerName": "content-type",
+                            "name": "content-type",
                             "value": "text/plain"
                         }
                     ]
@@ -361,10 +361,10 @@ ${boundary}--\r
                     {
                         "filename": "test.txt",
                         "fieldName": "file",
-                        "headerName": "content-disposition"
+                        "name": "content-disposition"
                     },
                     {
-                        "headerName": "content-type",
+                        "name": "content-type",
                         "value": "text/plain"
                     }
                 ]

@@ -1,17 +1,17 @@
 import {httpServer} from "../../src/server";
 import {Req, res, Res} from "../../src/interface";
-import {Body, MultipartFormPart} from "../../src/body";
+import {Body, ContentTypeHeader, Forms} from "../../src/body";
 import * as fs from "fs";
 
 async function multipartFormServer() {
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
-            const fileparts = await Body.multipartForm(req);
-            const filePart = (fileparts as MultipartFormPart[]).find(part => part.headers.some(h => h['filename'] !== undefined))
-            if (filePart) {
-                console.log('here');
-                console.log({filePart});
-                fs.writeFileSync('./hbg.txt', filePart!.body);
+            const formParts = await Body.multipartForm(req);
+            const file = Forms.aFileNamed(formParts, 'pic')
+            if (file) {
+                const name = Forms.aFieldNamed(formParts, 'name')
+                const contentType = Forms.partHeader(file, 'content-type') as ContentTypeHeader | undefined
+                fs.writeFileSync(`./${name?.body}.${contentType?.value === 'image/png' ? 'png' : 'txt'}`, file.body);
             }
             if (req.method === 'GET') {
                 return res({
@@ -32,7 +32,7 @@ function html() {
     <p>combo of simple field and a file</p>
     <form enctype="multipart/form-data" action="/file" method="post">
         <input type="text" id="name" name="name" placeholder="name..." />
-        <input type="file" id="avatar" name="file" />
+        <input type="file" id="pic" name="pic" />
         <input type="submit" value="submit" formaction="/file"/>    
     </form>
     

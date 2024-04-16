@@ -20,10 +20,12 @@ Simple:
 
 - performance test
 - multipart form data
-    - handle output stream ie parse while going along
+  - document
+  - get rid of one public method (change tests)
+  - refactor into buffer or string streaming
+  - handle output stream ie parse while going along
+  - test multiple file types in one upload
   - client sends multipart form data
-  - should we just use busboy lol ?
-  - handle images (dont Text decode!)
   - max file size so you don't get DOS'd
 - handle application/x-www-form-urlencoded
 - security like header obfuscation etc. (node should handle this?)

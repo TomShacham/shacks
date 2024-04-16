@@ -1,4 +1,5 @@
 import {HttpMessage, HttpMessageBody, Req} from "./interface";
+import * as stream from "stream";
 
 export class Body {
     static async text(msg: HttpMessage) {
@@ -32,84 +33,66 @@ export class Body {
          *     - boundary parsing is just checking the first N bytes are that of the boundary supplied in the
          *     Content-Disposition header, where N is the boundary length; we are only in this state at the beginning,
          *     all other boundary parsing is done by checking the last N bytes of the body; ie all boundary parsing
-         *     after the first one is done in retrospect rather than explicitly
-         *     - header parsing is CRLF delimited lines that we turn into Content-Disposition or Content-Type headers
+         *     after the first one is done in retrospect rather than presently
+         *     - header parsing is CRLF delimited lines that we turn into Content-Disposition or Content-Type
+         *     or Content-Transfer-Encoding headers
          *   - boundaries:
-         *     - multipart form boundaries start with two dashes (--)
+         *     - multipart form boundaries start with at least two dashes (--) chrome adds about ten or more
          *     - we have to check if we're at a boundary; there isn't an indication of where they are
          *     because we're streaming potentially large data in multiple parts (that's the whole point!)
+         *     although sometimes there is a content-length header, we don't use it
          *     - we keep track of the last N bytes where N is the boundary length (so that we can check if we have
          *     seen the boundary) but for performance instead of checking this every time we see a new byte, instead
-         *     we set a countdown to do the check in N-2 bytes time, whenever we see two dashes (--)
+         *     we do it whenever we see two dashes (--)
          *   - bodies:
          *     - all we do is add bytes to the body but if we have just seen a boundary then we need to lop off
-         *     the N bytes we just added to the body, because they are the boundary not the body!
+         *     the last N bytes we just added to the body, because they are the boundary not the body!
          *   - we return "file parts" that represent the headers and body of each part sent in the request
+         *     as an intermediate representation, Forms has static methods to make file parts more user friendly≠
          */
         if (!boundary.startsWith('--')) throw new Error('Boundary must start with --');
-
-        const fileParts: Filepart[] = []
+        const fileParts: FilePart[] = []
         let i = 0;
         let headers: MultipartFormHeader[] = [];
         let header: string = '';
-        let body: string = '';
-
+        let text: string = '';
+        let contentType: ContentTypes = 'text/plain'
         // the last 4 bytes are used to see if it is the end of the headers
         let lastFourChars: string[] = ['x', 'x', 'x', 'x'] // start with some dummy chars
         // start by parsing the boundary at the beginning
         let parsingState: 'boundary' | 'headers' | 'body' = 'boundary'
-
         // lastCharsOfSameLengthAsBoundary is used to check we have just seen a boundary
         //   - it needs to be a bit longer because we understand what's happening after we've seen bytes
         //   ie the last two bytes inform what to do so we need two extra bytes to see back far enough
         let lastCharsOfSameLengthAsBoundary = new Array(boundary.length + 2).fill('x')
-        // countdownToCheckBoundary is used to check the boundary whenever we see 2 dashes (--)
-        //   - as we read the body byte by byte, we need to check at some point if we've already read a boundary
-        //   (as opposed to just some bytes that look like the boundary) but instead of doing this check every time we
-        //   see a new byte, we just do it if we've seen two hyphens (all boundaries start with --)
-        let countdownToCheckBoundary = -1;
         // typically we see CRLF as per the standard
         let delimiter = '\r\n';
-
-        function parseHeader(str: string): MultipartFormHeader | undefined {
-            const [headerName, value] = str.split(':');
-            if (headerName.toLowerCase() === 'content-disposition') {
-                // regex is a bit slow but means the header value can be a bit more flexible with its syntax
-                const nameRegex = /name="(?<name>([^"]+))/.exec(value);
-                const filenameRegex = /filename="(?<filename>([^"]+))/.exec(value);
-                // blow up if there's no name
-                const name = nameRegex!.groups!.name
-                const filename = filenameRegex?.groups?.filename
-                return {headerName: 'content-disposition', fieldName: name, ...(filename ? {filename} : {})};
-            }
-            if (headerName.toLowerCase() === 'content-type') {
-                return {headerName: "content-type", value: value.trim()}
-            }
-        }
+        let outputStream = new stream.Duplex()
 
         for await (const chunk of bodyStream) {
-            let buf = Buffer.alloc(chunk.length)
-            let bufferPointer = 0;
             let mode: 'buffer' | 'string' = 'buffer';
             if (typeof chunk === "string") {
                 mode = 'string'
             }
+            let buf = Buffer.alloc(chunk.length)
+            let bufferPointer = 0;
 
             for (let j = 0; j < chunk.length; j++) {
                 const byte = chunk[j];
-                const char = String.fromCharCode(byte)
+                const byteOrChar = mode === 'string' ? byte : String.fromCharCode(byte);
                 lastFourChars.shift();
-                const byteOrChar = mode === 'string' ? byte : char;
                 lastFourChars.push(byteOrChar);
                 lastCharsOfSameLengthAsBoundary.shift()
                 lastCharsOfSameLengthAsBoundary.push(byteOrChar)
-                countdownToCheckBoundary--;
 
                 // when parsing body we don't do anything except add the chars to our body state
                 if (parsingState === 'body') {
-                    body += byteOrChar
-                    buf[bufferPointer] = byte;
-                    bufferPointer++
+                    if (isTextContent(contentType)) {
+                        text += byteOrChar
+                    } else {
+                        buf[bufferPointer] = byte;
+                        bufferPointer++
+                    }
                 }
                 // if at the end of the boundary then switch to parsing headers
                 if (parsingState === 'boundary' && i === boundary.length) {
@@ -127,6 +110,8 @@ export class Body {
                 const endOfHeaders = (parsingState === 'headers' && lastFourChars[2] === '\n' && lastFourChars[3] === '\n')
                     || (parsingState === 'headers' && lastFourChars[0] === '\r' && lastFourChars[1] === '\n' && lastFourChars[2] === '\r' && lastFourChars[3] === '\n');
                 if (endOfHeaders) {
+                    const contentTypeHeader = getHeader(headers, 'content-type') as ContentTypeHeader | undefined;
+                    contentType = contentTypeFromText(contentTypeHeader?.value);
                     parsingState = 'body'
                 }
                 // if we've seen two hyphens then start countdown to checking the boundary soon
@@ -143,12 +128,16 @@ export class Body {
                             delimiter = '\n';
                         }
                         const extraToChopOff = delimiter.length
-                        body = body.slice(0, body.length - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
-                        buf = buf.subarray(0, bufferPointer - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
-                        fileParts.push({headers, body: (mode === 'string' ? body : buf)})
+                        if (isTextContent(contentType)) {
+                            text = text.slice(0, text.length - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
+                            fileParts.push({headers, body: text})
+                        } else {
+                            buf = buf.subarray(0, bufferPointer - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
+                            fileParts.push({headers, body: buf})
+                        }
                         headers = [];
-                        body = '';
-                        buf = Buffer.alloc(0);
+                        text = '';
+                        buf = Buffer.alloc(chunk.length);
                         bufferPointer = 0;
                         parsingState = 'headers'
                     }
@@ -165,20 +154,139 @@ export class Body {
                         header = '';
                     }
                 }
-
                 i++
             }
-
-
         }
 
         return fileParts;
     }
 }
 
-export type MultipartFormHeader =
-    | { headerName: 'content-disposition'; fieldName: string; filename?: string; }
-    | { headerName: 'content-type', value: 'text/plain' | string }
-export type MultipartFormPart = | { headers: MultipartFormHeader[]; body: Bodypart; }
-type Bodypart = string | Buffer;
-type Filepart = { headers: MultipartFormHeader[]; body: Bodypart };
+export type ContentTypeHeader = {
+    name: 'content-type',
+    value: ContentTypes
+};
+
+export type ContentTransferEncodingHeader = {
+    name: 'content-transfer-encoding',
+    value: 'base64' | 'binary'
+};
+export type ContentDispositionHeader = { name: 'content-disposition'; fieldName: string; filename?: string; };
+export type MultipartFormHeader = | ContentDispositionHeader | ContentTypeHeader | ContentTransferEncodingHeader
+export type MultipartFormPart = | { headers: MultipartFormHeader[]; body: BodyPart; }
+export type BodyPart = string | Buffer;
+export type FilePart = { headers: MultipartFormHeader[]; body: BodyPart };
+export type ContentTypes = | 'text/plain'
+    | 'text/html'
+    | 'text/css'
+    | 'text/xml'
+    | 'text/csv'
+    | 'image/png'
+    | 'image/jpg'
+    | 'image/jpeg'
+    | 'image/gif'
+    | 'image/svg'
+    | 'audio/mp4'
+    | 'audio/mpeg'
+    | 'video/mp4'
+    | 'video/mpeg'
+    | 'video/quicktime'
+    | 'application/pdf'
+    | 'application/json'
+    | 'application/xml'
+    | 'application/javascript'
+    | 'application/ms-word'
+    | 'application/vns.ms-excel'
+    | 'application/octet-stream'
+    | 'multipart/mixed'
+    | 'multipart/related'
+    | 'multipart/alternative';
+
+export class Forms {
+    static aFileNamed(fileparts: MultipartFormPart[], fileName: string): MultipartFormPart | undefined {
+        return fileparts.find(part => part.headers.some(h => 'filename' in h && 'fieldName' in h && h['fieldName'] === fileName));
+    }
+
+    static aFieldNamed(fileparts: MultipartFormPart[], fieldName: string): MultipartFormPart | undefined {
+        return fileparts.find(part => part.headers.some(h => 'fieldName' in h && h['fieldName'] === fieldName));
+    }
+
+    static partHeader(
+        part: MultipartFormPart,
+        headerName: 'content-type' | 'content-disposition' | 'content-transfer-encoding'
+    ): MultipartFormHeader | undefined {
+        if (headerName === 'content-type') {
+            return part.headers.find(h => h['name'] === headerName) as ContentTypeHeader | undefined;
+        }
+        if (headerName === 'content-disposition') {
+            return part.headers.find(h => h['name'] === headerName) as ContentDispositionHeader | undefined;
+        }
+        if (headerName === 'content-transfer-encoding') {
+            return part.headers.find(h => h['name'] === headerName) as ContentTransferEncodingHeader | undefined;
+        }
+    }
+}
+
+
+type MultipartFormHeaderName = 'content-type' | 'content-disposition' | 'content-transfer-encoding';
+
+function getHeader(headers: MultipartFormHeader[], headerName: MultipartFormHeaderName): MultipartFormHeader | undefined {
+    return headers.find(h => h.name === headerName);
+}
+
+function parseHeader(str: string): MultipartFormHeader | undefined {
+    const [headerName, value] = str.split(':');
+    if (headerName.toLowerCase() === 'content-disposition') {
+        // regex is a bit slow but means the header value can be a bit more flexible with its syntax
+        const nameRegex = /name="(?<name>([^"]+))/.exec(value);
+        const filenameRegex = /filename="(?<filename>([^"]+))/.exec(value);
+        // blow up if there's no name
+        const name = nameRegex!.groups!.name
+        const filename = filenameRegex?.groups?.filename
+        return {name: 'content-disposition', fieldName: name, ...(filename ? {filename} : {})};
+    }
+    if (headerName.toLowerCase() === 'content-type') {
+        const trim = value.trim();
+        const contentType = contentTypeFromText(trim);
+        return {name: "content-type", value: contentType ?? 'text/plain'}
+    }
+    if (headerName.toLowerCase() === 'content-transfer-encoding') {
+        return {name: "content-transfer-encoding", value: value.trim() === 'base64' ? 'base64' : 'binary'};
+    }
+}
+
+function isTextContent(contentType: ContentTypes): boolean {
+    return contentType.startsWith('text/')
+        || contentType === 'application/json'
+        || contentType === 'application/javascript';
+}
+
+function contentTypeFromText(trim: string | undefined): ContentTypes {
+    if (!trim) return 'text/plain'
+    if (trim.toLowerCase() === 'text/plain') return 'text/plain'
+    if (trim.toLowerCase() === 'text/html') return 'text/html'
+    if (trim.toLowerCase() === 'text/css') return 'text/css'
+    if (trim.toLowerCase() === 'text/xml') return 'text/xml'
+    if (trim.toLowerCase() === 'text/csv') return 'text/csv'
+    if (trim.toLowerCase() === 'image/png') return 'image/png'
+    if (trim.toLowerCase() === 'image/jpg') return 'image/jpg'
+    if (trim.toLowerCase() === 'image/jpeg') return 'image/jpeg'
+    if (trim.toLowerCase() === 'image/gif') return 'image/gif'
+    if (trim.toLowerCase() === 'image/svg') return 'image/svg'
+    if (trim.toLowerCase() === 'audio/mp4') return 'audio/mp4'
+    if (trim.toLowerCase() === 'audio/mpeg') return 'audio/mpeg'
+    if (trim.toLowerCase() === 'video/mp4') return 'video/mp4'
+    if (trim.toLowerCase() === 'video/mpeg') return 'video/mpeg'
+    if (trim.toLowerCase() === 'video/quicktime') return 'video/quicktime'
+    if (trim.toLowerCase() === 'application/pdf') return 'application/pdf'
+    if (trim.toLowerCase() === 'application/json') return 'application/json'
+    if (trim.toLowerCase() === 'application/xml') return 'application/xml'
+    if (trim.toLowerCase() === 'application/javascript') return 'application/javascript'
+    if (trim.toLowerCase() === 'application/ms-word') return 'application/ms-word'
+    if (trim.toLowerCase() === 'application/vns.ms-excel') return 'application/vns.ms-excel'
+    if (trim.toLowerCase() === 'application/octet-stream') return 'application/octet-stream'
+    if (trim.toLowerCase() === 'multipart/mixed') return 'multipart/mixed'
+    if (trim.toLowerCase() === 'multipart/related') return 'multipart/related'
+    if (trim.toLowerCase() === 'multipart/alternative') return 'multipart/alternative'
+    return 'text/plain'
+}
