@@ -29,7 +29,7 @@ Test file contents\r
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = Body.multipartForm(req);
+            const {headers, body} = Body.multipartFormField(req);
 
             expect(headers).deep.eq([
                     {
@@ -63,7 +63,7 @@ tom\r
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = Body.multipartForm(req);
+            const {headers, body} = Body.multipartFormField(req);
 
             expect(headers).deep.eq([
                     {
@@ -94,43 +94,32 @@ Test file contents\r
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = Body.multipartForm(req);
+            const formParts = Body.multipartForm(req);
+            const {headers: headers1, body: body1} = formParts[0];
 
-            expect(headers).deep.eq([
+            expect(headers1).deep.eq([
                     {
                         "fieldName": "name",
                         "name": "content-disposition"
                     }
                 ]
             )
+            expect(await Body.text(body1)).eq('tom')
 
-            expect(await Body.text(body)).eq('tom')
-
-            let x = [
-                {
-                    "body": "tom",
-                    "headers": [
-                        {
-                            "fieldName": "name",
-                            "name": "content-disposition"
-                        }
-                    ]
-                },
-                {
-                    "body": "Test file contents",
-                    "headers": [
-                        {
-                            "filename": "test.txt",
-                            "fieldName": "file",
-                            "name": "content-disposition"
-                        },
-                        {
-                            "name": "content-type",
-                            "value": "text/plain"
-                        }
-                    ]
-                }
-            ];
+            const {headers: headers2, body: body2} = formParts[1];
+            expect(headers2).deep.eq([
+                    {
+                        "filename": "test.txt",
+                        "fieldName": "file",
+                        "name": "content-disposition"
+                    },
+                    {
+                        "name": "content-type",
+                        "value": "text/plain"
+                    }
+                ]
+            )
+            expect(await Body.text(body2)).eq('Test file contents')
         })
 
         it('a text input and multiple files', async () => {
@@ -159,7 +148,7 @@ Test file contents
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartForm(req);
+            const fileParts = await Body.multipartFormField(req);
 
             expect(fileParts).deep.eq([
                 {
@@ -232,7 +221,7 @@ Test file contents
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartForm(req);
+            const fileParts = await Body.multipartFormField(req);
 
             expect(fileParts).deep.eq([
                 {
@@ -303,7 +292,7 @@ Test file contents
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartForm(req);
+            const fileParts = await Body.multipartFormField(req);
 
             expect(fileParts).deep.eq([
                 {
@@ -352,7 +341,7 @@ Test-- file-- contents\r
                 body: stream.Readable.from(randomChunks),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartForm(req);
+            const fileParts = await Body.multipartFormField(req);
 
             expect(fileParts).deep.eq([{
                 "body": "Test-- file-- contents",
@@ -391,7 +380,7 @@ Content-Type: image/png\r
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartForm(req);
+            const fileParts = await Body.multipartFormField(req);
 
             fs.writeFileSync('./src/http/test/resources/hamburger-out.png', fileParts[0].body)
         })

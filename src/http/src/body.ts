@@ -1,6 +1,11 @@
 import {HttpMessageBody, Req} from "./interface";
 import * as stream from "stream";
 
+type MultipartFormPart = {
+    headers: MultipartFormHeader[],
+    body: stream.Readable
+};
+
 export class Body {
     static async text(body: HttpMessageBody) {
         let text = '';
@@ -12,23 +17,41 @@ export class Body {
         return text;
     }
 
-    static multipartForm(msg: Req): {
-        headers: MultipartFormHeader[],
-        body: stream.Readable
-    } {
+    static multipartForm(msg: Req): MultipartFormPart[] {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
             const boundary = /boundary=(?<boundary>(.+))/.exec(contentType)?.groups?.boundary
-            const {headers, outputStream} = Body.parseMultipartForm(msg.body! as stream.Readable, '--' + boundary!)
+            let ended = false;
+            let parts: MultipartFormPart[] = []
+            let bodyStream = msg.body! as stream.Readable
+            while (!ended) {
+                const {headers, outputStream, remainder, seenEnd} = Body.parsePart(bodyStream, '--' + boundary!);
+                parts.push({headers, body: outputStream});
+                bodyStream.unshift(remainder);
+                ended = seenEnd;
+            }
+            return parts
+        } else {
+            return []
+        }
+    }
+
+    static multipartFormField(msg: Req): MultipartFormPart {
+        const contentType = msg.headers?.["content-type"];
+        if (contentType?.includes('multipart/form-data')) {
+            const boundary = /boundary=(?<boundary>(.+))/.exec(contentType)?.groups?.boundary
+            const {headers, outputStream} = Body.parsePart(msg.body! as stream.Readable, '--' + boundary!)
             return {headers, body: outputStream}
         } else {
             return {headers: [], body: stream.Readable.from('')}
         }
     }
 
-    static parseMultipartForm(inputStream: stream.Readable, boundary: string): {
+    private static parsePart(inputStream: stream.Readable, boundary: string): {
         headers: MultipartFormHeader[],
-        outputStream: stream.Readable
+        outputStream: stream.Readable,
+        remainder: Chunk,
+        seenEnd: boolean
     } {
         /**
          * Multipart form parsing
@@ -61,10 +84,9 @@ export class Body {
         const chunk = inputStream.read();
         const {remainder: r1, usingCRLF} = parseBoundary(chunk, boundary)
         const {headers, remainder: r2} = parseHeaders(r1)
-        // add remainder back to the front of the inputStream
-        inputStream.unshift(r2)
-        parseBody(inputStream, outputStream, boundary, usingCRLF)
-        return {headers, outputStream}
+        inputStream.unshift(r2) // add remainder back to the front of the inputStream
+        const {remainder, seenEnd} = parseBody(inputStream, outputStream, boundary, usingCRLF);
+        return {headers, outputStream, remainder, seenEnd}
     }
 
 }
@@ -80,7 +102,6 @@ export type ContentTransferEncodingHeader = {
 };
 export type ContentDispositionHeader = { name: 'content-disposition'; fieldName: string; filename?: string; };
 export type MultipartFormHeader = | ContentDispositionHeader | ContentTypeHeader | ContentTransferEncodingHeader
-export type MultipartFormPart = | { headers: MultipartFormHeader[]; body: BodyPart; }
 export type BodyPart = string | Buffer;
 export type FilePart = { headers: MultipartFormHeader[]; body: BodyPart };
 export type ContentTypes = | 'text/plain'
@@ -137,7 +158,11 @@ export class Forms {
 
 type MultipartFormHeaderName = 'content-type' | 'content-disposition' | 'content-transfer-encoding';
 
-export function parseBody(inputStream: stream.Readable, outputStream: stream.Readable, boundary: string, usingCRLF: boolean) {
+export function parseBody(
+    inputStream: stream.Readable,
+    outputStream: stream.Readable,
+    boundary: string,
+    usingCRLF: boolean): { remainder: Chunk, seenEnd: boolean } {
     let text: string = '';
     //  used to check we have just seen a boundary
     let lastNChars = new Array(boundary.length + 2).fill('x')
@@ -187,10 +212,12 @@ export function parseBody(inputStream: stream.Readable, outputStream: stream.Rea
                     // we're done with this body
                     outputStream.push(null);
 
-                    // return remainder
-                    return typeof chunk === 'string'
-                        ? chunk.slice(boundary.length)
-                        : chunk.subarray(bufferPointer - lastNChars.length - extraToChopOff);
+                    // return remainder including boundary we've just seen so that we can rinse and repeat
+                    const remainder = typeof chunk === 'string'
+                        ? chunk.slice(j - boundary.length - 1)
+                        : chunk.subarray(bufferPointer - boundary.length - 1);
+
+                    return {remainder, seenEnd: isFinalBoundary};
                 }
             }
 
@@ -207,6 +234,7 @@ export function parseBody(inputStream: stream.Readable, outputStream: stream.Rea
     }
     // finally push null as there is nothing more to read from input
     outputStream.push(null)
+    return {remainder: '', seenEnd: true};
 }
 
 type Chunk = Buffer | string;
