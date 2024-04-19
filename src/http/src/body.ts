@@ -1,29 +1,35 @@
-import {HttpMessage, HttpMessageBody, Req} from "./interface";
+import {HttpMessageBody, Req} from "./interface";
 import * as stream from "stream";
 
 export class Body {
-    static async text(msg: HttpMessage) {
+    static async text(body: HttpMessageBody) {
         let text = '';
-        if (!msg.body) return text;
+        if (!body) return text;
         const textDecoder = new TextDecoder();
-        for await (const chunk of msg.body) {
+        for await (const chunk of body) {
             text += textDecoder.decode(chunk);
         }
         return text;
     }
 
-    static async multipartForm(msg: Req): Promise<MultipartFormPart[]> {
+    static multipartForm(msg: Req): {
+        headers: MultipartFormHeader[],
+        body: stream.Readable
+    } {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
             const boundary = /boundary=(?<boundary>(.+))/.exec(contentType)?.groups?.boundary
-            const doubleHyphenPlusBoundary = '--' + boundary!;
-            return Body.parseMultipartForm(msg.body!, doubleHyphenPlusBoundary)
+            const {headers, outputStream} = Body.parseMultipartForm(msg.body! as stream.Readable, '--' + boundary!)
+            return {headers, body: outputStream}
         } else {
-            return []
+            return {headers: [], body: stream.Readable.from('')}
         }
     }
 
-    static async parseMultipartForm(bodyStream: HttpMessageBody, boundary: string): Promise<MultipartFormPart[]> {
+    static parseMultipartForm(inputStream: stream.Readable, boundary: string): {
+        headers: MultipartFormHeader[],
+        outputStream: stream.Readable
+    } {
         /**
          * Multipart form parsing
          *   - this is a streaming parser i.e. it can handle receiving the input stream in arbitrarily sized chunks;
@@ -50,116 +56,17 @@ export class Body {
          *   - we return "file parts" that represent the headers and body of each part sent in the request
          *     as an intermediate representation, Forms has static methods to make file parts more user friendly≠
          */
-        if (!boundary.startsWith('--')) throw new Error('Boundary must start with --');
-        const fileParts: FilePart[] = []
-        let i = 0;
-        let headers: MultipartFormHeader[] = [];
-        let header: string = '';
-        let text: string = '';
-        let contentType: ContentTypes = 'text/plain'
-        // the last 4 bytes are used to see if it is the end of the headers
-        let lastFourChars: string[] = ['x', 'x', 'x', 'x'] // start with some dummy chars
-        // start by parsing the boundary at the beginning
-        let parsingState: 'boundary' | 'headers' | 'body' = 'boundary'
-        // lastCharsOfSameLengthAsBoundary is used to check we have just seen a boundary
-        //   - it needs to be a bit longer because we understand what's happening after we've seen bytes
-        //   ie the last two bytes inform what to do so we need two extra bytes to see back far enough
-        let lastCharsOfSameLengthAsBoundary = new Array(boundary.length + 2).fill('x')
-        // typically we see CRLF as per the standard
-        let delimiter = '\r\n';
-        let outputStream = new stream.Duplex()
 
-        for await (const chunk of bodyStream) {
-            let mode: 'buffer' | 'string' = 'buffer';
-            if (typeof chunk === "string") {
-                mode = 'string'
-            }
-            let buf = Buffer.alloc(chunk.length)
-            let bufferPointer = 0;
-
-            for (let j = 0; j < chunk.length; j++) {
-                const byte = chunk[j];
-                const byteOrChar = mode === 'string' ? byte : String.fromCharCode(byte);
-                lastFourChars.shift();
-                lastFourChars.push(byteOrChar);
-                lastCharsOfSameLengthAsBoundary.shift()
-                lastCharsOfSameLengthAsBoundary.push(byteOrChar)
-
-                // when parsing body we don't do anything except add the chars to our body state
-                if (parsingState === 'body') {
-                    if (isTextContent(contentType)) {
-                        text += byteOrChar
-                    } else {
-                        buf[bufferPointer] = byte;
-                        bufferPointer++
-                    }
-                }
-                // if at the end of the boundary then switch to parsing headers
-                if (parsingState === 'boundary' && i === boundary.length) {
-                    parsingState = 'headers'
-                }
-
-                // parse initial boundary
-                if (parsingState === 'boundary') {
-                    if (!(byteOrChar === boundary[i])) {
-                        throw new Error(`Expected boundary to match boundary value in content disposition header`)
-                    }
-                }
-
-                // if at end of headers then switch to parsing body
-                const endOfHeaders = (parsingState === 'headers' && lastFourChars[2] === '\n' && lastFourChars[3] === '\n')
-                    || (parsingState === 'headers' && lastFourChars[0] === '\r' && lastFourChars[1] === '\n' && lastFourChars[2] === '\r' && lastFourChars[3] === '\n');
-                if (endOfHeaders) {
-                    const contentTypeHeader = getHeader(headers, 'content-type') as ContentTypeHeader | undefined;
-                    contentType = contentTypeFromText(contentTypeHeader?.value);
-                    parsingState = 'body'
-                }
-                // if we've seen two hyphens then start countdown to checking the boundary soon
-                const shouldCheckBoundary = lastCharsOfSameLengthAsBoundary.some((value, index) => {
-                    return (lastCharsOfSameLengthAsBoundary[index] + lastCharsOfSameLengthAsBoundary[index + 1]) === '--'
-                })
-                if (parsingState === 'body' && shouldCheckBoundary) {
-                    // chop off the extra 2 bytes in our history buffer (that's how many bytes we had to see to decide to come here)
-                    const seenBoundary = boundary.split('').every((c, index) => c === lastCharsOfSameLengthAsBoundary[index]);
-                    // if it is the boundary then make the file part
-                    if (seenBoundary) {
-                        // if we see only a \n at the end of the boundary, then we are using LF only; not CRLF;
-                        if (lastCharsOfSameLengthAsBoundary[lastCharsOfSameLengthAsBoundary.length - 2] === '\n') {
-                            delimiter = '\n';
-                        }
-                        const extraToChopOff = delimiter.length
-                        if (isTextContent(contentType)) {
-                            text = text.slice(0, text.length - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
-                            fileParts.push({headers, body: text})
-                        } else {
-                            buf = buf.subarray(0, bufferPointer - lastCharsOfSameLengthAsBoundary.length - extraToChopOff)
-                            fileParts.push({headers, body: buf})
-                        }
-                        headers = [];
-                        text = '';
-                        buf = Buffer.alloc(chunk.length);
-                        bufferPointer = 0;
-                        parsingState = 'headers'
-                    }
-                }
-
-                if (parsingState === 'headers') {
-                    if (byteOrChar !== '\n') {
-                        header += byteOrChar;
-                    } else {
-                        if (header !== '') {
-                            const parsed = parseHeader(header)
-                            if (parsed) headers.push(parsed)
-                        }
-                        header = '';
-                    }
-                }
-                i++
-            }
-        }
-
-        return fileParts;
+        const outputStream = createReadable();
+        const chunk = inputStream.read();
+        const {remainder: r1, usingCRLF} = parseBoundary(chunk, boundary)
+        const {headers, remainder: r2} = parseHeaders(r1)
+        // add remainder back to the front of the inputStream
+        inputStream.unshift(r2)
+        parseBody(inputStream, outputStream, boundary, usingCRLF)
+        return {headers, outputStream}
     }
+
 }
 
 export type ContentTypeHeader = {
@@ -230,8 +137,132 @@ export class Forms {
 
 type MultipartFormHeaderName = 'content-type' | 'content-disposition' | 'content-transfer-encoding';
 
-function getHeader(headers: MultipartFormHeader[], headerName: MultipartFormHeaderName): MultipartFormHeader | undefined {
-    return headers.find(h => h.name === headerName);
+export function parseBody(inputStream: stream.Readable, outputStream: stream.Readable, boundary: string, usingCRLF: boolean) {
+    let text: string = '';
+    //  used to check we have just seen a boundary
+    let lastNChars = new Array(boundary.length + 2).fill('x')
+    // typically we see CRLF as per the standard
+    let delimiter = usingCRLF ? '\r\n' : '\n';
+
+    let chunk;
+    while ((chunk = inputStream.read()) != null) {
+        let buf = Buffer.alloc(chunk.length)
+        let bufferPointer = 0;
+
+        for (let j = 0; j < chunk.length; j++) {
+            const byte = chunk[j];
+            const byteOrChar = typeof byte === 'string' ? byte : String.fromCharCode(byte);
+            lastNChars.shift()
+            lastNChars.push(byteOrChar)
+
+            if (typeof byte === 'string') {
+                text += byteOrChar
+            } else {
+                buf[bufferPointer] = byte as number;
+                bufferPointer++
+            }
+
+            // if we've seen two hyphens then start countdown to checking the boundary soon
+            const shouldCheckBoundary = lastNChars.some((value, index) => {
+                return (lastNChars[index] + lastNChars[index + 1]) === '--'
+            })
+
+            if (shouldCheckBoundary) {
+                // chop off the extra 2 bytes in our history buffer (that's how many bytes we had to see to decide to come here)
+                const seenBoundary = boundary.split('').every((c, index) => c === lastNChars[index]);
+                // if it is the boundary then make the file part
+                if (seenBoundary) {
+                    // if we see only a \n at the end of the boundary, then we are using LF only; not CRLF;
+                    const isFinalBoundary = lastNChars.slice(-2, lastNChars.length).every(c => c === '-')
+                    if (lastNChars[lastNChars.length - 2] === '\n') {
+                        delimiter = '\n';
+                    }
+                    const extraToChopOff = delimiter.length
+                    if (typeof byte === 'string') {
+                        text = text.slice(0, text.length - lastNChars.length - extraToChopOff)
+                        outputStream.push(text)
+                    } else {
+                        outputStream.push(buf.subarray(0, bufferPointer - lastNChars.length - extraToChopOff))
+                    }
+                    // we're done with this body
+                    outputStream.push(null);
+
+                    // return remainder
+                    return typeof chunk === 'string'
+                        ? chunk.slice(boundary.length)
+                        : chunk.subarray(bufferPointer - lastNChars.length - extraToChopOff);
+                }
+            }
+
+            const endOfChunk = j === chunk.length - 1;
+            if (endOfChunk) {
+                if (typeof byte === 'string') {
+                    outputStream.push(text)
+                } else {
+                    buf = buf.subarray(0, bufferPointer)
+                    outputStream.push(buf)
+                }
+            }
+        }
+    }
+    // finally push null as there is nothing more to read from input
+    outputStream.push(null)
+}
+
+type Chunk = Buffer | string;
+
+export function parseBoundary(chunk: Chunk, boundary: string): { remainder: Chunk, usingCRLF: boolean } {
+    for (let j = 0; j < boundary.length; j++) {
+        const char = typeof chunk[j] === 'string' ? chunk[j] : String.fromCharCode(chunk[j] as number);
+        if (char !== boundary[j]) throw new Error('Uh oh');
+    }
+    const usingCRLF = chunk[boundary.length] === 13 || chunk[boundary.length] === '\r';
+    const skip = usingCRLF ? 2 : 1;
+    const remainder = typeof chunk === 'string'
+        ? chunk.slice(boundary.length + skip)
+        : chunk.subarray(boundary.length + skip);
+    return {remainder, usingCRLF}
+}
+
+export function parseHeaders(chunk: Chunk): { headers: MultipartFormHeader[], remainder: Chunk } {
+    let headers: MultipartFormHeader[] = []
+    let header = '';
+    let lastFour = ['x', 'x', 'x', 'x'];
+
+
+    for (let j = 0; j < chunk.length; j++) {
+        const byte: string | number = chunk[j];
+        const char = typeof byte === 'string' ? byte : String.fromCharCode(byte);
+        lastFour.shift();
+        lastFour.push(char);
+
+        if (char !== '\n') {
+            header += char
+        } else {
+            if (header !== '') {
+                const parsed = parseHeader(header)
+                if (parsed) headers.push(parsed)
+            }
+            header = '';
+        }
+        if (
+            lastFour[0] === '\r' && lastFour [1] === '\n' && lastFour[2] === '\r' && lastFour[3] === '\n'
+            || lastFour[2] === '\n' && lastFour[3] === '\n'
+        ) {
+            const remainder = typeof chunk === 'string'
+                ? chunk.slice(j + 1)
+                : chunk.subarray(j + 1)
+            return {headers, remainder}
+        }
+    }
+    return {headers, remainder: chunk}
+}
+
+export function createReadable() {
+    return new stream.Readable({
+        read() {
+        }
+    });
 }
 
 function parseHeader(str: string): MultipartFormHeader | undefined {
@@ -253,12 +284,6 @@ function parseHeader(str: string): MultipartFormHeader | undefined {
     if (headerName.toLowerCase() === 'content-transfer-encoding') {
         return {name: "content-transfer-encoding", value: value.trim() === 'base64' ? 'base64' : 'binary'};
     }
-}
-
-function isTextContent(contentType: ContentTypes): boolean {
-    return contentType.startsWith('text/')
-        || contentType === 'application/json'
-        || contentType === 'application/javascript';
 }
 
 function contentTypeFromText(trim: string | undefined): ContentTypes {
