@@ -1,4 +1,4 @@
-import {HttpHandler, Method, req} from "./interface";
+import {HttpHandler, Method, request} from "./interface";
 import * as http from "http";
 import {AddressInfo} from "node:net";
 import * as timers from "timers";
@@ -13,7 +13,7 @@ export async function httpServer(handler: HttpHandler, port = 0) {
     }))
     server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {
         const {headers, method, url} = nodeReq;
-        const res = await handler.handle(req({body: nodeReq, headers, method: method as Method, path: url}));
+        const res = await handler.handle(request({body: nodeReq, headers, method: method as Method, path: url}));
         nodeResponse.writeHead(res.status, res.headers)
         if (res.body instanceof stream.Readable) {
             res.body.on('end', () => nodeResponse.end())

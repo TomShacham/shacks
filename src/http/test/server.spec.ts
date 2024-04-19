@@ -1,5 +1,5 @@
 import {client} from "../src/client";
-import {Req, res, Res} from "../src/interface";
+import {Req, Res, response} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
@@ -12,7 +12,7 @@ describe('client / server', function () {
     it('send / receive request / response', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
-                return res({status: 201, headers: req.headers, body: await Body.text(req)})
+                return response({status: 201, headers: req.headers, body: await Body.text(req.body!)})
             }
         };
         const {port, close} = await httpServer(handler);
@@ -40,10 +40,10 @@ describe('client / server', function () {
     it('streaming one way', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
-                return res({
+                return response({
                     status: 201,
                     headers: {foo: 'bar'},
-                    body: JSON.stringify({size: (await Body.text(req)).length})
+                    body: JSON.stringify({size: (await Body.text(req.body!)).length})
                 })
             }
         };
@@ -66,7 +66,7 @@ describe('client / server', function () {
             expect(response.status).to.eq(201);
             expect(response.statusText).to.eq("Created");
             expect(response.headers.foo).to.eq('bar')
-            expect(await Body.text(response)).to.eq(JSON.stringify({size}));
+            expect(await Body.text(response.body!)).to.eq(JSON.stringify({size}));
         } finally {
             // delete file and close server
             fs.unlinkSync(filePath)
@@ -77,7 +77,7 @@ describe('client / server', function () {
     it('multipart form data', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
-                return res({status: 200, body: req.body})
+                return response({status: 200, body: req.body})
             }
         };
 
@@ -108,7 +108,7 @@ Upload test file
             });
             expect(response.status).to.eq(200);
             expect(response.statusText).to.eq("OK");
-            expect(await Body.text(response)).to.eq('testing file uploads');
+            expect(await Body.text(response.body!)).to.eq('testing file uploads');
         } finally {
             await closeServer()
         }
@@ -125,7 +125,7 @@ Upload test file
                     body: req.body, // file read stream
                     headers: {}
                 })
-                return res({
+                return response({
                     status: 200,
                     body: responseFromProxy.body
                 })
@@ -135,7 +135,7 @@ Upload test file
         const proxyHandler = {
             async handle(req: Req): Promise<Res> {
                 const body = (req.body as stream.Readable).pipe(zlib.createGzip());
-                return res({
+                return response({
                     status: 201,
                     headers: {foo: 'bar'},
                     body: body,

@@ -5,7 +5,7 @@ export interface HttpHandler {
     handle(req: Req): Promise<Res>
 }
 
-type Payload = string | Uint8Array;
+export type Payload = string | Uint8Array;
 export type HttpMessageBody<TBody extends Payload = string | Uint8Array> =
     | stream.Duplex
     | AsyncIterable<TBody>
@@ -33,11 +33,11 @@ export interface Res<TBody extends Payload = string> extends HttpMessage<TBody> 
     statusText?: string
 }
 
-export function res(res?: Partial<Res>): Res {
+export function response(res?: Partial<Res>): Res {
     return {status: 200, headers: {}, ...res}
 }
 
-export function req(req?: Partial<Req>): Req {
+export function request(req?: Partial<Req>): Req {
     return {method: 'GET', path: '/', headers: {}, ...req}
 }
 

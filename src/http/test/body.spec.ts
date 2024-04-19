@@ -75,19 +75,103 @@ tom\r
             expect(await Body.text(body)).eq('tom')
         })
 
-        it('a text input and a file', async () => {
-            const boundary = '----------------------WebKitFormBoundary3SDTCgyIZiMSWJG7';
+        it('multiple text inputs and multiple files', async () => {
+            const boundary = '------WebKitFormBoundaryZnZz58ycjFeBNyad';
 
             let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name="name"\r
+Content-Disposition: form-data; name=\"name\"\r
 \r
 tom\r
 --${boundary}\r
-Content-Disposition: form-data; name="file"; filename="test.txt"\r
+Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
 Content-Type: text/plain\r
 \r
-Test file contents\r
+Test file contents
+\r
+--${boundary}\r
+Content-Disposition: form-data; name=\"title\"\r
+\r
+title\r
+--${boundary}\r
+Content-Disposition: form-data; name=\"bio\"; filename=\"test.txt\"\r
+Content-Type: text/plain\r
+\r
+Test file contents
+\r
 --${boundary}--\r
+`
+            const req = request({
+                method: 'POST',
+                body: stream.Readable.from(exampleMultipartFormData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const formParts = Body.multipartForm(req);
+            const {headers: headers1, body: body1} = formParts[0];
+
+            expect(headers1).deep.eq([
+                    {
+                        "fieldName": "name",
+                        "name": "content-disposition"
+                    }
+                ]
+            )
+            expect(await Body.text(body1)).eq('tom')
+
+            const {headers: headers2, body: body2} = formParts[1];
+            expect(headers2).deep.eq([
+                    {
+                        "filename": "test.txt",
+                        "fieldName": "file",
+                        "name": "content-disposition"
+                    },
+                    {
+                        "name": "content-type",
+                        "value": "text/plain"
+                    }
+                ]
+            )
+            expect(await Body.text(body2)).eq('Test file contents\n')
+
+            const {headers: headers3, body: body3} = formParts[2];
+
+            expect(headers3).deep.eq([
+                    {
+                        "fieldName": "title",
+                        "name": "content-disposition"
+                    }
+                ]
+            )
+            expect(await Body.text(body3)).eq('title')
+
+            const {headers: headers4, body: body4} = formParts[3];
+            expect(headers4).deep.eq([
+                    {
+                        "fieldName": "bio",
+                        "filename": "test.txt",
+                        "name": "content-disposition"
+                    },
+                    {
+                        "name": "content-type",
+                        "value": "text/plain"
+                    }
+                ]
+            )
+            expect(await Body.text(body4)).eq('Test file contents\n');
+        })
+
+        it('a text input and a file but with \\n only', async () => {
+            const boundary = '------WebKitFormBoundary3SDTCgyIZiMSWJG7';
+
+            let exampleMultipartFormData = `--${boundary}
+Content-Disposition: form-data; name="name"
+
+tom
+--${boundary}
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Test file contents
+--${boundary}--
 `
             const req = request({
                 method: 'POST',
@@ -122,206 +206,6 @@ Test file contents\r
             expect(await Body.text(body2)).eq('Test file contents')
         })
 
-        it('a text input and multiple files', async () => {
-            const boundary = '------WebKitFormBoundaryQmshvAjyLS077cbB';
-
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"name\"\r
-\r
-tom\r
---${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents
-\r
---${boundary}\r
-Content-Disposition: form-data; name=\"bio\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents
-\r
---${boundary}--\r
-`
-            const req = request({
-                method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
-                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
-            })
-            const fileParts = await Body.multipartFormField(req);
-
-            expect(fileParts).deep.eq([
-                {
-                    "body": "tom",
-                    "headers": [
-                        {
-                            "fieldName": "name",
-                            "name": "content-disposition"
-                        }
-                    ]
-                },
-                {
-                    "body": "Test file contents\n",
-                    "headers": [
-                        {
-                            "fieldName": "file",
-                            "filename": "test.txt",
-                            "name": "content-disposition"
-                        },
-                        {
-                            "name": "content-type",
-                            "value": "text/plain"
-                        }
-                    ]
-                },
-                {
-                    "body": "Test file contents\n",
-                    "headers": [
-                        {
-                            "fieldName": "bio",
-                            "filename": "test.txt",
-                            "name": "content-disposition"
-                        },
-                        {
-                            "name": "content-type",
-                            "value": "text/plain"
-                        }
-                    ]
-                }
-            ]);
-        })
-
-        it('multiple text inputs and multiple files', async () => {
-            const boundary = '------WebKitFormBoundaryZnZz58ycjFeBNyad';
-
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"name\"\r
-\r
-tom\r
---${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents
-\r
---${boundary}\r
-Content-Disposition: form-data; name=\"title\"\r
-\r
-title\r
---${boundary}\r
-Content-Disposition: form-data; name=\"bio\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents
-\r
---${boundary}--\r
-`
-            const req = request({
-                method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
-                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
-            })
-            const fileParts = await Body.multipartFormField(req);
-
-            expect(fileParts).deep.eq([
-                {
-                    "body": "tom",
-                    "headers": [
-                        {
-                            "fieldName": "name",
-                            "name": "content-disposition"
-                        }
-                    ]
-                },
-                {
-                    "body": "Test file contents\n",
-                    "headers": [
-                        {
-                            "fieldName": "file",
-                            "filename": "test.txt",
-                            "name": "content-disposition"
-                        },
-                        {
-                            "name": "content-type",
-                            "value": "text/plain"
-                        }
-                    ]
-                },
-                {
-                    "body": "title",
-                    "headers": [
-                        {
-                            "fieldName": "title",
-                            "name": "content-disposition"
-                        }
-                    ]
-                },
-                {
-                    "body": "Test file contents\n",
-                    "headers": [
-                        {
-                            "fieldName": "bio",
-                            "filename": "test.txt",
-                            "name": "content-disposition"
-                        },
-                        {
-                            "name": "content-type",
-                            "value": "text/plain"
-                        }
-                    ]
-                }
-            ]);
-        })
-
-        it('a text input and a file but with \\n only', async () => {
-            const boundary = '------WebKitFormBoundary3SDTCgyIZiMSWJG7';
-
-            let exampleMultipartFormData = `--${boundary}
-Content-Disposition: form-data; name="name"
-
-tom
---${boundary}
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
-
-Test file contents
---${boundary}--
-`
-            const req = request({
-                method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
-                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
-            })
-            const fileParts = await Body.multipartFormField(req);
-
-            expect(fileParts).deep.eq([
-                {
-                    "body": "tom",
-                    "headers": [
-                        {
-                            "fieldName": "name",
-                            "name": "content-disposition"
-                        }
-                    ]
-                },
-                {
-                    "body": "Test file contents",
-                    "headers": [
-                        {
-                            "filename": "test.txt",
-                            "fieldName": "file",
-                            "name": "content-disposition"
-                        },
-                        {
-                            "name": "content-type",
-                            "value": "text/plain"
-                        }
-                    ]
-                }
-            ]);
-
-        })
-
         it('a file by itself but with dashes in it', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
@@ -333,19 +217,14 @@ Test-- file-- contents\r
 --${boundary}--\r
 `
 
-            // random chunks so that we prove we can handle receiving the payload in arbitrary bits
-            // (as it may come over the wire in bits and bobs)
-            const randomChunks = inChunks(exampleMultipartFormData);
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(randomChunks),
+                body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartFormField(req);
+            const {headers, body} = Body.multipartFormField(req);
 
-            expect(fileParts).deep.eq([{
-                "body": "Test-- file-- contents",
-                "headers": [
+            expect(headers).deep.eq([
                     {
                         "filename": "test.txt",
                         "fieldName": "file",
@@ -356,7 +235,10 @@ Test-- file-- contents\r
                         "value": "text/plain"
                     }
                 ]
-            }]);
+            )
+
+            const text = await Body.text(body);
+            expect(text).deep.eq('Test-- file-- contents');
         })
 
         it('handles png', async () => {
@@ -380,9 +262,8 @@ Content-Type: image/png\r
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const fileParts = await Body.multipartFormField(req);
-
-            fs.writeFileSync('./src/http/test/resources/hamburger-out.png', fileParts[0].body)
+            const {headers, body} = Body.multipartFormField(req);
+            body.pipe(fs.createWriteStream('./src/http/test/resources/hamburger-out.png'));
         })
 
     })

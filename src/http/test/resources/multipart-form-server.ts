@@ -1,24 +1,23 @@
 import {httpServer} from "../../src/server";
-import {Req, res, Res} from "../../src/interface";
-import {Body, ContentTypeHeader, Forms} from "../../src/body";
-import * as fs from "fs";
+import {Req, Res, response} from "../../src/interface";
+import {Body} from "../../src/body";
 
 async function multipartFormServer() {
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
-            const formParts = await Body.multipartForm(req);
-            const file = Forms.aFileNamed(formParts, 'pic')
-            if (file) {
-                const name = Forms.aFieldNamed(formParts, 'name')
-                const contentType = Forms.partHeader(file, 'content-type') as ContentTypeHeader | undefined
-                fs.writeFileSync(`./${name?.body}.${contentType?.value === 'image/png' ? 'png' : 'txt'}`, file.body);
+            if (req.method === 'POST') {
+                const {headers, body} = await Body.multipartFormField(req);
+                console.log(headers);
+                for await (const b of body) {
+                    console.log({readBack: b.length});
+                }
             }
             if (req.method === 'GET') {
-                return res({
+                return response({
                     body: html(), status: 200
                 })
             } else {
-                return res({
+                return response({
                     body: '', status: 302, headers: {"Location": "/file"}
                 })
             }
