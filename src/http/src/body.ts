@@ -3,7 +3,8 @@ import * as stream from "stream";
 
 type MultipartFormPart = {
     headers: MultipartFormHeader[],
-    body: stream.Readable
+    body: stream.Readable,
+    done: Promise<null>
 };
 
 export class Body {
@@ -17,41 +18,23 @@ export class Body {
         return text;
     }
 
-    static async multipartForm(msg: Req): Promise<MultipartFormPart[]> {
-        const contentType = msg.headers?.["content-type"];
-        if (contentType?.includes('multipart/form-data')) {
-            const boundary = /boundary=(?<boundary>(.+))/.exec(contentType)?.groups?.boundary
-            let ended = false;
-            let parts: MultipartFormPart[] = []
-            let bodyStream = msg.body! as stream.Readable
-            while (!ended) {
-                const {headers, outputStream, remainder, seenEnd} = await Body.parsePart(bodyStream, '--' + boundary!);
-                parts.push({headers, body: outputStream});
-                bodyStream.unshift(remainder);
-                ended = seenEnd;
-            }
-            return parts
-        } else {
-            return []
-        }
-    }
-
     static async multipartFormField(msg: Req): Promise<MultipartFormPart> {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
-            const boundary = /boundary=(?<boundary>(.+))/.exec(contentType)?.groups?.boundary
-            const {headers, outputStream} = await Body.parsePart(msg.body! as stream.Readable, '--' + boundary!)
-            return {headers, body: outputStream}
+            await new Promise((resolve) => {
+                (msg.body! as stream.Readable).on('readable', () => resolve(null))
+            })
+            const {headers, body, done} = await Body.parsePart(msg)
+            return {headers, body: body, done}
         } else {
-            return {headers: [], body: stream.Readable.from('')}
+            return {headers: [], body: stream.Readable.from(''), done: new Promise(() => null)}
         }
     }
 
-    private static async parsePart(inputStream: stream.Readable, boundary: string): Promise<{
+    static async parsePart(msg: Req): Promise<{
         headers: MultipartFormHeader[],
-        outputStream: stream.Readable,
-        remainder: Chunk,
-        seenEnd: boolean
+        body: stream.Readable,
+        done: Promise<null>
     }> {
         /**
          * Multipart form parsing
@@ -79,17 +62,17 @@ export class Body {
          *   - we return "file parts" that represent the headers and body of each part sent in the request
          *     as an intermediate representation, Forms has static methods to make file parts more user friendly≠
          */
-
+        const contentType = msg.headers?.["content-type"];
+        const boundary = /boundary=(?<boundary>(.+))/.exec(contentType!)?.groups?.boundary
+        const withHyphens = '--' + boundary;
+        const inputStream = msg.body! as stream.Readable;
         const outputStream = createReadable();
-        await new Promise((resolve) => {
-            inputStream.on('readable', () => resolve(null))
-        })
         const chunk = inputStream.read();
-        const {remainder: r1, usingCRLF} = parseBoundary(chunk, boundary)
+        const {remainder: r1, usingCRLF} = parseBoundary(chunk, withHyphens)
         const {headers, remainder: r2} = parseHeaders(r1)
         inputStream.unshift(r2) // add remainder back to the front of the inputStream
-        const {remainder, seenEnd} = await parseBody(inputStream, outputStream, boundary, usingCRLF);
-        return {headers, outputStream, remainder, seenEnd}
+        const done = parseBody(inputStream, outputStream, withHyphens, usingCRLF);
+        return {headers, body: outputStream, done}
     }
 
 }
@@ -133,47 +116,18 @@ export type ContentTypes = | 'text/plain'
     | 'multipart/related'
     | 'multipart/alternative';
 
-export class Forms {
-    static aFileNamed(fileparts: MultipartFormPart[], fileName: string): MultipartFormPart | undefined {
-        return fileparts.find(part => part.headers.some(h => 'filename' in h && 'fieldName' in h && h['fieldName'] === fileName));
-    }
-
-    static aFieldNamed(fileparts: MultipartFormPart[], fieldName: string): MultipartFormPart | undefined {
-        return fileparts.find(part => part.headers.some(h => 'fieldName' in h && h['fieldName'] === fieldName));
-    }
-
-    static partHeader(
-        part: MultipartFormPart,
-        headerName: 'content-type' | 'content-disposition' | 'content-transfer-encoding'
-    ): MultipartFormHeader | undefined {
-        if (headerName === 'content-type') {
-            return part.headers.find(h => h['name'] === headerName) as ContentTypeHeader | undefined;
-        }
-        if (headerName === 'content-disposition') {
-            return part.headers.find(h => h['name'] === headerName) as ContentDispositionHeader | undefined;
-        }
-        if (headerName === 'content-transfer-encoding') {
-            return part.headers.find(h => h['name'] === headerName) as ContentTransferEncodingHeader | undefined;
-        }
-    }
-}
-
-
-type MultipartFormHeaderName = 'content-type' | 'content-disposition' | 'content-transfer-encoding';
-
 export async function parseBody(
     inputStream: stream.Readable,
     outputStream: stream.Readable,
     boundary: string,
-    usingCRLF: boolean): Promise<{ remainder: Chunk, seenEnd: boolean }> {
+    usingCRLF: boolean): Promise<null> {
     let text: string = '';
     //  used to check we have just seen a boundary
     let lastNChars = new Array(boundary.length + 2).fill('x')
     // typically we see CRLF as per the standard
     let delimiter = usingCRLF ? '\r\n' : '\n';
 
-    for await (const chunk of inputStream) {
-        console.log({chunk: chunk.length});
+    for await (const chunk of inputStream.iterator({destroyOnReturn: false})) {
         let buf = Buffer.alloc(chunk.length)
         let bufferPointer = 0;
 
@@ -200,7 +154,6 @@ export async function parseBody(
                 const seenBoundary = boundary.split('').every((c, index) => c === lastNChars[index]);
                 // if it is the boundary then make the file part
                 if (seenBoundary) {
-                    console.log({seenBoundary});
                     // if we see only a \n at the end of the boundary, then we are using LF only; not CRLF;
                     const isFinalBoundary = lastNChars.slice(-2, lastNChars.length).every(c => c === '-')
                     if (lastNChars[lastNChars.length - 2] === '\n') {
@@ -221,25 +174,30 @@ export async function parseBody(
                         ? chunk.slice(j - boundary.length - 1)
                         : chunk.subarray(bufferPointer - boundary.length - 1);
 
-                    return {remainder, seenEnd: isFinalBoundary};
+                    if (!isFinalBoundary) {
+                        inputStream.unshift(remainder)
+                    }
+
+                    return null;
                 }
             }
 
             const endOfChunk = j === chunk.length - 1;
             if (endOfChunk) {
-                console.log({endOfChunk});
                 if (typeof byte === 'string') {
                     outputStream.push(text)
+                    outputStream.emit('data', text);
                 } else {
                     buf = buf.subarray(0, bufferPointer)
                     outputStream.push(buf)
+                    outputStream.emit('data', buf);
                 }
             }
         }
     }
     // finally push null as there is nothing more to read from input
     outputStream.push(null)
-    return {remainder: '', seenEnd: true};
+    return null;
 }
 
 type Chunk = Buffer | string;

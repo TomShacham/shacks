@@ -3,13 +3,17 @@ import {Req, Res, response} from "../../src/interface";
 import {Body} from "../../src/body";
 
 async function multipartFormServer() {
+    let {baselineHeap, heap} = heapStats();
+    const logInterval = setInterval(() => {
+        console.log({runningAverageHeapDelta: fmt(heap.slice(-5).reduce((acc, next) => acc + next) / 5)})
+    }, 500)
+
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
             if (req.method === 'POST') {
                 const {headers, body} = await Body.multipartFormField(req);
-                console.log(headers);
                 for await (const b of body) {
-                    console.log({readBack: b.length});
+                    heap.push(process.memoryUsage().heapUsed - baselineHeap)
                 }
             }
             if (req.method === 'GET') {
@@ -24,6 +28,8 @@ async function multipartFormServer() {
         }
     }, 3000);
 }
+
+const fmt = (data) => `${Math.round(data / 1024 / 1024)} MB`;
 
 function html() {
     return `
@@ -73,6 +79,18 @@ function html() {
     </form>
 </html>
 `;
+}
+
+function heapStats() {
+    const baselineHeap = process.memoryUsage().heapUsed
+    let heap = [
+        process.memoryUsage().heapUsed - baselineHeap,
+        process.memoryUsage().heapUsed - baselineHeap,
+        process.memoryUsage().heapUsed - baselineHeap,
+        process.memoryUsage().heapUsed - baselineHeap,
+        process.memoryUsage().heapUsed - baselineHeap
+    ];
+    return {baselineHeap, heap};
 }
 
 multipartFormServer();
