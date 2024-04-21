@@ -4,16 +4,14 @@ import {Body} from "../../src/body";
 
 async function multipartFormServer() {
     let {baselineHeap, heap} = heapStats();
-    const logInterval = setInterval(() => {
-        console.log({runningAverageHeapDelta: fmt(heap.slice(-5).reduce((acc, next) => acc + next) / 5)})
-    }, 500)
 
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
             if (req.method === 'POST') {
                 const {headers, body} = await Body.multipartFormField(req);
+                console.log({headers});
                 for await (const b of body) {
-                    heap.push(process.memoryUsage().heapUsed - baselineHeap)
+
                 }
             }
             if (req.method === 'GET') {

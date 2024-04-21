@@ -21,7 +21,7 @@ export class Body {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
             await new Promise((resolve) => {
-                (msg.body! as stream.Readable).on('readable', () => resolve(null))
+                (msg.body! as stream.Readable).on('readable', () => resolve(null));
             })
             const {headers, body} = await Body.parsePart(msg)
             return {headers, body: body}
@@ -86,8 +86,6 @@ export type ContentTransferEncodingHeader = {
 };
 export type ContentDispositionHeader = { name: 'content-disposition'; fieldName: string; filename?: string; };
 export type MultipartFormHeader = | ContentDispositionHeader | ContentTypeHeader | ContentTransferEncodingHeader
-export type BodyPart = string | Buffer;
-export type FilePart = { headers: MultipartFormHeader[]; body: BodyPart };
 export type ContentTypes = | 'text/plain'
     | 'text/html'
     | 'text/css'
@@ -103,6 +101,7 @@ export type ContentTypes = | 'text/plain'
     | 'video/mp4'
     | 'video/mpeg'
     | 'video/quicktime'
+    | 'application/zip'
     | 'application/pdf'
     | 'application/json'
     | 'application/xml'
@@ -112,7 +111,8 @@ export type ContentTypes = | 'text/plain'
     | 'application/octet-stream'
     | 'multipart/mixed'
     | 'multipart/related'
-    | 'multipart/alternative';
+    | 'multipart/alternative'
+    | string;
 
 export async function parseBody(
     inputStream: stream.Readable,
@@ -168,7 +168,6 @@ export async function parseBody(
                     outputStream.push(null);
 
                     // return remainder including boundary we've just seen so that we can rinse and repeat
-                    console.log(typeof chunk === 'string');
                     const remainder = typeof chunk === 'string'
                         ? chunk.slice(j - boundary.length - 1)
                         : chunk.subarray(bufferPointer - boundary.length - 2);
@@ -269,40 +268,9 @@ function parseHeader(str: string): MultipartFormHeader | undefined {
     }
     if (headerName.toLowerCase() === 'content-type') {
         const trim = value.trim();
-        const contentType = contentTypeFromText(trim);
-        return {name: "content-type", value: contentType ?? 'text/plain'}
+        return {name: "content-type", value: trim}
     }
     if (headerName.toLowerCase() === 'content-transfer-encoding') {
         return {name: "content-transfer-encoding", value: value.trim() === 'base64' ? 'base64' : 'binary'};
     }
-}
-
-function contentTypeFromText(trim: string | undefined): ContentTypes {
-    if (!trim) return 'text/plain'
-    if (trim.toLowerCase() === 'text/plain') return 'text/plain'
-    if (trim.toLowerCase() === 'text/html') return 'text/html'
-    if (trim.toLowerCase() === 'text/css') return 'text/css'
-    if (trim.toLowerCase() === 'text/xml') return 'text/xml'
-    if (trim.toLowerCase() === 'text/csv') return 'text/csv'
-    if (trim.toLowerCase() === 'image/png') return 'image/png'
-    if (trim.toLowerCase() === 'image/jpg') return 'image/jpg'
-    if (trim.toLowerCase() === 'image/jpeg') return 'image/jpeg'
-    if (trim.toLowerCase() === 'image/gif') return 'image/gif'
-    if (trim.toLowerCase() === 'image/svg') return 'image/svg'
-    if (trim.toLowerCase() === 'audio/mp4') return 'audio/mp4'
-    if (trim.toLowerCase() === 'audio/mpeg') return 'audio/mpeg'
-    if (trim.toLowerCase() === 'video/mp4') return 'video/mp4'
-    if (trim.toLowerCase() === 'video/mpeg') return 'video/mpeg'
-    if (trim.toLowerCase() === 'video/quicktime') return 'video/quicktime'
-    if (trim.toLowerCase() === 'application/pdf') return 'application/pdf'
-    if (trim.toLowerCase() === 'application/json') return 'application/json'
-    if (trim.toLowerCase() === 'application/xml') return 'application/xml'
-    if (trim.toLowerCase() === 'application/javascript') return 'application/javascript'
-    if (trim.toLowerCase() === 'application/ms-word') return 'application/ms-word'
-    if (trim.toLowerCase() === 'application/vns.ms-excel') return 'application/vns.ms-excel'
-    if (trim.toLowerCase() === 'application/octet-stream') return 'application/octet-stream'
-    if (trim.toLowerCase() === 'multipart/mixed') return 'multipart/mixed'
-    if (trim.toLowerCase() === 'multipart/related') return 'multipart/related'
-    if (trim.toLowerCase() === 'multipart/alternative') return 'multipart/alternative'
-    return 'text/plain'
 }

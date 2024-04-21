@@ -241,7 +241,7 @@ Test-- file-- contents\r
             expect(text).deep.eq('Test-- file-- contents');
         })
 
-        it('handles png', async () => {
+        it('handles a text field with a png', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
             const preFile = `--${boundary}\r
