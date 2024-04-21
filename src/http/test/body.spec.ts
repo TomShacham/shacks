@@ -245,6 +245,10 @@ Test-- file-- contents\r
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
             const preFile = `--${boundary}\r
+Content-Disposition: form-data; name=\"name\"\r
+\r
+tom\r
+--${boundary}\r
 Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
 Content-Type: image/png\r
 \r
@@ -263,7 +267,16 @@ Content-Type: image/png\r
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const {headers, body} = await Body.multipartFormField(req);
-            body.pipe(fs.createWriteStream('./src/http/test/resources/hamburger-out.png'));
+            expect(headers).deep.eq([
+                {
+                    "fieldName": "name",
+                    "name": "content-disposition"
+                }
+            ])
+            expect(await Body.text(body)).deep.eq('tom')
+
+            const {headers: headers1, body: body1} = await Body.parsePart(req);
+            body1.pipe(fs.createWriteStream('./src/http/test/resources/hamburger-out.png'));
         })
 
     })

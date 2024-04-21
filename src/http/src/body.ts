@@ -168,9 +168,10 @@ export async function parseBody(
                     outputStream.push(null);
 
                     // return remainder including boundary we've just seen so that we can rinse and repeat
+                    console.log(typeof chunk === 'string');
                     const remainder = typeof chunk === 'string'
                         ? chunk.slice(j - boundary.length - 1)
-                        : chunk.subarray(bufferPointer - boundary.length - 1);
+                        : chunk.subarray(bufferPointer - boundary.length - 2);
 
                     if (!isFinalBoundary) {
                         inputStream.unshift(remainder)
@@ -203,7 +204,8 @@ type Chunk = Buffer | string;
 export function parseBoundary(chunk: Chunk, boundary: string): { remainder: Chunk, usingCRLF: boolean } {
     for (let j = 0; j < boundary.length; j++) {
         const char = typeof chunk[j] === 'string' ? chunk[j] : String.fromCharCode(chunk[j] as number);
-        if (char !== boundary[j]) throw new Error('Uh oh');
+        if (char !== boundary[j])
+            throw new Error('Boundary has not matched expected boundary given in content type header');
     }
     const usingCRLF = chunk[boundary.length] === 13 || chunk[boundary.length] === '\r';
     const skip = usingCRLF ? 2 : 1;
