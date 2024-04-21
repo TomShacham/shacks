@@ -105,7 +105,7 @@ Test file contents
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers: headers1, body: body1, done: done1} = await Body.multipartFormField(req);
+            const {headers: headers1, body: body1} = await Body.multipartFormField(req);
 
             expect(headers1).deep.eq([
                     {
@@ -115,9 +115,8 @@ Test file contents
                 ]
             )
             expect(await Body.text(body1)).eq('tom')
-            await done1
 
-            const {headers: headers2, body: body2, done: done2} = await Body.parsePart(req);
+            const {headers: headers2, body: body2} = await Body.parsePart(req);
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",
@@ -131,9 +130,8 @@ Test file contents
                 ]
             )
             expect(await Body.text(body2)).eq('Test file contents\n')
-            await done2;
 
-            const {headers: headers3, body: body3, done: done3} = await Body.parsePart(req)
+            const {headers: headers3, body: body3} = await Body.parsePart(req)
 
             expect(headers3).deep.eq([
                     {
@@ -143,7 +141,6 @@ Test file contents
                 ]
             )
             expect(await Body.text(body3)).eq('title')
-            await done3;
 
             const {headers: headers4, body: body4} = await Body.parsePart(req);
             expect(headers4).deep.eq([
@@ -181,7 +178,7 @@ Test file contents
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const formParts = await Body.multipartFormField(req);
-            const {headers: headers1, body: body1, done: done1} = formParts;
+            const {headers: headers1, body: body1} = formParts;
 
             expect(headers1).deep.eq([
                     {
@@ -191,9 +188,8 @@ Test file contents
                 ]
             )
             expect(await Body.text(body1)).eq('tom')
-            await done1;
 
-            const {headers: headers2, body: body2, done: done2} = await Body.parsePart(req);
+            const {headers: headers2, body: body2} = await Body.parsePart(req);
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",

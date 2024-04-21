@@ -3,8 +3,7 @@ import * as stream from "stream";
 
 type MultipartFormPart = {
     headers: MultipartFormHeader[],
-    body: stream.Readable,
-    done: Promise<null>
+    body: stream.Readable
 };
 
 export class Body {
@@ -24,17 +23,16 @@ export class Body {
             await new Promise((resolve) => {
                 (msg.body! as stream.Readable).on('readable', () => resolve(null))
             })
-            const {headers, body, done} = await Body.parsePart(msg)
-            return {headers, body: body, done}
+            const {headers, body} = await Body.parsePart(msg)
+            return {headers, body: body}
         } else {
-            return {headers: [], body: stream.Readable.from(''), done: new Promise(() => null)}
+            return {headers: [], body: stream.Readable.from('')}
         }
     }
 
     static async parsePart(msg: Req): Promise<{
         headers: MultipartFormHeader[],
         body: stream.Readable,
-        done: Promise<null>
     }> {
         /**
          * Multipart form parsing
@@ -71,8 +69,8 @@ export class Body {
         const {remainder: r1, usingCRLF} = parseBoundary(chunk, withHyphens)
         const {headers, remainder: r2} = parseHeaders(r1)
         inputStream.unshift(r2) // add remainder back to the front of the inputStream
-        const done = parseBody(inputStream, outputStream, withHyphens, usingCRLF);
-        return {headers, body: outputStream, done}
+        parseBody(inputStream, outputStream, withHyphens, usingCRLF);
+        return {headers, body: outputStream}
     }
 
 }
