@@ -3,9 +3,15 @@ import * as http from "http";
 import {AddressInfo} from "node:net";
 import * as timers from "timers";
 import * as stream from "stream";
+import * as process from "process";
 
 export async function httpServer(handler: HttpHandler, port = 0) {
-    const server = http.createServer()
+    const server = http.createServer();
+    process.on('uncaughtException', (e) => {
+        if ('code' in e && e.code === 'ECONNRESET') {
+            console.log('Connection reset');
+        }
+    })
     const listening = server.listen({port: port ?? 0, host: '127.0.0.1'})
     await new Promise(res => server.on('listening', (e: Event) => {
         port = (listening.address() as AddressInfo).port
@@ -23,8 +29,8 @@ export async function httpServer(handler: HttpHandler, port = 0) {
             nodeResponse.end()
         }
     })
-
     server.on('error', (err) => {
+        console.log('BIG FAT ERROR');
         console.log(err);
     })
 
