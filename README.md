@@ -22,7 +22,6 @@ Simple:
 - multipart form data
   - make nice API around Body.parsePart etc
   - document
-  - error handling ie destroying the stream on error and adding .on('error') handlers to tidy up
   - handle content encoding???
   - max file size so you don't get DOS'd
 - performance test

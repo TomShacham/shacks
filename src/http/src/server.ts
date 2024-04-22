@@ -30,7 +30,6 @@ export async function httpServer(handler: HttpHandler, port = 0) {
         }
     })
     server.on('error', (err) => {
-        console.log('BIG FAT ERROR');
         console.log(err);
     })
 

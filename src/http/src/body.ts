@@ -34,35 +34,19 @@ export class Body {
         }
     }
 
-    static async parsePart(msg: Req): Promise<{
-        headers: MultipartFormHeader[],
-        body: stream.Readable,
-    }> {
+    static async parsePart(msg: Req): Promise<MultipartFormPart> {
         /**
          * Multipart form parsing
-         *   - this is a streaming parser i.e. it can handle receiving the input stream in arbitrarily sized chunks;
-         *   the tests around it chop the request payload up into random chunks to ensure this
-         *   - there are 3 states: parsing a boundary, a header or the body
-         *     - body parsing is just accumulating bytes until we've seen the boundary
-         *     - boundary parsing is just checking the first N bytes are that of the boundary supplied in the
-         *     Content-Disposition header, where N is the boundary length; we are only in this state at the beginning,
-         *     all other boundary parsing is done by checking the last N bytes of the body; ie all boundary parsing
-         *     after the first one is done in retrospect rather than presently
-         *     - header parsing is CRLF delimited lines that we turn into Content-Disposition or Content-Type
-         *     or Content-Transfer-Encoding headers
-         *   - boundaries:
-         *     - multipart form boundaries start with at least two dashes (--) chrome adds about ten or more
-         *     - we have to check if we're at a boundary; there isn't an indication of where they are
-         *     because we're streaming potentially large data in multiple parts (that's the whole point!)
-         *     although sometimes there is a content-length header, we don't use it
-         *     - we keep track of the last N bytes where N is the boundary length (so that we can check if we have
-         *     seen the boundary) but for performance instead of checking this every time we see a new byte, instead
-         *     we do it whenever we see two dashes (--)
-         *   - bodies:
-         *     - all we do is add bytes to the body but if we have just seen a boundary then we need to lop off
-         *     the last N bytes we just added to the body, because they are the boundary not the body!
-         *   - we return "file parts" that represent the headers and body of each part sent in the request
-         *     as an intermediate representation, Forms has static methods to make file parts more user friendly≠
+         *
+         *     Returns headers immediately; and an outputStream that you can "for await"
+         *       we don't await parseBody otherwise we'd block until the inputStream is fully read
+         *
+         *     - each parse function returns the remainder of the Buffer that wasn't needed to be read
+         *       - the boundary parser just throws if the boundary doesn't match
+         *       - the header parser turns the headers into JSON;
+         *         - content-type, content-disposition and content-transfer-encoding
+         *       - the body parser just writes chunks to the outputStream until it sees a boundary
+         *         - if it sees the final boundary (two extra dashes at the end) then it pushes null to end the stream
          */
         const contentType = msg.headers?.["content-type"];
         const boundary = /boundary=(?<boundary>(.+))/.exec(contentType!)?.groups?.boundary
