@@ -241,6 +241,34 @@ Test-- file-- contents\r
             expect(text).deep.eq('Test-- file-- contents');
         })
 
+        it('destroy stream on error and body text doesnt explode', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+
+            let exampleMultipartFormData = `--${boundary}\r
+Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
+Content-Type: text/plain\r
+\r
+Test file contents\r
+--${boundary}--\r
+`
+
+            const req = request({
+                method: 'POST',
+                body: stream.Readable.from(exampleMultipartFormData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const {headers, body} = await Body.multipartFormField(req);
+
+            // stream isn't aborted at first
+            expect(body.readableAborted).eq(false);
+            // emit error so that stream aborts
+            body.emit('error', new Error('test error'));
+            // reading body shouldn't throw, just returns empty string
+            const text = await Body.text(body);
+            expect(body.readableAborted).eq(true);
+            expect(text).eq('');
+        })
+
         it('handles a text field with a png', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
@@ -280,16 +308,4 @@ Content-Type: image/png\r
         })
 
     })
-
-
 })
-
-
-function inChunks(exampleMPFormData: string, noOfChunks: number = 5 + Math.floor(Math.random() * 10)) {
-    let randomChunks: string[] = []
-    const chunkSize = exampleMPFormData.length / noOfChunks
-    for (let i = 0; i < noOfChunks; i++) {
-        randomChunks.push(exampleMPFormData.slice(i * chunkSize, (i + 1) * chunkSize))
-    }
-    return randomChunks;
-}

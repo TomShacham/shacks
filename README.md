@@ -19,16 +19,16 @@ Simple:
 
 ## Todo
 
-- performance test
-- routing
-- http client
-  - client sends multipart form data
 - multipart form data
   - make nice API around Body.parsePart etc
   - document
   - error handling ie destroying the stream on error and adding .on('error') handlers to tidy up
-  - handle content encoding
+  - handle content encoding???
   - max file size so you don't get DOS'd
+- performance test
+- routing
+- http client
+  - client sends multipart form data
 - handle application/x-www-form-urlencoded
 - security e.g. header obfuscation etc. (node should handle this?)
 - trailers

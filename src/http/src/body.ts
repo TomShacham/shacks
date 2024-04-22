@@ -10,6 +10,10 @@ export class Body {
     static async text(body: HttpMessageBody) {
         let text = '';
         if (!body) return text;
+        if (body instanceof stream.Readable && body.destroyed) {
+            console.warn('Stream destroyed so not trying to read body');
+            return text;
+        }
         const textDecoder = new TextDecoder();
         for await (const chunk of body) {
             text += textDecoder.decode(chunk);
@@ -65,6 +69,10 @@ export class Body {
         const withHyphens = '--' + boundary;
         const inputStream = msg.body! as stream.Readable;
         const outputStream = createReadable();
+        outputStream.once('error', (e) => {
+            console.error(e);
+            outputStream.destroy();
+        });
         const chunk = inputStream.read();
         const {remainder: r1, usingCRLF} = parseBoundary(chunk, withHyphens)
         const {headers, remainder: r2} = parseHeaders(r1)
