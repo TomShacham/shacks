@@ -122,7 +122,7 @@ export type ContentTypes = | 'text/plain'
     | 'multipart/alternative'
     | string;
 
-export async function parseBody(
+async function parseBody(
     inputStream: stream.Readable,
     outputStream: stream.Readable,
     boundary: string,
@@ -208,7 +208,7 @@ export async function parseBody(
 
 type Chunk = Buffer | string;
 
-export function parseBoundary(chunk: Chunk, boundary: string): { remainder: Chunk, usingCRLF: boolean } {
+function parseBoundary(chunk: Chunk, boundary: string): { remainder: Chunk, usingCRLF: boolean } {
     for (let j = 0; j < boundary.length; j++) {
         const char = typeof chunk[j] === 'string' ? chunk[j] : String.fromCharCode(chunk[j] as number);
         if (char !== boundary[j])
@@ -222,7 +222,7 @@ export function parseBoundary(chunk: Chunk, boundary: string): { remainder: Chun
     return {remainder, usingCRLF}
 }
 
-export function parseHeaders(chunk: Chunk): { headers: MultipartFormHeader[], remainder: Chunk } {
+function parseHeaders(chunk: Chunk): { headers: MultipartFormHeader[], remainder: Chunk } {
     let headers: MultipartFormHeader[] = []
     let header = '';
     let lastFour = ['x', 'x', 'x', 'x'];
