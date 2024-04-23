@@ -20,10 +20,8 @@ Simple:
 ## Todo
 
 - multipart form data
-  - make nice API around Body.parsePart etc
-  - document
-  - handle content encoding???
   - max file size so you don't get DOS'd
+  - document
 - performance test
 - routing
 - http client

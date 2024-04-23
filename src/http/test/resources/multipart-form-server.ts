@@ -1,6 +1,7 @@
 import {httpServer} from "../../src/server";
 import {Req, Res, response} from "../../src/interface";
-import {Body} from "../../src/body";
+import {MultipartForm} from "../../src/body";
+import * as fs from "fs";
 
 async function multipartFormServer() {
     let {baselineHeap, heap} = heapStats();
@@ -8,11 +9,13 @@ async function multipartFormServer() {
     const {server, close} = await httpServer({
         async handle(req: Req): Promise<Res> {
             if (req.method === 'POST') {
-                const {headers, body} = await Body.multipartFormField(req);
-                console.log({headers});
-                for await (const b of body) {
-
-                }
+                const {headers, body} = await MultipartForm.multipartFormField(req);
+                const fieldName = MultipartForm.fieldName(headers);
+                const fileName = MultipartForm.fileName(headers);
+                const contentType = MultipartForm.contentType(headers);
+                const contentTypeOrTxt = contentType?.split('/')?.[1] ?? 'txt';
+                const rand = Math.random().toString().slice(2, 5);
+                body.pipe(fs.createWriteStream(`./src/http/test/resources/${fieldName}-${rand}.${contentTypeOrTxt}`))
             }
             if (req.method === 'GET') {
                 return response({
@@ -41,7 +44,7 @@ function html() {
     
     <p>doesn't have a field; just a single file</p>
     <form enctype="multipart/form-data" action="/file" method="post">
-        <input type="file" id="avatar" name="file" />
+        <input type="file" id="avatar" name="avatar" />
         <input type="submit" value="submit" formaction="/file"/>    
     </form>
     

@@ -9,7 +9,7 @@ export async function httpServer(handler: HttpHandler, port = 0) {
     const server = http.createServer();
     process.on('uncaughtException', (e) => {
         if ('code' in e && e.code === 'ECONNRESET') {
-            console.log('Connection reset');
+            console.log('Connection reset by client');
         }
     })
     const listening = server.listen({port: port ?? 0, host: '127.0.0.1'})

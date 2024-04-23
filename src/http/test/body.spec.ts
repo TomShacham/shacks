@@ -1,6 +1,6 @@
 import * as stream from "stream";
 import {expect} from "chai";
-import {Body} from "../src/body";
+import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
 import {request} from "../src/interface";
 
@@ -16,20 +16,22 @@ describe('body', () => {
         it('a file by itself', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents\r
---${boundary}--\r
-`
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '',
+                'Test file contents',
+                `--${boundary}--`,
+                ''
+            ].join('\r\n')
 
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await Body.multipartFormField(req);
+            const {headers, body} = await MultipartForm.multipartFormField(req);
 
             expect(headers).deep.eq([
                     {
@@ -63,7 +65,7 @@ tom\r
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await Body.multipartFormField(req);
+            const {headers, body} = await MultipartForm.multipartFormField(req);
 
             expect(headers).deep.eq([
                     {
@@ -105,7 +107,7 @@ Test file contents
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers: headers1, body: body1} = await Body.multipartFormField(req);
+            const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
 
             expect(headers1).deep.eq([
                     {
@@ -116,7 +118,7 @@ Test file contents
             )
             expect(await Body.text(body1)).eq('tom')
 
-            const {headers: headers2, body: body2} = await Body.parsePart(req);
+            const {headers: headers2, body: body2} = await MultipartForm.multipartFormField(req);
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",
@@ -131,7 +133,7 @@ Test file contents
             )
             expect(await Body.text(body2)).eq('Test file contents\n')
 
-            const {headers: headers3, body: body3} = await Body.parsePart(req)
+            const {headers: headers3, body: body3} = await MultipartForm.multipartFormField(req)
 
             expect(headers3).deep.eq([
                     {
@@ -142,7 +144,7 @@ Test file contents
             )
             expect(await Body.text(body3)).eq('title')
 
-            const {headers: headers4, body: body4} = await Body.parsePart(req);
+            const {headers: headers4, body: body4} = await MultipartForm.multipartFormField(req);
             expect(headers4).deep.eq([
                     {
                         "fieldName": "bio",
@@ -158,7 +160,7 @@ Test file contents
             expect(await Body.text(body4)).eq('Test file contents\n');
         })
 
-        it('a text input and a file but with \\n only', async () => {
+        it('a text input and a file but with LF only (no CR)', async () => {
             const boundary = '------WebKitFormBoundary3SDTCgyIZiMSWJG7';
 
             let exampleMultipartFormData = `--${boundary}
@@ -177,7 +179,7 @@ Test file contents
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const formParts = await Body.multipartFormField(req);
+            const formParts = await MultipartForm.multipartFormField(req);
             const {headers: headers1, body: body1} = formParts;
 
             expect(headers1).deep.eq([
@@ -189,7 +191,7 @@ Test file contents
             )
             expect(await Body.text(body1)).eq('tom')
 
-            const {headers: headers2, body: body2} = await Body.parsePart(req);
+            const {headers: headers2, body: body2} = await MultipartForm.multipartFormField(req);
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",
@@ -206,7 +208,7 @@ Test file contents
             expect(await Body.text(body2)).eq('Test file contents')
         })
 
-        it('a file by itself but with dashes in it', async () => {
+        it('a file by itself with dashes in it (we use dashes to determine boundary checking)', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
             let exampleMultipartFormData = `--${boundary}\r
@@ -222,7 +224,7 @@ Test-- file-- contents\r
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await Body.multipartFormField(req);
+            const {headers, body} = await MultipartForm.multipartFormField(req);
 
             expect(headers).deep.eq([
                     {
@@ -257,7 +259,7 @@ Test file contents\r
                 body: stream.Readable.from(exampleMultipartFormData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await Body.multipartFormField(req);
+            const {headers, body} = await MultipartForm.multipartFormField(req);
 
             // stream isn't aborted at first
             expect(body.readableAborted).eq(false);
@@ -269,7 +271,7 @@ Test file contents\r
             expect(text).eq('');
         })
 
-        it('handles a text field with a png', async () => {
+        it('handles mixed mime types like text and a png', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
 
             const preFile = `--${boundary}\r
@@ -294,7 +296,7 @@ Content-Type: image/png\r
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await Body.multipartFormField(req);
+            const {headers, body} = await MultipartForm.multipartFormField(req);
             expect(headers).deep.eq([
                 {
                     "fieldName": "name",
@@ -303,8 +305,45 @@ Content-Type: image/png\r
             ])
             expect(await Body.text(body)).deep.eq('tom')
 
-            const {headers: headers1, body: body1} = await Body.parsePart(req);
+            const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
             body1.pipe(fs.createWriteStream('./src/http/test/resources/hamburger-out.png'));
+        })
+
+        it('parses content-transfer-encoding', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+
+            let exampleMultipartFormData = `--${boundary}\r
+Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
+Content-Type: text/plain\r
+Content-Transfer-Encoding: base64\r
+\r
+Test file contents\r
+--${boundary}--\r
+`
+
+            const req = request({
+                method: 'POST',
+                body: stream.Readable.from(exampleMultipartFormData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const {headers, body} = await MultipartForm.multipartFormField(req);
+
+            expect(headers).deep.eq([
+                    {
+                        "filename": "test.txt",
+                        "fieldName": "file",
+                        "name": "content-disposition"
+                    },
+                    {
+                        "name": "content-type",
+                        "value": "text/plain"
+                    },
+                    {
+                        "name": "content-transfer-encoding",
+                        "value": "base64"
+                    }
+                ]
+            )
         })
 
     })
