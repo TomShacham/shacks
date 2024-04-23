@@ -15,15 +15,14 @@ describe('body', () => {
 
         it('a file by itself', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
-
             const wireData = [
                 `--${boundary}`,
                 'Content-Disposition: form-data; name="file"; filename="test.txt"',
                 'Content-Type: text/plain',
-                '',
+                '', // headers end
                 'Test file contents',
                 `--${boundary}--`,
-                ''
+                '' // body end
             ].join('\r\n')
 
             const req = request({
@@ -52,17 +51,18 @@ describe('body', () => {
 
         it('a text input by itself', async () => {
             const boundary = '------WebKitFormBoundaryS7EqcIpCaxXELv6B';
-
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name="name"\r
-\r
-tom\r
---${boundary}--\r
-`
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
 
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const {headers, body} = await MultipartForm.multipartFormField(req);
@@ -74,37 +74,37 @@ tom\r
                     }
                 ]
             );
-            expect(await Body.text(body)).eq('tom')
+            expect(await Body.text(body)).eq('Test file contents')
         })
 
         it('multiple text inputs and multiple files', async () => {
             const boundary = '------WebKitFormBoundaryZnZz58ycjFeBNyad';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                '', // headers end
+                'tom',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents\n',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="title"',
+                '', // headers end
+                'title',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="bio"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents\n',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
 
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"name\"\r
-\r
-tom\r
---${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents
-\r
---${boundary}\r
-Content-Disposition: form-data; name=\"title\"\r
-\r
-title\r
---${boundary}\r
-Content-Disposition: form-data; name=\"bio\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents
-\r
---${boundary}--\r
-`
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
@@ -162,21 +162,23 @@ Test file contents
 
         it('a text input and a file but with LF only (no CR)', async () => {
             const boundary = '------WebKitFormBoundary3SDTCgyIZiMSWJG7';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                '', // headers end
+                'tom',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\n') // <---------- just using LF
 
-            let exampleMultipartFormData = `--${boundary}
-Content-Disposition: form-data; name="name"
-
-tom
---${boundary}
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
-
-Test file contents
---${boundary}--
-`
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const formParts = await MultipartForm.multipartFormField(req);
@@ -210,18 +212,19 @@ Test file contents
 
         it('a file by itself with dashes in it (we use dashes to determine boundary checking)', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
-
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test-- file-- contents\r
---${boundary}--\r
-`
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test-- file-- contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
 
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const {headers, body} = await MultipartForm.multipartFormField(req);
@@ -245,18 +248,19 @@ Test-- file-- contents\r
 
         it('destroy stream on error and body text doesnt explode', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
-
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-\r
-Test file contents\r
---${boundary}--\r
-`
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
 
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const {headers, body} = await MultipartForm.multipartFormField(req);
@@ -273,16 +277,17 @@ Test file contents\r
 
         it('handles mixed mime types like text and a png', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+            const preFile = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                '', // headers end
+                'tom',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: image/png',
+                '', // headers end
+            ].join('\r\n')
 
-            const preFile = `--${boundary}\r
-Content-Disposition: form-data; name=\"name\"\r
-\r
-tom\r
---${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: image/png\r
-\r
-`
             const postFile = `\r
 --${boundary}--\r
 `
@@ -311,19 +316,20 @@ Content-Type: image/png\r
 
         it('parses content-transfer-encoding', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
-
-            let exampleMultipartFormData = `--${boundary}\r
-Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"\r
-Content-Type: text/plain\r
-Content-Transfer-Encoding: base64\r
-\r
-Test file contents\r
---${boundary}--\r
-`
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                'Content-Transfer-Encoding: base64',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
 
             const req = request({
                 method: 'POST',
-                body: stream.Readable.from(exampleMultipartFormData),
+                body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
             const {headers, body} = await MultipartForm.multipartFormField(req);
