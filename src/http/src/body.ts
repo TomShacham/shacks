@@ -23,13 +23,16 @@ export class Body {
 }
 
 export class MultipartForm {
-    static async multipartFormField(msg: Req): Promise<MultipartFormPart> {
+    static async multipartFormField(
+        msg: Req,
+        options: MultipartOptions = {maxHeadersSizeBytes: 2048}
+    ): Promise<MultipartFormPart> {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
             await new Promise((resolve) => {
                 (msg.body! as stream.Readable).once('readable', () => resolve(null));
             })
-            const {headers, body} = await MultipartForm.parsePart(msg)
+            const {headers, body} = await MultipartForm.parsePart(msg, options.maxHeadersSizeBytes)
             return {headers, body: body}
         } else {
             return {headers: [], body: stream.Readable.from('')}
@@ -52,7 +55,7 @@ export class MultipartForm {
         return (headers.find(h => h.name === 'content-transfer-encoding') as ContentTransferEncodingHeader)?.value;
     }
 
-    private static async parsePart(msg: Req): Promise<MultipartFormPart> {
+    private static async parsePart(msg: Req, maxHeadersSizeBytes: number): Promise<MultipartFormPart> {
         /**
          * Multipart form parsing
          *
@@ -77,7 +80,11 @@ export class MultipartForm {
         });
         const chunk = inputStream.read();
         const {remainder: r1, usingCRLF} = MultipartForm.parseBoundary(chunk, withHyphens)
-        const {headers, remainder: r2} = MultipartForm.parseHeaders(r1)
+        const defaultMaxHeadersSize = 2048;
+        const {
+            headers,
+            remainder: r2
+        } = MultipartForm.parseHeaders(r1, maxHeadersSizeBytes)
         inputStream.unshift(r2) // add remainder back to the front of the inputStream
         // don't await or else we cannot stream the output on the consumer side
         MultipartForm.parseBody(inputStream, outputStream, withHyphens, usingCRLF);
@@ -182,13 +189,17 @@ export class MultipartForm {
         return {remainder, usingCRLF}
     }
 
-    private static parseHeaders(chunk: Chunk): { headers: MultipartFormHeader[], remainder: Chunk } {
+    private static parseHeaders(chunk: Chunk, maxHeadersSizeBytes: number): {
+        headers: MultipartFormHeader[];
+        remainder: Chunk
+    } {
         let headers: MultipartFormHeader[] = []
         let header = '';
         let lastFour = ['x', 'x', 'x', 'x'];
 
 
         for (let j = 0; j < chunk.length; j++) {
+            if (j > maxHeadersSizeBytes) throw new Error(`Max header size of ${maxHeadersSizeBytes} bytes exceeded`)
             const byte: string | number = chunk[j];
             const char = typeof byte === 'string' ? byte : String.fromCharCode(byte);
             lastFour.shift();
@@ -216,6 +227,10 @@ export class MultipartForm {
         return {headers, remainder: chunk}
     }
 }
+
+type MultipartOptions = {
+    maxHeadersSizeBytes: number;
+};
 
 export type ContentTypeHeader = {
     name: 'content-type',

@@ -20,12 +20,14 @@ Simple:
 ## Todo
 
 - multipart form data
-  - max file size so you don't get DOS'd
+  - change HttpMessageBody to just stream?
+    and separate out interface for HttpClientRequest and HttpServerResponse
+    so you can still conveniently use a string body?
   - document
+  - http client
+    - client sends multipart form data
 - performance test
 - routing
-- http client
-  - client sends multipart form data
 - handle application/x-www-form-urlencoded
 - security e.g. header obfuscation etc. (node should handle this?)
 - trailers

@@ -352,5 +352,30 @@ describe('body', () => {
             )
         })
 
+        it('can provide a max headers to protect against DOS', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                'Content-Transfer-Encoding: base64',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
+
+            const req = request({
+                method: 'POST',
+                body: stream.Readable.from(wireData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+
+            try {
+                await MultipartForm.multipartFormField(req, {maxHeadersSizeBytes: 10});
+            } catch (e) {
+                expect((e as Error).message).eq('Max header size of 10 bytes exceeded')
+            }
+        })
     })
 })
