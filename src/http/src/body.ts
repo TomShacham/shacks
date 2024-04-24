@@ -80,7 +80,6 @@ export class MultipartForm {
         });
         const chunk = inputStream.read();
         const {remainder: r1, usingCRLF} = MultipartForm.parseBoundary(chunk, withHyphens)
-        const defaultMaxHeadersSize = 2048;
         const {
             headers,
             remainder: r2

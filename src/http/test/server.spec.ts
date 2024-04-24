@@ -3,10 +3,9 @@ import {Req, Res, response} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
-import {Body} from "../src/body";
+import {Body, MultipartForm} from "../src/body";
 import * as stream from "stream";
 import * as zlib from "zlib";
-import * as process from "process";
 
 describe('client / server', function () {
     it('send / receive request / response', async () => {
@@ -77,38 +76,40 @@ describe('client / server', function () {
     it('multipart form data', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
-                return response({status: 200, body: req.body})
+                const {headers: h1, body: b1} = await MultipartForm.multipartFormField(req);
+                const {headers: h2, body: b2} = await MultipartForm.multipartFormField(req);
+                const text1 = await Body.text(b1);
+                const text2 = await Body.text(b2);
+
+                return response({status: 200, body: JSON.stringify({text: text1, file: text2})})
             }
         };
 
         const {port, close: closeServer} = await httpServer(handler);
 
-        const fileName = 'data-streaming-one-way.txt';
-
         try {
-            const size = 10 * 1024 * 1024;
-            // payload has two input fields, one is text field "name", one is file field
-            const payload = `------WebKitFormBoundary5TIW9pTKMB25OROE
+            const boundary = `----WebKitFormBoundary5TIW9pTKMB25OROE`;
+            const payload = `--${boundary}
 Content-Disposition: form-data; name="name"
 
 Tommy
-------WebKitFormBoundary5TIW9pTKMB25OROE
+--${boundary}
 Content-Disposition: form-data; name="file"; filename="test.txt"
 Content-Type: text/plain
 
 Upload test file
-------WebKitFormBoundary5TIW9pTKMB25OROE--
+--${boundary}--
 
 `
             const response = await client().handle({
                 method: 'POST',
                 path: `http://localhost:${port}/`,
-                headers: {'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryF0Nj67HEBBHHIhcv'},
+                headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
                 body: payload
             });
             expect(response.status).to.eq(200);
             expect(response.statusText).to.eq("OK");
-            expect(await Body.text(response.body!)).to.eq('testing file uploads');
+            expect(await Body.text(response.body!)).to.eq('{"text":"Tommy","file":"Upload test file"}');
         } finally {
             await closeServer()
         }
@@ -151,9 +152,6 @@ Upload test file
 
         try {
             const size = 10 * 1024 * 1024;
-            setInterval(() => {
-                console.log(Object.entries(process.memoryUsage()).map(p => [p[0], Number(p[1]) / (1024 * 1024)]));
-            }, 1)
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
             const response = await client().handle({

@@ -20,16 +20,21 @@ Simple:
 ## Todo
 
 - multipart form data
-  - change HttpMessageBody to just stream?
-    and separate out interface for HttpClientRequest and HttpServerResponse
-    so you can still conveniently use a string body?
   - document
   - http client
     - client sends multipart form data
+- handle application/x-www-form-urlencoded
 - performance test
 - routing
-- handle application/x-www-form-urlencoded
 - security e.g. header obfuscation etc. (node should handle this?)
 - trailers
 - does node handle inflate/deflate ?
   - if not then we can write some filters that do
+
+## Open questions
+
+- change HttpMessageBody to just stream?
+  and separate out interface for HttpClientRequest and HttpServerResponse
+  so you can still conveniently use a string body
+  but when dealing with a node request we are always streaming
+  
