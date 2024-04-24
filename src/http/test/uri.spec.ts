@@ -2,6 +2,19 @@ import {assert} from "chai";
 import {uri, uriString} from "../src/uri";
 
 describe('uri', () => {
+    it('should parse path by itself', () => {
+        const uriString = '/path/to/resource?query1=value1&query2=value2#fragment';
+        const match = uri(uriString);
+
+        assert.ok(match);
+        assert.strictEqual(match.protocol, undefined);
+        assert.strictEqual(match.hostname, undefined);
+        assert.strictEqual(match.port, undefined);
+        assert.strictEqual(match.path, '/path/to/resource');
+        assert.strictEqual(match.query, '?query1=value1&query2=value2');
+        assert.strictEqual(match.fragment, '#fragment');
+    });
+
     it('should parse URI with protocol, hostname, and path', () => {
         const uriString = 'http://example.com/path/to/resource';
         const match = uri(uriString);

@@ -8,7 +8,7 @@ import * as stream from "stream";
 import * as zlib from "zlib";
 
 describe('client / server', function () {
-    it('send / receive request / response', async () => {
+    it('sends and receives http messages', async () => {
         const handler = {
             async handle(req: Req): Promise<Res> {
                 return response({status: 201, headers: req.headers, body: await Body.text(req.body!)})
@@ -73,48 +73,6 @@ describe('client / server', function () {
         }
     })
 
-    it('multipart form data', async () => {
-        const handler = {
-            async handle(req: Req): Promise<Res> {
-                const {headers: h1, body: b1} = await MultipartForm.multipartFormField(req);
-                const {headers: h2, body: b2} = await MultipartForm.multipartFormField(req);
-                const text1 = await Body.text(b1);
-                const text2 = await Body.text(b2);
-
-                return response({status: 200, body: JSON.stringify({text: text1, file: text2})})
-            }
-        };
-
-        const {port, close: closeServer} = await httpServer(handler);
-
-        try {
-            const boundary = `----WebKitFormBoundary5TIW9pTKMB25OROE`;
-            const payload = `--${boundary}
-Content-Disposition: form-data; name="name"
-
-Tommy
---${boundary}
-Content-Disposition: form-data; name="file"; filename="test.txt"
-Content-Type: text/plain
-
-Upload test file
---${boundary}--
-
-`
-            const response = await client().handle({
-                method: 'POST',
-                path: `http://localhost:${port}/`,
-                headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
-                body: payload
-            });
-            expect(response.status).to.eq(200);
-            expect(response.statusText).to.eq("OK");
-            expect(await Body.text(response.body!)).to.eq('{"text":"Tommy","file":"Upload test file"}');
-        } finally {
-            await closeServer()
-        }
-    })
-
     it('proxies stream - can do on the fly compression', async function () {
         const proxyPort = 1234;
 
@@ -172,6 +130,48 @@ Upload test file
             fs.unlinkSync(filePath)
             await closeServer()
             await closeProxy()
+        }
+    })
+
+    it('multipart form data', async () => {
+        const handler = {
+            async handle(req: Req): Promise<Res> {
+                const {headers: h1, body: b1} = await MultipartForm.multipartFormField(req);
+                const {headers: h2, body: b2} = await MultipartForm.multipartFormField(req);
+                const text1 = await Body.text(b1);
+                const text2 = await Body.text(b2);
+
+                return response({status: 200, body: JSON.stringify({text: text1, file: text2})})
+            }
+        };
+
+        const {port, close: closeServer} = await httpServer(handler);
+
+        try {
+            const boundary = `----WebKitFormBoundary5TIW9pTKMB25OROE`;
+            const payload = `--${boundary}
+Content-Disposition: form-data; name="name"
+
+Tommy
+--${boundary}
+Content-Disposition: form-data; name="file"; filename="test.txt"
+Content-Type: text/plain
+
+Upload test file
+--${boundary}--
+
+`
+            const response = await client().handle({
+                method: 'POST',
+                path: `http://localhost:${port}/`,
+                headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
+                body: payload
+            });
+            expect(response.status).to.eq(200);
+            expect(response.statusText).to.eq("OK");
+            expect(await Body.text(response.body!)).to.eq('{"text":"Tommy","file":"Upload test file"}');
+        } finally {
+            await closeServer()
         }
     })
 })

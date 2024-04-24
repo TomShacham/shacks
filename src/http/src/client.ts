@@ -45,3 +45,7 @@ export class HttpClient implements HttpHandler {
 export function client(): HttpClient {
     return new HttpClient()
 }
+
+export function get(path: string = '/', headers: http.IncomingHttpHeaders = {}): Req {
+    return {method: 'GET', path, headers}
+}

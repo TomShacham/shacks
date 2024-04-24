@@ -20,6 +20,10 @@ export class Body {
         }
         return text;
     }
+
+    static async json(body: HttpMessageBody) {
+        return JSON.parse(await this.text(body));
+    }
 }
 
 export class MultipartForm {
