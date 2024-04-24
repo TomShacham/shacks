@@ -1,16 +1,16 @@
-import {HttpHandler, Req, request, Res, response} from "../src/interface";
 import {expect} from "chai";
+import {HTTP, HttpHandler, HttpRequest, HttpResponse} from "../src/interface";
 
-type Route = { path: string; handler: { handle(req: Req): Promise<Res> }; method: string };
+type Route = { path: string; handler: { handle(req: HttpRequest): Promise<HttpResponse> }; method: string };
 
 class Router implements HttpHandler {
     constructor(public routes: Route[]) {
     }
 
-    handle(req: Req<string>): Promise<Res<string>> {
+    handle(req: HttpRequest): Promise<HttpResponse> {
         const notFoundHandler = {
-            async handle(req: Req): Promise<Res> {
-                return response({status: 404, body: "Not found"})
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                return HTTP.response({status: 404, body: "Not found"})
             }
         };
         const apiHandler = this.routes.find(it => it.path === req.path && it.method === req.method)?.handler;
@@ -26,12 +26,12 @@ describe('router', () => {
             path: "/",
             method: "GET",
             handler: {
-                async handle(req: Req): Promise<Res> {
-                    return response({status: 200, body: 'Hello'})
+                async handle(req: HttpRequest): Promise<HttpResponse> {
+                    return HTTP.response({status: 200, body: 'Hello'})
                 }
             }
         }]);
-        const res = await router.handle(request({method: 'GET', path: '/'}))
+        const res = await router.handle(HTTP.request({method: 'GET', path: '/'}))
         expect(res.status).eq(200);
         expect(res.body).eq('Hello');
     })
@@ -41,12 +41,12 @@ describe('router', () => {
             path: "/resource/{id}",
             method: "GET",
             handler: {
-                async handle(req: Req): Promise<Res> {
-                    return response({status: 200, body: 'Hello'})
+                async handle(req: HttpRequest): Promise<HttpResponse> {
+                    return HTTP.response({status: 200, body: 'Hello'})
                 }
             }
         }]);
-        const res = await router.handle(request({method: 'GET', path: '/resource/123'}))
+        const res = await router.handle(HTTP.request({method: 'GET', path: '/resource/123'}))
         expect(res.status).eq(200);
         expect(res.body).eq('Hello 123');
     })

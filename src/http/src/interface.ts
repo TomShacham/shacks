@@ -1,25 +1,28 @@
+import * as http from "http";
 import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
 import * as stream from "stream";
+import {HttpClient} from "./client";
+import {httpServer, HttpServer} from "./server";
 
 export interface HttpHandler {
-    handle(req: Req): Promise<Res>
+    handle(req: HttpRequest): Promise<HttpResponse>
 }
 
-export type Payload = string | Uint8Array;
-export type HttpMessageBody<TBody extends Payload = string | Uint8Array> =
+export type Payload = string | Buffer;
+export type HttpMessageBody<TBody extends Payload = string | Buffer> =
     | stream.Duplex
     | AsyncIterable<TBody>
     | TBody;
 
-export interface HttpMessage<TBody extends Payload = string> {
+export interface HttpMessage<TBody extends Payload = Payload> {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: NodeJS.Dict<string>
     body?: HttpMessageBody<TBody>
 }
 
-export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'CONNECT' | 'HEAD' | 'OPTIONS';
+export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 
-export interface Req<TBody extends Payload = string> extends HttpMessage<TBody> {
+export interface HttpRequest<TBody extends Payload = Payload> extends HttpMessage<TBody> {
     // Note: The TE request header needs to be set to "trailers" to allow trailer fields.
     method: Method
     headers: IncomingHttpHeaders
@@ -27,26 +30,73 @@ export interface Req<TBody extends Payload = string> extends HttpMessage<TBody> 
     version?: string
 }
 
-export interface Res<TBody extends Payload = string> extends HttpMessage<TBody> {
+export interface HttpResponse<TBody extends Payload = Payload> extends HttpMessage<TBody> {
     headers: OutgoingHttpHeaders
     status: number
     statusText?: string
 }
 
-export function response(res?: Partial<Res>): Res {
-    return {status: 200, headers: {}, ...res}
-}
+export class HTTP {
+    static response(res?: Partial<HttpResponse>): HttpResponse {
+        return {status: 200, headers: {}, ...res}
+    }
 
-export function request(req?: Partial<Req>): Req {
-    return {method: 'GET', path: '/', headers: {}, ...req}
-}
+    static request(req?: Partial<HttpRequest>): HttpRequest {
+        return {method: 'GET', path: '/', headers: {}, ...req}
+    }
 
-export function isReq(msg: HttpMessage): msg is Req {
-    return 'method' in msg;
-}
+    static isRequest(msg: HttpMessage): msg is HttpRequest {
+        return 'method' in msg;
+    }
 
-export function isRes(msg: HttpMessage): msg is Res {
-    return 'status' in msg;
+    static isResponse(msg: HttpMessage): msg is HttpResponse {
+        return 'status' in msg;
+    }
+
+    static client(): HttpClient {
+        return new HttpClient()
+    }
+
+    static async server(handler: HttpHandler, port = 0): Promise<HttpServer> {
+        return httpServer(handler, port);
+    }
+
+    static get(path: string = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        return {method: 'GET', path, headers}
+    }
+
+    static post(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        return {method: 'POST', body, path, headers}
+    }
+
+    static put(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        return {method: 'PUT', body, path, headers}
+    }
+
+    static patch(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        return {method: 'PATCH', body, path, headers}
+    }
+
+    static delete(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        /*
+            Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
+                for node to be happy, even though POST, PUT and PATCH can figure themselves out...
+         */
+        if (typeof body === 'string' || body instanceof Buffer) {
+            const contentLength = body.length.toString();
+            return {method: 'DELETE', body, path, headers: {...headers, "content-length": contentLength}}
+        } else {
+            return {method: 'DELETE', body, path, headers: {...headers, "transfer-encoding": "chunked"}}
+        }
+    }
+
+    static options(path = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        return {method: 'OPTIONS', path, headers}
+    }
+
+    static head(path = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+        return {method: 'HEAD', path, headers}
+    }
 }
 
 /*

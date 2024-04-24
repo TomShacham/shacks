@@ -1,4 +1,4 @@
-import {HttpMessageBody, Req} from "./interface";
+import {HttpMessageBody, HttpRequest} from "./interface";
 import * as stream from "stream";
 
 type MultipartFormPart = {
@@ -28,7 +28,7 @@ export class Body {
 
 export class MultipartForm {
     static async multipartFormField(
-        msg: Req,
+        msg: HttpRequest,
         options: MultipartOptions = {maxHeadersSizeBytes: 2048}
     ): Promise<MultipartFormPart> {
         const contentType = msg.headers?.["content-type"];
@@ -59,7 +59,7 @@ export class MultipartForm {
         return (headers.find(h => h.name === 'content-transfer-encoding') as ContentTransferEncodingHeader)?.value;
     }
 
-    private static async parsePart(msg: Req, maxHeadersSizeBytes: number): Promise<MultipartFormPart> {
+    private static async parsePart(msg: HttpRequest, maxHeadersSizeBytes: number): Promise<MultipartFormPart> {
         /**
          * Multipart form parsing
          *

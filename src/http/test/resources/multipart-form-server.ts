@@ -1,5 +1,5 @@
 import {httpServer} from "../../src/server";
-import {Req, Res, response} from "../../src/interface";
+import {HTTP, HttpRequest, HttpResponse} from "../../src/interface";
 import {MultipartForm} from "../../src/body";
 import * as fs from "fs";
 
@@ -7,7 +7,7 @@ async function multipartFormServer() {
     let {baselineHeap, heap} = heapStats();
 
     const {server, close} = await httpServer({
-        async handle(req: Req): Promise<Res> {
+        async handle(req: HttpRequest): Promise<HttpResponse> {
             if (req.method === 'POST') {
                 const {headers, body} = await MultipartForm.multipartFormField(req);
                 const fieldName = MultipartForm.fieldName(headers);
@@ -18,13 +18,9 @@ async function multipartFormServer() {
                 body.pipe(fs.createWriteStream(`./src/http/test/resources/${fieldName}-${rand}.${contentTypeOrTxt}`))
             }
             if (req.method === 'GET') {
-                return response({
-                    body: html(), status: 200
-                })
+                return HTTP.response({body: html(), status: 200})
             } else {
-                return response({
-                    body: '', status: 302, headers: {"Location": "/file"}
-                })
+                return HTTP.response({body: '', status: 302, headers: {"Location": "/file"}})
             }
         }
     }, 3000);

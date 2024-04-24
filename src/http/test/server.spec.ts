@@ -1,5 +1,4 @@
-import {client} from "../src/client";
-import {Req, Res, response} from "../src/interface";
+import {HTTP, HttpRequest, HttpResponse} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
@@ -10,14 +9,14 @@ import * as zlib from "zlib";
 describe('client / server', function () {
     it('sends and receives http messages', async () => {
         const handler = {
-            async handle(req: Req): Promise<Res> {
-                return response({status: 201, headers: req.headers, body: await Body.text(req.body!)})
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                return HTTP.response({status: 201, headers: req.headers, body: await Body.text(req.body!)})
             }
         };
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await client().handle({
+            const response = await HTTP.client().handle({
                 method: 'POST',
                 path: `http://localhost:${port}/`,
                 headers: {},
@@ -38,8 +37,8 @@ describe('client / server', function () {
 
     it('streaming one way', async () => {
         const handler = {
-            async handle(req: Req): Promise<Res> {
-                return response({
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                return HTTP.response({
                     status: 201,
                     headers: {foo: 'bar'},
                     body: JSON.stringify({size: (await Body.text(req.body!)).length})
@@ -56,7 +55,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await client().handle({
+            const response = await HTTP.client().handle({
                 method: 'POST',
                 path: `http://localhost:${port}/`,
                 headers: {},
@@ -77,14 +76,14 @@ describe('client / server', function () {
         const proxyPort = 1234;
 
         const handler = {
-            async handle(req: Req): Promise<Res> {
-                const responseFromProxy = await client().handle({
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                const responseFromProxy = await HTTP.client().handle({
                     method: "POST",
                     path: `http://localhost:${proxyPort}`,
                     body: req.body, // file read stream
                     headers: {}
                 })
-                return response({
+                return HTTP.response({
                     status: 200,
                     body: responseFromProxy.body
                 })
@@ -92,9 +91,9 @@ describe('client / server', function () {
         };
 
         const proxyHandler = {
-            async handle(req: Req): Promise<Res> {
+            async handle(req: HttpRequest): Promise<HttpResponse> {
                 const body = (req.body as stream.Readable).pipe(zlib.createGzip());
-                return response({
+                return HTTP.response({
                     status: 201,
                     headers: {foo: 'bar'},
                     body: body,
@@ -112,7 +111,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await client().handle({
+            const response = await HTTP.client().handle({
                 method: 'POST',
                 path: `http://localhost:${port}/`,
                 headers: {},
@@ -135,13 +134,13 @@ describe('client / server', function () {
 
     it('multipart form data', async () => {
         const handler = {
-            async handle(req: Req): Promise<Res> {
+            async handle(req: HttpRequest): Promise<HttpResponse> {
                 const {headers: h1, body: b1} = await MultipartForm.multipartFormField(req);
                 const {headers: h2, body: b2} = await MultipartForm.multipartFormField(req);
                 const text1 = await Body.text(b1);
                 const text2 = await Body.text(b2);
 
-                return response({status: 200, body: JSON.stringify({text: text1, file: text2})})
+                return HTTP.response({status: 200, body: JSON.stringify({text: text1, file: text2})})
             }
         };
 
@@ -161,7 +160,7 @@ Upload test file
 --${boundary}--
 
 `
-            const response = await client().handle({
+            const response = await HTTP.client().handle({
                 method: 'POST',
                 path: `http://localhost:${port}/`,
                 headers: {'content-type': `multipart/form-data; boundary=${boundary}`},

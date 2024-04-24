@@ -1,11 +1,17 @@
-import {HttpHandler, Method, request} from "./interface";
+import {HTTP, HttpHandler, HttpResponse, Method} from "./interface";
 import * as http from "http";
-import {AddressInfo} from "node:net";
+import {AddressInfo, Server} from "node:net";
 import * as timers from "timers";
 import * as stream from "stream";
 import * as process from "process";
 
-export async function httpServer(handler: HttpHandler, port = 0) {
+export type HttpServer = {
+    server: Server;
+    port: number;
+    close: (timeout?: number) => Promise<Awaited<unknown>>
+};
+
+export async function httpServer(handler: HttpHandler, port = 0): Promise<HttpServer> {
     const server = http.createServer();
     process.on('uncaughtException', (e) => {
         if ('code' in e && e.code === 'ECONNRESET') {
@@ -17,9 +23,25 @@ export async function httpServer(handler: HttpHandler, port = 0) {
         port = (listening.address() as AddressInfo).port
         res(e)
     }))
+
+    function setDefaultHeadResponseHeaders(res: HttpResponse) {
+        if (res.headers["content-length"] === undefined && (typeof res.body === 'string' || res.body instanceof Buffer)) {
+            res.headers["content-length"] = res.body.length.toString()
+        }
+        if (res.headers["content-type"] === undefined && (typeof res.body === 'string')) {
+            res.headers["content-type"] = 'text/plain'
+        }
+    }
+
     server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {
         const {headers, method, url} = nodeReq;
-        const res = await handler.handle(request({body: nodeReq, headers, method: method as Method, path: url}));
+        const res = await handler.handle(HTTP.request({
+            body: nodeReq,
+            headers,
+            method: method as Method,
+            path: url
+        }));
+        if (method?.toLowerCase() === 'head') setDefaultHeadResponseHeaders(res);
         nodeResponse.writeHead(res.status, res.headers)
         if (res.body instanceof stream.Readable) {
             res.body.on('end', () => nodeResponse.end())

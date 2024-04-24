@@ -21,8 +21,7 @@ Simple:
 
 - multipart form data
   - document
-  - http client
-    - client sends multipart form data
+  - http client sends multipart form data
 - handle application/x-www-form-urlencoded
 - performance test
 - routing
