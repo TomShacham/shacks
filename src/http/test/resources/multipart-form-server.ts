@@ -1,5 +1,5 @@
 import {httpServer} from "../../src/server";
-import {HTTP, HttpRequest, HttpResponse} from "../../src/interface";
+import {H22P, HttpRequest, HttpResponse} from "../../src/interface";
 import {MultipartForm} from "../../src/body";
 import * as fs from "fs";
 
@@ -13,14 +13,20 @@ async function multipartFormServer() {
                 const fieldName = MultipartForm.fieldName(headers);
                 const fileName = MultipartForm.fileName(headers);
                 const contentType = MultipartForm.contentType(headers);
+
                 const contentTypeOrTxt = contentType?.split('/')?.[1] ?? 'txt';
                 const rand = Math.random().toString().slice(2, 5);
+
+                // for await ({headers, body} of multipartFormFields(req)) {
+                // do whatever you want
+                // }
+
                 body.pipe(fs.createWriteStream(`./src/http/test/resources/${fieldName}-${rand}.${contentTypeOrTxt}`))
             }
             if (req.method === 'GET') {
-                return HTTP.response({body: html(), status: 200})
+                return H22P.response({body: html(), status: 200})
             } else {
-                return HTTP.response({body: '', status: 302, headers: {"Location": "/file"}})
+                return H22P.response({body: '', status: 302, headers: {"Location": "/file"}})
             }
         }
     }, 3000);

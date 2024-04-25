@@ -2,7 +2,7 @@ import * as stream from "stream";
 import {expect} from "chai";
 import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
-import {HTTP} from "../src/interface";
+import {H22P} from "../src/interface";
 
 describe('body', () => {
 
@@ -25,7 +25,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -60,7 +60,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -102,7 +102,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -176,7 +176,7 @@ describe('body', () => {
                 '' // body end
             ].join('\n') // <---------- just using LF
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -222,7 +222,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -258,7 +258,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -296,7 +296,7 @@ describe('body', () => {
                 fs.readFileSync('./src/http/test/resources/hamburger.png'),
                 Buffer.from(postFile, 'binary')])
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -327,7 +327,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -365,17 +365,47 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = HTTP.request({
+            const req = H22P.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
+
 
             try {
                 await MultipartForm.multipartFormField(req, {maxHeadersSizeBytes: 10});
             } catch (e) {
                 expect((e as Error).message).eq('Max header size of 10 bytes exceeded')
             }
+        })
+
+        it('get interesting headers', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                'Content-Transfer-Encoding: base64',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
+
+            const req = H22P.request({
+                method: 'POST',
+                body: stream.Readable.from(wireData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+
+            const {headers,} = await MultipartForm.multipartFormField(req);
+            const contentEncoding = MultipartForm.contentEncoding(headers);
+            const fieldName = MultipartForm.fieldName(headers);
+            const fileName = MultipartForm.fileName(headers);
+
+            expect(contentEncoding).eq('base64')
+            expect(fieldName).eq('file')
+            expect(fileName).eq('test.txt')
         })
     })
 })

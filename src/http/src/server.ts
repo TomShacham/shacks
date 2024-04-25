@@ -1,4 +1,4 @@
-import {HTTP, HttpHandler, HttpResponse, Method} from "./interface";
+import {H22P, HttpHandler, HttpResponse, Method} from "./interface";
 import * as http from "http";
 import {AddressInfo, Server} from "node:net";
 import * as timers from "timers";
@@ -35,7 +35,7 @@ export async function httpServer(handler: HttpHandler, port = 0): Promise<HttpSe
 
     server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {
         const {headers, method, url} = nodeReq;
-        const res = await handler.handle(HTTP.request({
+        const res = await handler.handle(H22P.request({
             body: nodeReq,
             headers,
             method: method as Method,

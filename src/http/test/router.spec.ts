@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {HTTP, HttpHandler, HttpRequest, HttpResponse} from "../src/interface";
+import {H22P, HttpHandler, HttpRequest, HttpResponse} from "../src/interface";
 
 type Route = { path: string; handler: { handle(req: HttpRequest): Promise<HttpResponse> }; method: string };
 
@@ -10,7 +10,7 @@ class Router implements HttpHandler {
     handle(req: HttpRequest): Promise<HttpResponse> {
         const notFoundHandler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                return HTTP.response({status: 404, body: "Not found"})
+                return H22P.response({status: 404, body: "Not found"})
             }
         };
         const apiHandler = this.routes.find(it => it.path === req.path && it.method === req.method)?.handler;
@@ -27,11 +27,11 @@ describe('router', () => {
             method: "GET",
             handler: {
                 async handle(req: HttpRequest): Promise<HttpResponse> {
-                    return HTTP.response({status: 200, body: 'Hello'})
+                    return H22P.response({status: 200, body: 'Hello'})
                 }
             }
         }]);
-        const res = await router.handle(HTTP.request({method: 'GET', path: '/'}))
+        const res = await router.handle(H22P.request({method: 'GET', path: '/'}))
         expect(res.status).eq(200);
         expect(res.body).eq('Hello');
     })
@@ -42,11 +42,11 @@ describe('router', () => {
             method: "GET",
             handler: {
                 async handle(req: HttpRequest): Promise<HttpResponse> {
-                    return HTTP.response({status: 200, body: 'Hello'})
+                    return H22P.response({status: 200, body: 'Hello'})
                 }
             }
         }]);
-        const res = await router.handle(HTTP.request({method: 'GET', path: '/resource/123'}))
+        const res = await router.handle(H22P.request({method: 'GET', path: '/resource/123'}))
         expect(res.status).eq(200);
         expect(res.body).eq('Hello 123');
     })

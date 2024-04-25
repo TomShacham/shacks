@@ -1,13 +1,13 @@
-import {HttpMessageBody, HttpRequest} from "./interface";
+import {HttpMessageBody, HttpRequest, isSimpleBody} from "./interface";
 import * as stream from "stream";
 
-type MultipartFormPart = {
+type MultipartFormPart<T = stream.Readable> = {
     headers: MultipartFormHeader[],
-    body: stream.Readable
+    body: T
 };
 
 export class Body {
-    static async text(body: HttpMessageBody) {
+    static async text(body: HttpMessageBody): Promise<string> {
         let text = '';
         if (!body) return text;
         if (body instanceof stream.Readable && body.destroyed) {
@@ -21,8 +21,63 @@ export class Body {
         return text;
     }
 
-    static async json(body: HttpMessageBody) {
+    static async json(body: HttpMessageBody): Promise<Json> {
         return JSON.parse(await this.text(body));
+    }
+
+    static asMultipartForm(parts: MultipartFormPart<HttpMessageBody>[], boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)): HttpMessageBody {
+        const outputStream = createReadable();
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            const isFinalPart = i === parts.length - 1;
+            const boundaryAndHeaders = [
+                `--${boundary}`,
+                part.headers.map(h => [
+                    h.name === 'content-disposition' ? `${h.name}: form-data;` : `${h.name}:`,
+                    'value' in h
+                        ? h.value
+                        : `${h.filename ? [`name="${h.fieldName}"; filename="${h.filename}"`].join(' ') : `name="${h.fieldName}"`}`
+                ].join(' ')).join('\r\n'),
+                '',
+                ''
+            ].join('\r\n');
+            outputStream.push(boundaryAndHeaders);
+            if (isSimpleBody(part.body)) {
+                outputStream.push(part.body);
+                writeEndOrCRLF(isFinalPart);
+            } else {
+                let chunk;
+                while ((chunk = (part.body as stream.Readable).read())) {
+                    outputStream.push(chunk);
+                }
+                writeEndOrCRLF(isFinalPart);
+            }
+        }
+
+        function writeEndOrCRLF(isFinalPart: boolean) {
+            if (isFinalPart) {
+                outputStream.push(`\r\n--${boundary}--`);
+                outputStream.push(null);
+            } else {
+                outputStream.push('\r\n');
+            }
+        }
+
+        return outputStream
+    }
+
+
+    private static randomString(length: number): string {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const charactersLength = characters.length;
+        let randomString = '';
+
+        for (let i = 0; i < length; i++) {
+            randomString += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+
+        return randomString;
     }
 }
 
@@ -84,10 +139,7 @@ export class MultipartForm {
         });
         const chunk = inputStream.read();
         const {remainder: r1, usingCRLF} = MultipartForm.parseBoundary(chunk, withHyphens)
-        const {
-            headers,
-            remainder: r2
-        } = MultipartForm.parseHeaders(r1, maxHeadersSizeBytes)
+        const {headers, remainder: r2} = MultipartForm.parseHeaders(r1, maxHeadersSizeBytes)
         inputStream.unshift(r2) // add remainder back to the front of the inputStream
         // don't await or else we cannot stream the output on the consumer side
         MultipartForm.parseBody(inputStream, outputStream, withHyphens, usingCRLF);
@@ -315,3 +367,5 @@ export function fileName(headers: MultipartFormHeader[]): string | undefined {
 export function contentType(headers: MultipartFormHeader[]): string | undefined {
     return (headers.find(h => h.name === 'content-type') as ContentTypeHeader)?.value;
 }
+
+type Json = string | number | boolean | null | Json[] | { [key: string]: Json };

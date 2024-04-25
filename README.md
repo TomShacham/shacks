@@ -20,12 +20,14 @@ Simple:
 ## Todo
 
 - multipart form data
+  - check works on other browsers
+  - create some code that streams a file to S3
   - document
-  - http client sends multipart form data
 - handle application/x-www-form-urlencoded
 - performance test
 - routing
 - security e.g. header obfuscation etc. (node should handle this?)
+- content-range
 - trailers
 - does node handle inflate/deflate ?
   - if not then we can write some filters that do

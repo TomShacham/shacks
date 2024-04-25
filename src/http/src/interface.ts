@@ -9,20 +9,18 @@ export interface HttpHandler {
 }
 
 export type Payload = string | Buffer;
-export type HttpMessageBody<TBody extends Payload = string | Buffer> =
-    | stream.Duplex
-    | AsyncIterable<TBody>
-    | TBody;
+export type HttpMessageBody = stream.Readable | Payload;
 
-export interface HttpMessage<TBody extends Payload = Payload> {
+
+export interface HttpMessage {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: NodeJS.Dict<string>
-    body?: HttpMessageBody<TBody>
+    body?: HttpMessageBody
 }
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 
-export interface HttpRequest<TBody extends Payload = Payload> extends HttpMessage<TBody> {
+export interface HttpRequest extends HttpMessage {
     // Note: The TE request header needs to be set to "trailers" to allow trailer fields.
     method: Method
     headers: IncomingHttpHeaders
@@ -30,13 +28,17 @@ export interface HttpRequest<TBody extends Payload = Payload> extends HttpMessag
     version?: string
 }
 
-export interface HttpResponse<TBody extends Payload = Payload> extends HttpMessage<TBody> {
+export interface HttpResponse extends HttpMessage {
     headers: OutgoingHttpHeaders
     status: number
     statusText?: string
 }
 
-export class HTTP {
+export function isSimpleBody(body: stream.Duplex | AsyncIterable<string | Buffer> | string | Buffer): body is string | Buffer {
+    return typeof body === 'string' || body instanceof Buffer;
+}
+
+export class H22P {
     static response(res?: Partial<HttpResponse>): HttpResponse {
         return {status: 200, headers: {}, ...res}
     }
@@ -82,7 +84,7 @@ export class HTTP {
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...
          */
-        if (typeof body === 'string' || body instanceof Buffer) {
+        if (isSimpleBody(body)) {
             const contentLength = body.length.toString();
             return {method: 'DELETE', body, path, headers: {...headers, "content-length": contentLength}}
         } else {
