@@ -101,6 +101,15 @@ export class H22P {
     }
 }
 
+type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
+type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
+    ? isPathParameter<PartA> | pathParameters<PartB>
+    : isPathParameter<Path>;
+type PathParameters<Path> = {
+    [Key in pathParameters<Path>]: string;
+};
+export type TypedHttpRequest<S extends string = string> = HttpRequest & { vars: { path: PathParameters<S> } }
+
 /*
  The Trailer response header allows the sender to include additional fields at the end of chunked messages
  in order to supply metadata that might be dynamically generated while the message body is sent,

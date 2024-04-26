@@ -1,52 +1,36 @@
 import {expect} from "chai";
-import {H22P, HttpHandler, HttpRequest, HttpResponse} from "../src/interface";
-
-type Route = { path: string; handler: { handle(req: HttpRequest): Promise<HttpResponse> }; method: string };
-
-class Router implements HttpHandler {
-    constructor(public routes: Route[]) {
-    }
-
-    handle(req: HttpRequest): Promise<HttpResponse> {
-        const notFoundHandler = {
-            async handle(req: HttpRequest): Promise<HttpResponse> {
-                return H22P.response({status: 404, body: "Not found"})
-            }
-        };
-        const apiHandler = this.routes.find(it => it.path === req.path && it.method === req.method)?.handler;
-        const handler = apiHandler ?? notFoundHandler;
-        return handler.handle(req);
-    }
-
-}
+import {H22P} from "../src/interface";
+import {route, Router} from "../src/router";
 
 describe('router', () => {
+    it('not found default', async () => {
+        const router = new Router([
+            route("GET", "/", async (req) => {
+                return H22P.response({status: 200, body: `Hello`})
+            })]);
+        const res = await router.handle(H22P.request({method: 'GET', path: '/not/found'}))
+        expect(res.status).eq(404);
+        expect(res.body).eq('Not found');
+    })
+
     it('simple route', async () => {
-        const router = new Router([{
-            path: "/",
-            method: "GET",
-            handler: {
-                async handle(req: HttpRequest): Promise<HttpResponse> {
-                    return H22P.response({status: 200, body: 'Hello'})
-                }
-            }
-        }]);
+        const router = new Router([
+            route("GET", "/", async (req) => {
+                return H22P.response({status: 200, body: `Hello`})
+            })]);
         const res = await router.handle(H22P.request({method: 'GET', path: '/'}))
         expect(res.status).eq(200);
         expect(res.body).eq('Hello');
     })
 
     it('path param', async () => {
-        const router = new Router([{
-            path: "/resource/{id}",
-            method: "GET",
-            handler: {
-                async handle(req: HttpRequest): Promise<HttpResponse> {
-                    return H22P.response({status: 200, body: 'Hello'})
-                }
-            }
-        }]);
-        const res = await router.handle(H22P.request({method: 'GET', path: '/resource/123'}))
+        const router = new Router([
+            route('GET', "/resource/{id}/sub/{foo}", async (req) => {
+                const params = req.vars.path;
+                return H22P.response({status: 200, body: `Hello ${params.id}`})
+            })
+        ]);
+        const res = await router.handle(H22P.get('/resource/123/sub/456'))
         expect(res.status).eq(200);
         expect(res.body).eq('Hello 123');
     })
