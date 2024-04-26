@@ -26,11 +26,7 @@ Simple:
 - handle application/x-www-form-urlencoded
 - performance test
 - routing
-  - path parms
-  - query params
-  - header params ?
-  - regexp for paths like /*/foo ?
-  - trailing slashes
+  - document
 - security e.g. header obfuscation etc. (node should handle this?)
 - content-range
 - trailers

@@ -35,6 +35,33 @@ describe('router', () => {
         expect(res.body).eq('Hello 123 456');
     })
 
+    it('wildcard without path params', async () => {
+        const router = new Router([
+            route('GET', "*/resource/*", async (req) => {
+                const params = req.vars.path;
+                return H22P.response({status: 200, body: `Hello ${req.vars.wildcards.join('::')}`})
+            })
+        ]);
+        const res = await router.handle(H22P.get('bingo/bongo/resource/hanky/panky'))
+        expect(res.status).eq(200);
+        expect(res.body).eq('Hello bingo/bongo::hanky/panky');
+    })
+
+    it('wildcard with path params', async () => {
+        const router = new Router([
+            route('GET', "*/resource/{id}/sub/{subId}/*", async (req) => {
+                const params = req.vars.path;
+                return H22P.response({
+                    status: 200,
+                    body: `Hello ${req.vars.wildcards.join('::')} ${params.id} ${params.subId}`
+                })
+            })
+        ]);
+        const res = await router.handle(H22P.get('bingo/bongo/resource/123/sub/456/hanky/panky'))
+        expect(res.status).eq(200);
+        expect(res.body).eq('Hello bingo/bongo::hanky/panky 123 456');
+    })
+
     it('trailing slash in route path is ignored', async () => {
         const router = new Router([
             route('GET', "/resource/{id}/", async (req) => {
