@@ -18,7 +18,7 @@ export class Router implements HttpHandler {
         };
         const apiHandler = this.matches(req.path, req.method);
         if (apiHandler.route) {
-            const typedReq = {...req, vars: {path: apiHandler.matches}}
+            const typedReq: TypedHttpRequest = Object.defineProperty(req, 'vars', {value: {path: apiHandler.matches}}) as TypedHttpRequest;
             return apiHandler.route.handler.handle(typedReq);
         } else {
             return notFoundHandler.handle(req);
@@ -27,9 +27,10 @@ export class Router implements HttpHandler {
 
     private matches(path: string, method: string): { route?: Route<string>, matches: NodeJS.Dict<string> } {
         for (const route of this.routes) {
-            const exactMatch = route.path === path && route.method === method;
+            const noTrailingSlash = (route.path !== '/' && route.path.endsWith('/')) ? route.path.slice(0, -1) : route.path;
+            const exactMatch = noTrailingSlash === path && route.method === method;
             if (exactMatch) return {route, matches: {}}
-            const regExp = new RegExp(route.path.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)'));
+            const regExp = new RegExp(noTrailingSlash.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)'));
             const regExpMatches = regExp.test(path);
             if (regExpMatches) {
                 const matches = path.match(regExp)!.groups as NodeJS.Dict<string>;
