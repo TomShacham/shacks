@@ -1,5 +1,5 @@
 import {httpServer} from "../../src/server";
-import {H22P, HttpRequest, HttpResponse} from "../../src/interface";
+import {h22p, HttpRequest, HttpResponse} from "../../src/interface";
 import {MultipartForm} from "../../src/body";
 import * as fs from "fs";
 
@@ -24,15 +24,15 @@ async function multipartFormServer() {
                 body.pipe(fs.createWriteStream(`./src/http/test/resources/${fieldName}-${rand}.${contentTypeOrTxt}`))
             }
             if (req.method === 'GET') {
-                return H22P.response({body: html(), status: 200})
+                return h22p.response({body: html(), status: 200})
             } else {
-                return H22P.response({body: '', status: 302, headers: {"Location": "/file"}})
+                return h22p.response({body: '', status: 302, headers: {"Location": "/file"}})
             }
         }
     }, 3000);
 }
 
-const fmt = (data) => `${Math.round(data / 1024 / 1024)} MB`;
+const fmt = (data: number) => `${Math.round(data / 1024 / 1024)} MB`;
 
 function html() {
     return `

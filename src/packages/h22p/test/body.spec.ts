@@ -2,7 +2,7 @@ import * as stream from "stream";
 import {expect} from "chai";
 import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
-import {H22P} from "../src/interface";
+import {h22p} from "../src/interface";
 
 describe('body', () => {
 
@@ -25,7 +25,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -60,7 +60,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -102,7 +102,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -176,7 +176,7 @@ describe('body', () => {
                 '' // body end
             ].join('\n') // <---------- just using LF
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -222,7 +222,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -258,7 +258,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -296,7 +296,7 @@ describe('body', () => {
                 fs.readFileSync('./src/http/test/resources/hamburger.png'),
                 Buffer.from(postFile, 'binary')])
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -327,7 +327,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -365,7 +365,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -392,7 +392,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = H22P.request({
+            const req = h22p.request({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}

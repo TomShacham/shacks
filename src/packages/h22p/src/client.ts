@@ -1,4 +1,4 @@
-import {H22P, HttpHandler, HttpRequest, HttpResponse} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
 
@@ -21,7 +21,7 @@ export class HttpClient implements HttpHandler {
             const nodeRequest = http.request(options, nodeResponse => {
                 const {statusCode, statusMessage, headers, trailers} = nodeResponse;
                 nodeResponse.once('readable', () => {
-                    resolve(H22P.response({
+                    resolve(h22p.response({
                         status: statusCode,
                         statusText: statusMessage,
                         body: nodeResponse,

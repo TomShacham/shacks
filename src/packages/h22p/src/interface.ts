@@ -38,7 +38,7 @@ export function isSimpleBody(body: stream.Duplex | AsyncIterable<string | Buffer
     return typeof body === 'string' || body instanceof Buffer;
 }
 
-export class H22P {
+export class h22p {
     static response(res?: Partial<HttpResponse>): HttpResponse {
         return {status: 200, headers: {}, ...res}
     }
@@ -100,6 +100,7 @@ export class H22P {
         return {method: 'HEAD', path, headers}
     }
 }
+
 
 /*
  The Trailer response header allows the sender to include additional fields at the end of chunked messages

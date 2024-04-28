@@ -1,4 +1,4 @@
-import {H22P, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
 
 type Route<S extends string> = {
     path: S;
@@ -13,7 +13,7 @@ export class Router implements HttpHandler {
     handle(req: HttpRequest): Promise<HttpResponse> {
         const notFoundHandler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                return H22P.response({status: 404, body: "Not found"})
+                return h22p.response({status: 404, body: "Not found"})
             }
         };
         const apiHandler = this.matches(req.path, req.method);
@@ -72,6 +72,10 @@ export class Router implements HttpHandler {
         return randomString;
     }
 
+}
+
+export function router(routes: Route<string>[]) {
+    return new Router(routes);
 }
 
 export function route<S extends string>(method: Method, path: S, handler: (req: TypedHttpRequest<S>) => Promise<HttpResponse>): Route<S> {

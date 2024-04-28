@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {H22P, HttpRequest, HttpResponse, Payload} from "../src/interface";
+import {h22p, HttpRequest, HttpResponse, Payload} from "../src/interface";
 import {URI} from "../src/uri";
 import {Body} from "../src/body";
 import * as stream from "stream";
@@ -8,8 +8,8 @@ describe('http client', function () {
     this.timeout(500);
 
     it('GET with uri parts echoed back', async () => {
-        const client = H22P.client();
-        const {port, close} = await H22P.server({
+        const client = h22p.client();
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 const uri = URI.of(req.path);
                 return {status: 200, body: JSON.stringify(uri), headers: {}}
@@ -17,7 +17,7 @@ describe('http client', function () {
         });
 
         const res = await client.handle(
-            H22P.get(`http://localhost:${port}/path/name?query1=value1&query2=value2#fragment`)
+            h22p.get(`http://localhost:${port}/path/name?query1=value1&query2=value2#fragment`)
         )
         expect(res.status).eq(200);
         expect(await Body.json(res.body!)).deep.eq({
@@ -29,15 +29,15 @@ describe('http client', function () {
     })
 
     it('OPTIONS request', async () => {
-        const client = H22P.client();
-        const {port, close} = await H22P.server({
+        const client = h22p.client();
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 return {status: 200, body: 'OPTIONS', headers: {"allow": "GET"}}
             }
         });
 
         const res = await client.handle(
-            H22P.options(`http://localhost:${port}/`)
+            h22p.options(`http://localhost:${port}/`)
         )
         expect(res.status).eq(200);
         expect(await Body.text(res.body!)).eq('OPTIONS');
@@ -46,8 +46,8 @@ describe('http client', function () {
     })
 
     it('HEAD request doesnt send body in response and sets default headers if not set in handler', async () => {
-        const client = H22P.client();
-        const {port, close} = await H22P.server({
+        const client = h22p.client();
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 const query = URI.query(URI.of(req.path).query);
                 if (query.hardCodeResponseHeaders)
@@ -63,7 +63,7 @@ describe('http client', function () {
 
 
         const repsonse = await client.handle(
-            H22P.head(`http://localhost:${port}/`)
+            h22p.head(`http://localhost:${port}/`)
         )
         expect(repsonse.status).eq(200);
         expect(await Body.text(repsonse.body!)).not.eq('THIS DOESNT GET SENT');
@@ -76,7 +76,7 @@ describe('http client', function () {
             doesn't override response headers if they are set in the handler
          */
         const repsonseHardCodedHeaders = await client.handle(
-            H22P.head(`http://localhost:${port}/?hardCodeResponseHeaders=true`)
+            h22p.head(`http://localhost:${port}/?hardCodeResponseHeaders=true`)
         )
         expect(repsonseHardCodedHeaders.status).eq(200);
         expect(await Body.text(repsonseHardCodedHeaders.body!)).not.eq('THIS DOESNT GET SENT');
@@ -92,20 +92,20 @@ describe('http client', function () {
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...
          */
 
-        const {port, close} = await H22P.server({
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 return {status: 200, body: req.body, headers: {method: req.method}}
             }
         });
 
 
-        const client = H22P.client();
+        const client = h22p.client();
         const bodyString = 'hello, world!';
 
-        const postResponseString = await client.handle(H22P.post(`http://localhost:${port}/`, bodyString))
-        const putResponseString = await client.handle(H22P.put(`http://localhost:${port}/`, bodyString))
-        const patchResponseString = await client.handle(H22P.patch(`http://localhost:${port}/`, bodyString))
-        const deleteResponseString = await client.handle(H22P.delete(`http://localhost:${port}/`, bodyString))
+        const postResponseString = await client.handle(h22p.post(`http://localhost:${port}/`, bodyString))
+        const putResponseString = await client.handle(h22p.put(`http://localhost:${port}/`, bodyString))
+        const patchResponseString = await client.handle(h22p.patch(`http://localhost:${port}/`, bodyString))
+        const deleteResponseString = await client.handle(h22p.delete(`http://localhost:${port}/`, bodyString))
 
         await testMethod(postResponseString, 'POST', bodyString);
         await testMethod(putResponseString, 'PUT', bodyString);
@@ -114,20 +114,20 @@ describe('http client', function () {
 
         const bodyBuffer = Buffer.from(bodyString);
 
-        const postResponseBuffer = await client.handle(H22P.post(`http://localhost:${port}/`, bodyBuffer))
-        const putResponseBuffer = await client.handle(H22P.put(`http://localhost:${port}/`, bodyBuffer))
-        const patchResponseBuffer = await client.handle(H22P.patch(`http://localhost:${port}/`, bodyBuffer))
-        const deleteResponseBuffer = await client.handle(H22P.delete(`http://localhost:${port}/`, bodyBuffer))
+        const postResponseBuffer = await client.handle(h22p.post(`http://localhost:${port}/`, bodyBuffer))
+        const putResponseBuffer = await client.handle(h22p.put(`http://localhost:${port}/`, bodyBuffer))
+        const patchResponseBuffer = await client.handle(h22p.patch(`http://localhost:${port}/`, bodyBuffer))
+        const deleteResponseBuffer = await client.handle(h22p.delete(`http://localhost:${port}/`, bodyBuffer))
 
         await testMethod(postResponseBuffer, 'POST', bodyString);
         await testMethod(putResponseBuffer, 'PUT', bodyString);
         await testMethod(patchResponseBuffer, 'PATCH', bodyString);
         await testMethod(deleteResponseBuffer, 'DELETE', bodyString);
 
-        const postResponseStream = await client.handle(H22P.post(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
-        const putResponseStream = await client.handle(H22P.put(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
-        const patchResponseStream = await client.handle(H22P.patch(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
-        const deleteResponseStream = await client.handle(H22P.delete(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
+        const postResponseStream = await client.handle(h22p.post(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
+        const putResponseStream = await client.handle(h22p.put(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
+        const patchResponseStream = await client.handle(h22p.patch(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
+        const deleteResponseStream = await client.handle(h22p.delete(`http://localhost:${port}/`, stream.Readable.from(bodyString)))
 
         await testMethod(postResponseStream, 'POST', bodyString);
         await testMethod(putResponseStream, 'PUT', bodyString);
@@ -145,14 +145,14 @@ describe('http client', function () {
     })
 
     it('can send a multipart/form-data request with simple body', async () => {
-        const client = H22P.client();
-        const {port, close} = await H22P.server({
+        const client = h22p.client();
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 return {status: 200, body: req.body, headers: {}}
             }
         });
 
-        const request = H22P.post(`http://localhost:${port}/`, Body.asMultipartForm([{
+        const request = h22p.post(`http://localhost:${port}/`, Body.asMultipartForm([{
             headers: [{
                 name: 'content-type',
                 value: 'text/plain'
@@ -175,14 +175,14 @@ describe('http client', function () {
     })
 
     it('can send a multipart/form-data request with stream body', async () => {
-        const client = H22P.client();
-        const {port, close} = await H22P.server({
+        const client = h22p.client();
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 return {status: 200, body: req.body, headers: {}}
             }
         });
 
-        const request = H22P.post(`http://localhost:${port}/`, Body.asMultipartForm([{
+        const request = h22p.post(`http://localhost:${port}/`, Body.asMultipartForm([{
             headers: [{
                 name: 'content-type',
                 value: 'text/plain'
@@ -205,15 +205,15 @@ describe('http client', function () {
     })
 
     it('can send multiple parts in multipart/form-data request', async () => {
-        const client = H22P.client();
-        const {port, close} = await H22P.server({
+        const client = h22p.client();
+        const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 return {status: 200, body: req.body, headers: {}}
             }
         });
 
 
-        const request = H22P.post(`http://localhost:${port}/`, Body.asMultipartForm([
+        const request = h22p.post(`http://localhost:${port}/`, Body.asMultipartForm([
             {
                 headers: [{
                     name: 'content-type',

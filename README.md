@@ -17,16 +17,20 @@ Simple:
     + test in-memory or over the wire in a few ms startup time
     + no reflection; no magic; no DI framework; small simple codebase
 
+Design choices:
+
+    + http responses 4xx or 5xx are not exceptions
+
 ## Todo
 
+- example app
+- typed http client from routes
+  - open api spec generation
 - multipart form data
-  - check works on other browsers
+  - check works on other browsers - check internet for test suite to prove it works
   - create some code that streams a file to S3
-  - document
 - handle application/x-www-form-urlencoded
 - performance test
-- routing
-  - document
 - security e.g. header obfuscation etc. (node should handle this?)
 - content-range
 - trailers
@@ -35,8 +39,3 @@ Simple:
 
 ## Open questions
 
-- change HttpMessageBody to just stream?
-  and separate out interface for HttpClientRequest and HttpServerResponse
-  so you can still conveniently use a string body
-  but when dealing with a node request we are always streaming
-  

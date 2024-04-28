@@ -7,6 +7,10 @@
   "dependencies": {
     "typescript": "5.4.3"
   },
+  "workspaces": [
+    "src/app-example",
+    "src/packages/**"
+  ],
   "devDependencies": {
     "@types/chai": "4.3.11",
     "@types/mocha": "10.0.6",

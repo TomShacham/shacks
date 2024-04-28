@@ -1,0 +1,7 @@
+packages:
+  - src/packages/h22p
+  - src/app-example
+  - src/frontend
+
+  # exclude packages that are inside test directories
+  - '!**/src/test/**'
