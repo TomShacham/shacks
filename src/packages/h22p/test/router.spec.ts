@@ -85,4 +85,14 @@ describe('router', () => {
         expect(res.status).eq(200);
         expect(res.body).eq('Hello 123');
     })
+
+    it('can generate a client from router', async () => {
+        const router = new Router([
+            route('GET', "/resource/{id}", async (req) => {
+                const params = req.vars.path;
+                return h22p.response({status: 200, body: `Hello ${params.id}`})
+            })
+        ]);
+
+    })
 })

@@ -1,13 +1,7 @@
 import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
 
-type Route<S extends string> = {
-    path: S;
-    handler: { handle(req: TypedHttpRequest<S>): Promise<HttpResponse> };
-    method: string
-};
-
 export class Router implements HttpHandler {
-    constructor(public routes: Route<string>[]) {
+    constructor(public routes: Route<string, Method>[]) {
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
@@ -18,12 +12,12 @@ export class Router implements HttpHandler {
         };
         const apiHandler = this.matches(req.path, req.method);
         if (apiHandler.route) {
-            const typedReq: TypedHttpRequest = Object.defineProperty(req, 'vars', {
+            const typedReq: TypedHttpRequest<string> = Object.defineProperty(req, 'vars', {
                 value: {
                     path: apiHandler.data.matches,
                     wildcards: apiHandler.data.wildcards
                 }
-            }) as TypedHttpRequest;
+            }) as TypedHttpRequest<string>;
             return apiHandler.route.handler.handle(typedReq);
         } else {
             return notFoundHandler.handle(req);
@@ -31,7 +25,7 @@ export class Router implements HttpHandler {
     }
 
     private matches(path: string, method: string): {
-        route?: Route<string>,
+        route?: Route<string, Method>,
         data: { matches: NodeJS.Dict<string>, wildcards: string[] }
     } {
         for (const route of this.routes) {
@@ -74,11 +68,11 @@ export class Router implements HttpHandler {
 
 }
 
-export function router(routes: Route<string>[]) {
+export function router(routes: Route<string, Method>[]) {
     return new Router(routes);
 }
 
-export function route<S extends string>(method: Method, path: S, handler: (req: TypedHttpRequest<S>) => Promise<HttpResponse>): Route<S> {
+export function route<S extends string, M extends Method>(method: M, path: S, handler: (req: TypedHttpRequest<S>) => Promise<HttpResponse>): Route<S, M> {
     return {
         path,
         method: method,
@@ -97,6 +91,27 @@ type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
 type PathParameters<Path> = {
     [Key in pathParameters<Path>]: string;
 };
-export type TypedHttpRequest<S extends string = string> = HttpRequest & {
+export type TypedHttpRequest<S> = HttpRequest & {
     vars: { path: PathParameters<S>, wildcards: string[] }
+}
+export type Route<S, M> = {
+    path: S;
+    handler: { handle(req: TypedHttpRequest<S>): Promise<HttpResponse> };
+    method: M
+};
+
+type SimpleReqForRoute<R extends Route<S, M>, S, M> = {
+    method: M,
+    path: { [K in pathParameters<S>]: string },
+}
+
+const r = route('GET', "/resource/{id}", async (req) => {
+    const params = req.vars.path;
+    return h22p.response({status: 200, body: `Hello ${params.id}`})
+})
+
+type X<R extends Route<S, M>, S, M> = SimpleReqForRoute<typeof r, typeof r.path, typeof r.method>
+
+function XX<S, M>(route: Route<S, M>): X<Route<S, M>, S, M> {
+    return {path: {id: '123'}, method: 'GET'}
 }

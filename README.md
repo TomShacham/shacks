@@ -22,6 +22,7 @@ Design choices:
 
 ## Todo
 
+- figure out what things to not export and hide
 - example app
 - typed http client from routes
   - open api spec generation

@@ -9,7 +9,7 @@ async function main() {
     const isProd = isProductionEnv();
     const host = isProd ? '0.0.0.0' : '127.0.0.1';
 
-    console.log({port, host});
+    console.log('app starting on', {port, host});
 
     const routingHandler = router([
         route('GET', '/path/{id}', async (req) => {
@@ -22,8 +22,6 @@ async function main() {
     ]);
     const decorated = new RedirectToHttps(routingHandler);
     const {server, close} = await h22p.server(decorated, port, host);
-
-    console.log(`Running on port ${port}`);
 }
 
 class RedirectToHttps implements HttpHandler {
