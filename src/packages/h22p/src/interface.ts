@@ -59,8 +59,8 @@ export class h22p {
         return new HttpClient()
     }
 
-    static async server(handler: HttpHandler, port = 0): Promise<HttpServer> {
-        return httpServer(handler, port);
+    static async server(handler: HttpHandler, port = 0, host: string = '127.0.0.1'): Promise<HttpServer> {
+        return httpServer(handler, port, host);
     }
 
     static get(path: string = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {

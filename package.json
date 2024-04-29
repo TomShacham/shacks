@@ -1,18 +1,20 @@
 {
-  "name": "shacks",
-  "version": "1.0.0",
+  "name": "@shacks/h22p",
+  "version": "1.0.13",
   "scripts": {
+    "clean": "./clean.sh",
+    "release": "./release.sh",
     "build": "tsc",
     "test": "tsc; mocha --require ts-node/register 'src/packages/**/*spec.ts'"
   },
-  "dependencies": {
-    "typescript": "5.4.3"
-  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "workspaces": [
     "src/app-example",
     "src/packages/**"
   ],
   "devDependencies": {
+    "typescript": "5.4.3",
     "@types/chai": "4.3.11",
     "@types/mocha": "10.0.6",
     "@types/node": "20.11.4",

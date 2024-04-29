@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      typescript:
-        specifier: 5.4.3
-        version: 5.4.3
     devDependencies:
       '@types/chai':
         specifier: 4.3.11
@@ -30,20 +26,21 @@ importers:
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@20.11.4)(typescript@5.4.3)
+      typescript:
+        specifier: 5.4.3
+        version: 5.4.3
 
   src/app-example:
     dependencies:
       '@shacks/h22p':
-        specifier: 0.0.0
-        version: 0.0.0
+        specifier: 1.0.13
+        version: 1.0.13
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@20.11.4)(typescript@5.4.3)
       typescript:
         specifier: 5.4.3
         version: 5.4.3
-
-  src/packages/h22p: { }
 
 packages:
 
@@ -61,8 +58,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: { integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ== }
 
-  '@shacks/h22p@0.0.0':
-    resolution: { integrity: sha512-NCGurOfPRV5X2scmEHOOb5qhhEFGBPi4Nv2Wwa1/ErxULMzCFjTBD/ROzmczs3iAvgi5ESsXSsvqhsPvD6MMBw== }
+  '@shacks/h22p@1.0.13':
+    resolution: { integrity: sha512-PzcFRK/rCViirp34/x9yLZjmoN3eaTqEo14g+dm06GHUmp85RUcx3C++IueAdMlvizSsAL5nIcKyjz4v1PSFuw== }
 
   '@tsconfig/node10@1.0.11':
     resolution: { integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw== }
@@ -476,7 +473,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  '@shacks/h22p@0.0.0': { }
+  '@shacks/h22p@1.0.13': { }
 
   '@tsconfig/node10@1.0.11': { }
 

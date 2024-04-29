@@ -7,14 +7,22 @@
   },
   "compilerOptions": {
     "strict": true,
+    "declaration": true,
+    "outDir": "dist",
     "module": "commonjs",
-    "importHelpers": true,
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "target": "esnext",
     "moduleDetection": "force",
     "noEmitOnError": true
   },
+  "include": [
+    "src/packages/**/*"
+  ],
   "exclude": [
     "node_modules",
-    "src/app-example"
+    "src/app-example",
+    "src/**/test"
   ]
 }

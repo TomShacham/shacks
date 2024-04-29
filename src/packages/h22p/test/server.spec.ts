@@ -6,7 +6,6 @@ import {Body, MultipartForm} from "../src/body";
 import * as stream from "stream";
 import * as zlib from "zlib";
 
-
 describe('client / server', function () {
     it('sends and receives http messages', async () => {
         const handler = {
@@ -103,7 +102,7 @@ describe('client / server', function () {
         };
 
         const {port, close: closeServer} = await httpServer(handler);
-        const {close: closeProxy} = await httpServer(proxyHandler, proxyPort);
+        const {close: closeProxy} = await httpServer(proxyHandler, proxyPort, '127.0.0.1');
 
         const fileName = 'data-proxy.txt';
         const filePath = `${__dirname}/resources/${fileName}`;

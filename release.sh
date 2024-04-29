@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -x
 
-npm run build && \
-npm run test && \
-rm -rf dist && \
-cp -r src/main dist && \
-cp package.json tsconfig.json README.md dist && \
-pushd dist && \
-npm publish && \
-popd && \
-rm -r dist
+rm -rf dist &&
+npm run build &&
+npm run test &&
+cp release.sh package.json tsconfig.json README.md dist &&
+npm publish --access public
