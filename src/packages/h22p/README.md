@@ -1,17 +1,22 @@
 ## Simple Http Library
 
-Simple 99% use-case client/server that can do:
+Simple 99% use-case client/server
 
     + type-safe routing
     + streaming
     + multipart/form-data
 
-Simple because:
+For when you don't want a stupid framework that gets in your way
+
+Simple:
 
     + zero dependencies
-    + no reflection; no magic; no DI framework; small well-tested codebase
+    + no reflection; no magic; no DI framework; small simple codebase
     + symmetrical client and server (ie same interface) 
     + immutable http message objects as close to wire format as possible
+
+Cool features:
+
     + start/stop server in one line of code and just a few ms startup time 
     + test in-memory or over the wire (so can easily build a fast test suite)
 
@@ -24,17 +29,17 @@ Design choices:
 
 - example app
 - typed http client from routes
-  - open api spec generation
+    - open api spec generation
 - multipart form data
-  - check works on other browsers - check internet for test suite to prove it works
-  - create some code that streams a file to S3
+    - check works on other browsers - check internet for test suite to prove it works
+    - create some code that streams a file to S3
 - handle application/x-www-form-urlencoded
 - performance test
 - security e.g. header obfuscation etc. (node should handle this?)
 - content-range
 - trailers
 - does node handle inflate/deflate ?
-  - if not then we can write some filters that do
+    - if not then we can write some filters that do
 
 ## Open questions
 

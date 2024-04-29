@@ -8,10 +8,12 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "dev": "vite",
+    "start": "ts-node index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "h22p": "workspace:*"
+    "typescript": "5.4.3",
+    "ts-node": "10.9.2",
+    "@shacks/h22p": "0.0.0"
   }
 }
