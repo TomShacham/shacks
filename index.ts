@@ -1,4 +1,4 @@
-import {h22p, route, router} from "h22p";
+import {h22p, route, router} from '@shacks/h22p'
 
 async function main() {
     const {server, port, close} = await h22p.server(router([
