@@ -286,6 +286,7 @@ describe('body', () => {
                 'Content-Disposition: form-data; name="file"; filename="test.txt"',
                 'Content-Type: image/png',
                 '', // headers end
+                '', // headers end
             ].join('\r\n')
 
             const postFile = `\r
@@ -293,7 +294,7 @@ describe('body', () => {
 `
             const inputStream = Buffer.concat([
                 Buffer.from(preFile, 'binary'),
-                fs.readFileSync('./src/http/test/resources/hamburger.png'),
+                fs.readFileSync('./test/resources/hamburger.png'),
                 Buffer.from(postFile, 'binary')])
 
             const req = h22p.request({
@@ -311,7 +312,7 @@ describe('body', () => {
             expect(await Body.text(body)).deep.eq('tom')
 
             const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
-            body1.pipe(fs.createWriteStream('./src/http/test/resources/hamburger-out.png'));
+            body1.pipe(fs.createWriteStream('./test/resources/hamburger-out.png'));
         })
 
         it('parses content-transfer-encoding', async () => {
@@ -406,6 +407,30 @@ describe('body', () => {
             expect(contentEncoding).eq('base64')
             expect(fieldName).eq('file')
             expect(fileName).eq('test.txt')
+        });
+
+        it('if headers does not end with \\r\\n\\r\\n then throw', async () => {
+            const boundary = '------WebKitFormBoundaryS7EqcIpCaxXELv6B';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                // no headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
+
+            const req = h22p.request({
+                method: 'POST',
+                body: stream.Readable.from(wireData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+
+            try {
+                const {headers, body} = await MultipartForm.multipartFormField(req);
+            } catch (e) {
+                expect(e.message).eq('Malformed headers, did not parse an ending')
+            }
         })
     })
 })

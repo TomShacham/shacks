@@ -49,7 +49,7 @@ describe('client / server', function () {
         const {port, close} = await httpServer(handler);
 
         const fileName = 'data-streaming-one-way.txt';
-        const filePath = './src/http/test/resources/' + fileName;
+        const filePath = './test/resources/' + fileName;
 
         try {
             const size = 10 * 1024 * 1024;
@@ -105,7 +105,7 @@ describe('client / server', function () {
         const {close: closeProxy} = await httpServer(proxyHandler, proxyPort);
 
         const fileName = 'data-proxy.txt';
-        const filePath = './src/http/test/resources/' + fileName;
+        const filePath = './test/resources/' + fileName;
 
         try {
             const size = 10 * 1024 * 1024;

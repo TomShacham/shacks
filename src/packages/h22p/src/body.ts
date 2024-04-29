@@ -270,8 +270,8 @@ export class MultipartForm {
                 header = '';
             }
             if (
-                lastFour[0] === '\r' && lastFour [1] === '\n' && lastFour[2] === '\r' && lastFour[3] === '\n'
-                || lastFour[2] === '\n' && lastFour[3] === '\n'
+                (lastFour[0] === '\r' && lastFour [1] === '\n' && lastFour[2] === '\r' && lastFour[3] === '\n')
+                || (lastFour[2] === '\n' && lastFour[3] === '\n')
             ) {
                 const remainder = typeof chunk === 'string'
                     ? chunk.slice(j + 1)
@@ -279,7 +279,27 @@ export class MultipartForm {
                 return {headers, remainder}
             }
         }
-        return {headers, remainder: chunk}
+        throw new Error('Malformed headers, did not parse an ending');
+    }
+}
+
+function parseHeader(str: string): MultipartFormHeader | undefined {
+    const [headerName, value] = str.split(':');
+    if (headerName.toLowerCase() === 'content-disposition') {
+        // regex is a bit slow but means the header value can be a bit more flexible with its syntax
+        const nameRegex = /name="(?<name>([^"]+))/.exec(value);
+        const filenameRegex = /filename="(?<filename>([^"]+))/.exec(value);
+        // blow up if there's no name
+        const name = nameRegex!.groups!.name
+        const filename = filenameRegex?.groups?.filename
+        return {name: 'content-disposition', fieldName: name, ...(filename ? {filename} : {})};
+    }
+    if (headerName.toLowerCase() === 'content-type') {
+        const trim = value.trim();
+        return {name: "content-type", value: trim}
+    }
+    if (headerName.toLowerCase() === 'content-transfer-encoding') {
+        return {name: "content-transfer-encoding", value: value.trim() === 'base64' ? 'base64' : 'binary'};
     }
 }
 
@@ -291,13 +311,14 @@ export type ContentTypeHeader = {
     name: 'content-type',
     value: ContentTypes
 };
-
 export type ContentTransferEncodingHeader = {
     name: 'content-transfer-encoding',
     value: 'base64' | 'binary'
 };
 export type ContentDispositionHeader = { name: 'content-disposition'; fieldName: string; filename?: string; };
 export type MultipartFormHeader = | ContentDispositionHeader | ContentTypeHeader | ContentTransferEncodingHeader
+
+
 export type ContentTypes = | 'text/plain'
     | 'text/html'
     | 'text/css'
@@ -326,7 +347,6 @@ export type ContentTypes = | 'text/plain'
     | 'multipart/alternative'
     | string;
 
-
 type Chunk = Buffer | string;
 
 export function createReadable() {
@@ -334,38 +354,6 @@ export function createReadable() {
         read() {
         }
     });
-}
-
-function parseHeader(str: string): MultipartFormHeader | undefined {
-    const [headerName, value] = str.split(':');
-    if (headerName.toLowerCase() === 'content-disposition') {
-        // regex is a bit slow but means the header value can be a bit more flexible with its syntax
-        const nameRegex = /name="(?<name>([^"]+))/.exec(value);
-        const filenameRegex = /filename="(?<filename>([^"]+))/.exec(value);
-        // blow up if there's no name
-        const name = nameRegex!.groups!.name
-        const filename = filenameRegex?.groups?.filename
-        return {name: 'content-disposition', fieldName: name, ...(filename ? {filename} : {})};
-    }
-    if (headerName.toLowerCase() === 'content-type') {
-        const trim = value.trim();
-        return {name: "content-type", value: trim}
-    }
-    if (headerName.toLowerCase() === 'content-transfer-encoding') {
-        return {name: "content-transfer-encoding", value: value.trim() === 'base64' ? 'base64' : 'binary'};
-    }
-}
-
-export function fieldName(headers: MultipartFormHeader[]): string | undefined {
-    return (headers.find(h => h.name === 'content-disposition') as ContentDispositionHeader)?.fieldName;
-}
-
-export function fileName(headers: MultipartFormHeader[]): string | undefined {
-    return (headers.find(h => h.name === 'content-disposition') as ContentDispositionHeader)?.filename;
-}
-
-export function contentType(headers: MultipartFormHeader[]): string | undefined {
-    return (headers.find(h => h.name === 'content-type') as ContentTypeHeader)?.value;
 }
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };

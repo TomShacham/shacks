@@ -11,15 +11,20 @@ For when you don't want a stupid framework that gets in your way
 Simple:
 
     + zero dependencies
-    + symmetrical client/server and one simple http interface
-    + immutable http message objects close to wire format
-    + start/stop server in one line
-    + test in-memory or over the wire in a few ms startup time
     + no reflection; no magic; no DI framework; small simple codebase
+    + symmetrical client and server (ie same interface) 
+    + immutable http message objects as close to wire format as possible
+    
+Cool features:
+
+    + start/stop server in one line of code 
+    + test in-memory or over the wire in a few ms startup time
 
 Design choices:
 
-    + http responses 4xx or 5xx are not exceptions
+    + composition over configuation (made easy because there is one simple http interface) 
+    + http client responses 4xx or 5xx are not exceptions
+    + 
 
 ## Todo
 
