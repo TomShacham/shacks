@@ -32,10 +32,11 @@ class RedirectToHttps implements HttpHandler {
 
     async handle(req: HttpRequest): Promise<HttpResponse> {
         const protocol = req.headers['x-forwarded-proto'];
-        console.log({protocol});
-        if (isProductionEnv() && protocol !== undefined && protocol !== 'https') {
+        if (isProductionEnv() && protocol !== 'https') {
             const url = URI.of(req.path);
-            return h22p.response({status: 301, headers: {"location": `https://${url.hostname}:${url.port}${url.path}`}})
+            const location = `https://${req.headers.host}${url.path}`;
+            console.log(`redirecting from http to https for ${url.path}`);
+            return h22p.response({status: 301, headers: {"location": location}, body: "Moved permanently"})
         } else {
             return this.delegate.handle(req);
         }
