@@ -4,6 +4,7 @@ import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
 import {h22p} from "../src/interface";
 
+
 describe('body', () => {
 
     describe('multipart form', () => {
@@ -292,9 +293,10 @@ describe('body', () => {
             const postFile = `\r
 --${boundary}--\r
 `
+            console.log(__dirname);
             const inputStream = Buffer.concat([
                 Buffer.from(preFile, 'binary'),
-                fs.readFileSync('./test/resources/hamburger.png'),
+                fs.readFileSync(`${__dirname}/resources/hamburger.png`),
                 Buffer.from(postFile, 'binary')])
 
             const req = h22p.request({
@@ -312,7 +314,7 @@ describe('body', () => {
             expect(await Body.text(body)).deep.eq('tom')
 
             const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
-            body1.pipe(fs.createWriteStream('./test/resources/hamburger-out.png'));
+            body1.pipe(fs.createWriteStream(`${__dirname}/resources/hamburger-out.png`));
         })
 
         it('parses content-transfer-encoding', async () => {
@@ -429,7 +431,7 @@ describe('body', () => {
             try {
                 const {headers, body} = await MultipartForm.multipartFormField(req);
             } catch (e) {
-                expect(e.message).eq('Malformed headers, did not parse an ending')
+                expect((e as Error).message).eq('Malformed headers, did not parse an ending')
             }
         })
     })
