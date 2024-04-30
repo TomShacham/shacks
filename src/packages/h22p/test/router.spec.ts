@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {h22p} from "../src/interface";
-import {route, Router} from "../src/router";
+import {bar, route, Router} from "../src/router";
 
 describe('router', () => {
     it('not found default', async () => {
@@ -89,30 +89,14 @@ describe('router', () => {
     it('can generate a client from router', async () => {
 
         const routing = {
-            getRoot: route('GET', "/resource/{id}", async (req) => {
+            getRoute: route('GET', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
                 return h22p.response({status: 200, body: `Hello ${params.id}`})
             })
         };
 
-        const api = {
-            // @ts-ignore
-            getRoot: (vars, path, method) => {
-                const keys = Object.keys(vars);
-                const replaced = keys.reduce((acc, next) => {
-                    // @ts-ignore
-                    const var1 = vars[next];
-                    return acc.replace(`{${next}}`, var1)
-                }, path) as any;
-
-                return {
-                    vars: {path: vars, wildcards: []},
-                    path: replaced,
-                    method,
-                    headers: {}
-                }
-            }
-        }
-
+        let z = bar(routing)
+        const req = z.getRoute({id: '123'});
+        await h22p.client().handle(req)
     })
 })

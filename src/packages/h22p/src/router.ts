@@ -1,4 +1,4 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse, Method, TypedHttpHandler} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<string, Method>[]) {
@@ -124,24 +124,33 @@ type X = PathParameters<'/resource/{id}/sub/{subId}/foo'>;
 type Z = reversePathParameters<'/resource/{id}/sub/{subId}/foo'>;
 
 
-export type UntypedRoutes = { [k: string]: Route<string, Method> };
+export type UntypedRoutes<Path extends string = string> = { [k: string]: Route<Path, Method> };
 
-type RoutePathParameters<Routes extends UntypedRoutes> = {
+export type Contract<Routes extends UntypedRoutes> = {
     [Key in keyof Routes]: Routes[Key] extends Route<infer Path extends string, infer Mtd extends Method>
-        ? PathParameters<Path>
-        : {}
+        ? (vars: PathParameters<Path>) => TypedHttpRequest<Path, Mtd>
+        : (vars: PathParameters<string>) => TypedHttpRequest
 };
 export type Api<Routes extends UntypedRoutes> = {
     [Key in keyof Routes]: Routes[Key] extends Route<infer Path extends string, infer Mtd extends Method>
         ? Route<Path, Mtd>
         : Route<string, Method>
 };
-export type Contract<Routes extends UntypedRoutes> = {
-    [Key in keyof Routes]: Routes[Key] extends Route<infer Path extends string, infer Mtd extends Method>
-        ? (vars: { [K in pathParameters<Path>]: string }) => TypedHttpHandler<TypedHttpRequest<Path, Mtd>>
-        : TypedHttpHandler
-}
+
+type ObjKey<T extends { [K in keyof T]: T[K] }, S extends keyof T> = S;
 type ObjValue<T extends { [K in keyof T]: T[K] }, S extends keyof T> = T[S];
+
+function mapObject<T, R, O extends { [K: string]: T }>(obj: O, f: (t: keyof O) => R): { [Key in keyof O]: R } {
+    let ret = {} as { [Key in keyof O]: R };
+    for (let key in obj) {
+        ret[key] = f(key)
+    }
+    return ret;
+}
+
+let x = {a: '1', b: '2'} as const;
+let y = mapObject(x, (k) => x[k])
+
 
 const routing = {
     getRoute: route('GET', "/resource/{id}", async (req) => {
@@ -151,8 +160,28 @@ const routing = {
 };
 
 type XX = Api<typeof routing>
-type YY = RoutePathParameters<typeof routing>
+type YY = Contract<typeof routing>
 
-const foo: YY = {
-    getRoute: {id: '123'}
+export function bar<Path extends string, R extends UntypedRoutes<Path>, T extends Api<R>>(routes: R): Contract<R> {
+    let ret = {} as any;
+    for (let f in routes) {
+        let y: keyof typeof routes = f;
+        const route = routes[f]
+        ret[y] = (vars: PathParameters<Path>) => {
+            const keys = Object.keys(vars);
+            const replaced = keys.reduce((acc, next) => {
+                // @ts-ignore
+                const var1 = vars[next];
+                return acc.replace(`{${next}}`, var1)
+            }, route.path) as any;
+
+            return {
+                vars: {...{path: vars}, wildcards: []},
+                path: replaced,
+                method: route.method,
+                headers: {},
+            } as TypedHttpRequest;
+        }
+    }
+    return ret;
 }
