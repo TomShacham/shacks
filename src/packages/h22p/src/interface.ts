@@ -3,10 +3,14 @@ import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
 import * as stream from "stream";
 import {HttpClient} from "./client";
 import {httpServer, HttpServer} from "./server";
-import {Route} from "./router";
+import {TypedHttpRequest} from "./router";
 
 export interface HttpHandler<R extends HttpRequest = HttpRequest> {
     handle(req: HttpRequest): Promise<HttpResponse>
+}
+
+export interface TypedHttpHandler<R extends TypedHttpRequest = TypedHttpRequest> {
+    handle(req: TypedHttpRequest): Promise<HttpResponse>
 }
 
 export type Payload = string | Buffer;
@@ -21,8 +25,7 @@ export interface HttpMessage {
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 
-export interface HttpRequest<M extends Method = Method, P extends string = string> extends HttpMessage {
-    // Note: The TE request header needs to be set to "trailers" to allow trailer fields.
+export interface HttpRequest<P extends string = string, M extends Method = Method> extends HttpMessage {
     method: M
     headers: IncomingHttpHeaders
     path: P
@@ -101,8 +104,6 @@ export class h22p {
         return {method: 'HEAD', path, headers}
     }
 
-    static clientFrom<S extends string>(route: Route<S>) {
-    }
 }
 
 

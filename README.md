@@ -22,14 +22,20 @@ Design choices:
 
 ## Todo
 
-- figure out what things to not export and hide
-- example app
 - typed http client from routes
-  - open api spec generation
+- open api spec generation
 - multipart form data
-  - check works on other browsers - check internet for test suite to prove it works
-  - create some code that streams a file to S3
+  - check works on other browsers - search internet for test suite to prove it works
 - handle application/x-www-form-urlencoded
+- figure out what things to not export and hide
+- continue with h22p statics for discoverability or move to globals?
+- example app
+  - filter examples like 404 catch all and tracing
+  - database with transactions
+  - streaming files to db eg csv with manipulation on the fly including totals
+  - streaming files to s3
+  - simple json api
+  - htmx
 - performance test
 - security e.g. header obfuscation etc. (node should handle this?)
 - content-range

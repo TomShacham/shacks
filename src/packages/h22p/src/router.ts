@@ -1,4 +1,4 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse, Method, TypedHttpHandler} from "./interface";
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<string, Method>[]) {
@@ -12,12 +12,12 @@ export class Router implements HttpHandler {
         };
         const apiHandler = this.matches(req.path, req.method);
         if (apiHandler.route) {
-            const typedReq: TypedHttpRequest<string> = Object.defineProperty(req, 'vars', {
+            const typedReq: TypedHttpRequest<string, Method> = Object.defineProperty(req, 'vars', {
                 value: {
                     path: apiHandler.data.matches,
                     wildcards: apiHandler.data.wildcards
                 }
-            }) as TypedHttpRequest<string>;
+            }) as TypedHttpRequest<string, Method>;
             return apiHandler.route.handler.handle(typedReq);
         } else {
             return notFoundHandler.handle(req);
@@ -65,19 +65,18 @@ export class Router implements HttpHandler {
 
         return randomString;
     }
-
 }
 
 export function router(routes: Route<string, Method>[]) {
     return new Router(routes);
 }
 
-export function route<S extends string, M extends Method>(method: M, path: S, handler: (req: TypedHttpRequest<S>) => Promise<HttpResponse>): Route<S, M> {
+export function route<S extends string, M extends Method>(method: M, path: S, handler: (req: TypedHttpRequest<S, M>) => Promise<HttpResponse>): Route<S, M> {
     return {
         path,
         method: method,
         handler: {
-            async handle(req: TypedHttpRequest<S>): Promise<HttpResponse> {
+            async handle(req: TypedHttpRequest<S, M>): Promise<HttpResponse> {
                 return handler(req);
             }
         }
@@ -91,27 +90,69 @@ type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
 type PathParameters<Path> = {
     [Key in pathParameters<Path>]: string;
 };
-export type TypedHttpRequest<S> = HttpRequest & {
-    vars: { path: PathParameters<S>, wildcards: string[] }
+
+// type PathParameterValues<Path, params extends PathParameters<Path>, T extends {[K in keyof params]: T[K]}>
+//     =
+
+export type TypedHttpRequest<Path extends string = string, M extends Method = Method> = HttpRequest<Path, M> & {
+    vars: { path: PathParameters<Path>, wildcards: string[] }
 }
-export type Route<S, M> = {
-    path: S;
-    handler: { handle(req: TypedHttpRequest<S>): Promise<HttpResponse> };
-    method: M
+
+export type Route<Path extends string, Mtd extends Method> = {
+    path: Path;
+    handler: { handle(req: TypedHttpRequest<Path, Mtd>): Promise<HttpResponse> };
+    method: Mtd
 };
 
-type SimpleReqForRoute<R extends Route<S, M>, S, M> = {
+type ReqForRoute<R extends Route<string, Method>> = R extends Route<infer S extends string, infer M extends Method> ? {
     method: M,
-    path: { [K in pathParameters<S>]: string },
-}
+    path: S,
+    vars: { [K in pathParameters<S>]: string },
+} : never
 
 const r = route('GET', "/resource/{id}", async (req) => {
     const params = req.vars.path;
     return h22p.response({status: 200, body: `Hello ${params.id}`})
 })
 
-type X<R extends Route<S, M>, S, M> = SimpleReqForRoute<typeof r, typeof r.path, typeof r.method>
+type backToPath<Part, T extends pathParameters<Part> = pathParameters<Part>> = Part extends `{${infer Name}}` ? string : Part;
+type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
+    ? `${backToPath<PartA>}/${reversePathParameters<PartB>}`
+    : backToPath<Path>;
 
-function XX<S, M>(route: Route<S, M>): X<Route<S, M>, S, M> {
-    return {path: {id: '123'}, method: 'GET'}
+type X = PathParameters<'/resource/{id}/sub/{subId}/foo'>;
+type Z = reversePathParameters<'/resource/{id}/sub/{subId}/foo'>;
+
+
+export type UntypedRoutes = { [k: string]: Route<string, Method> };
+
+type RoutePathParameters<Routes extends UntypedRoutes> = {
+    [Key in keyof Routes]: Routes[Key] extends Route<infer Path extends string, infer Mtd extends Method>
+        ? PathParameters<Path>
+        : {}
+};
+export type Api<Routes extends UntypedRoutes> = {
+    [Key in keyof Routes]: Routes[Key] extends Route<infer Path extends string, infer Mtd extends Method>
+        ? Route<Path, Mtd>
+        : Route<string, Method>
+};
+export type Contract<Routes extends UntypedRoutes> = {
+    [Key in keyof Routes]: Routes[Key] extends Route<infer Path extends string, infer Mtd extends Method>
+        ? (vars: { [K in pathParameters<Path>]: string }) => TypedHttpHandler<TypedHttpRequest<Path, Mtd>>
+        : TypedHttpHandler
+}
+type ObjValue<T extends { [K in keyof T]: T[K] }, S extends keyof T> = T[S];
+
+const routing = {
+    getRoute: route('GET', "/resource/{id}", async (req) => {
+        const params = req.vars.path;
+        return h22p.response({status: 200, body: `Hello ${params.id}`})
+    })
+};
+
+type XX = Api<typeof routing>
+type YY = RoutePathParameters<typeof routing>
+
+const foo: YY = {
+    getRoute: {id: '123'}
 }

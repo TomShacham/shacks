@@ -87,12 +87,32 @@ describe('router', () => {
     })
 
     it('can generate a client from router', async () => {
-        const router = new Router([
-            route('GET', "/resource/{id}", async (req) => {
+
+        const routing = {
+            getRoot: route('GET', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
                 return h22p.response({status: 200, body: `Hello ${params.id}`})
             })
-        ]);
+        };
+
+        const api = {
+            // @ts-ignore
+            getRoot: (vars, path, method) => {
+                const keys = Object.keys(vars);
+                const replaced = keys.reduce((acc, next) => {
+                    // @ts-ignore
+                    const var1 = vars[next];
+                    return acc.replace(`{${next}}`, var1)
+                }, path) as any;
+
+                return {
+                    vars: {path: vars, wildcards: []},
+                    path: replaced,
+                    method,
+                    headers: {}
+                }
+            }
+        }
 
     })
 })
