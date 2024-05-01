@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {h22p} from "../src/interface";
-import {bar, route, Router} from "../src/router";
+import {contractFrom, route, router, Router} from "../src/router";
+import {Body} from "../src";
 
 describe('router', () => {
     it('not found default', async () => {
@@ -87,7 +88,6 @@ describe('router', () => {
     })
 
     it('can generate a client from router', async () => {
-
         const routing = {
             getRoute: route('GET', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
@@ -95,8 +95,15 @@ describe('router', () => {
             })
         };
 
-        let z = bar(routing)
-        const req = z.getRoute({id: '123'});
-        await h22p.client().handle(req)
+        const {port, close} = await h22p.server(router(Object.values(routing)))
+        const contract = contractFrom(routing)
+        const getRoute = contract.getRoute({id: '123'});
+        const withHost = {...getRoute, path: `http://localhost:${port}${getRoute.path}`}
+        const response = await h22p.client().handle(withHost);
+
+        expect(response.status).eq(200);
+        expect(await Body.text(response.body!)).eq('Hello 123');
+
+        await close();
     })
 })

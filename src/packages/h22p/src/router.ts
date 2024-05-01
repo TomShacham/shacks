@@ -1,4 +1,4 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse, Method, TypedHttpHandler} from "./interface";
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<string, Method>[]) {
@@ -91,29 +91,15 @@ type PathParameters<Path> = {
     [Key in pathParameters<Path>]: string;
 };
 
-// type PathParameterValues<Path, params extends PathParameters<Path>, T extends {[K in keyof params]: T[K]}>
-//     =
-
 export type TypedHttpRequest<Path extends string = string, M extends Method = Method> = HttpRequest<Path, M> & {
     vars: { path: PathParameters<Path>, wildcards: string[] }
 }
 
 export type Route<Path extends string, Mtd extends Method> = {
     path: Path;
-    handler: { handle(req: TypedHttpRequest<Path, Mtd>): Promise<HttpResponse> };
+    handler: TypedHttpHandler;
     method: Mtd
 };
-
-type ReqForRoute<R extends Route<string, Method>> = R extends Route<infer S extends string, infer M extends Method> ? {
-    method: M,
-    path: S,
-    vars: { [K in pathParameters<S>]: string },
-} : never
-
-const r = route('GET', "/resource/{id}", async (req) => {
-    const params = req.vars.path;
-    return h22p.response({status: 200, body: `Hello ${params.id}`})
-})
 
 type backToPath<Part, T extends pathParameters<Part> = pathParameters<Part>> = Part extends `{${infer Name}}` ? string : Part;
 type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
@@ -122,7 +108,6 @@ type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
 
 type X = PathParameters<'/resource/{id}/sub/{subId}/foo'>;
 type Z = reversePathParameters<'/resource/{id}/sub/{subId}/foo'>;
-
 
 export type UntypedRoutes<Path extends string = string> = { [k: string]: Route<Path, Method> };
 
@@ -162,7 +147,7 @@ const routing = {
 type XX = Api<typeof routing>
 type YY = Contract<typeof routing>
 
-export function bar<Path extends string, R extends UntypedRoutes<Path>, T extends Api<R>>(routes: R): Contract<R> {
+export function contractFrom<Path extends string, R extends UntypedRoutes<Path>, T extends Api<R>>(routes: R): Contract<R> {
     let ret = {} as any;
     for (let f in routes) {
         let y: keyof typeof routes = f;

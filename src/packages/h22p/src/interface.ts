@@ -6,11 +6,11 @@ import {httpServer, HttpServer} from "./server";
 import {TypedHttpRequest} from "./router";
 
 export interface HttpHandler<R extends HttpRequest = HttpRequest> {
-    handle(req: HttpRequest): Promise<HttpResponse>
+    handle(req: R): Promise<HttpResponse>
 }
 
 export interface TypedHttpHandler<R extends TypedHttpRequest = TypedHttpRequest> {
-    handle(req: TypedHttpRequest): Promise<HttpResponse>
+    handle(req: R): Promise<HttpResponse>
 }
 
 export type Payload = string | Buffer;
