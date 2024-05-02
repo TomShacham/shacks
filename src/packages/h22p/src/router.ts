@@ -87,7 +87,7 @@ type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
 type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
     ? isPathParameter<PartA> | pathParameters<PartB>
     : isPathParameter<Path>;
-type PathParameters<Path> = {
+export type PathParameters<Path> = {
     [Key in pathParameters<Path>]: string;
 };
 
@@ -106,8 +106,6 @@ type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
     ? `${backToPath<PartA>}/${reversePathParameters<PartB>}`
     : backToPath<Path>;
 
-type X = PathParameters<'/resource/{id}/sub/{subId}/foo'>;
-type Z = reversePathParameters<'/resource/{id}/sub/{subId}/foo'>;
 
 export type UntypedRoutes<Path extends string = string> = { [k: string]: Route<Path, Method> };
 
@@ -121,31 +119,6 @@ export type Api<Routes extends UntypedRoutes> = {
         ? Route<Path, Mtd>
         : Route<string, Method>
 };
-
-type ObjKey<T extends { [K in keyof T]: T[K] }, S extends keyof T> = S;
-type ObjValue<T extends { [K in keyof T]: T[K] }, S extends keyof T> = T[S];
-
-function mapObject<T, R, O extends { [K: string]: T }>(obj: O, f: (t: keyof O) => R): { [Key in keyof O]: R } {
-    let ret = {} as { [Key in keyof O]: R };
-    for (let key in obj) {
-        ret[key] = f(key)
-    }
-    return ret;
-}
-
-let x = {a: '1', b: '2'} as const;
-let y = mapObject(x, (k) => x[k])
-
-
-const routing = {
-    getRoute: route('GET', "/resource/{id}", async (req) => {
-        const params = req.vars.path;
-        return h22p.response({status: 200, body: `Hello ${params.id}`})
-    })
-};
-
-type XX = Api<typeof routing>
-type YY = Contract<typeof routing>
 
 export function contractFrom<Path extends string, R extends UntypedRoutes<Path>, T extends Api<R>>(routes: R): Contract<R> {
     let ret = {} as any;

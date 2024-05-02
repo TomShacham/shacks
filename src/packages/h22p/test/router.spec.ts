@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {h22p} from "../src/interface";
-import {contractFrom, route, router, Router} from "../src/router";
-import {Body} from "../src";
+import {contractFrom, PathParameters, route, router, Router} from "../src/router";
+import {Body, HttpRequest} from "../src";
 
 describe('router', () => {
     it('not found default', async () => {
@@ -91,6 +91,13 @@ describe('router', () => {
         const routing = {
             getRoute: route('GET', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
+                return h22p.response({status: 200, body: `Hello ${params.id}`})
+            }),
+            postRoute: route('GET', "/resource/{id}", async (req: HttpRequest<"/resource/{id}", "GET"> & {
+                vars: { path: PathParameters<"/resource/{id}">; wildcards: string[] }
+            }) => {
+                const params = req.vars.path;
+                const body = req.body?.foo;
                 return h22p.response({status: 200, body: `Hello ${params.id}`})
             })
         };

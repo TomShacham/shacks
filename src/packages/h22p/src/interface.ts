@@ -14,7 +14,14 @@ export interface TypedHttpHandler<R extends TypedHttpRequest = TypedHttpRequest>
 }
 
 export type Payload = string | Buffer;
-export type HttpMessageBody = stream.Readable | Payload;
+export type HttpMessageBody<J extends JsonBody | undefined = any> = stream.Readable | Payload | J;
+/*
+*  technically Json can be just a primitive eg "null" or 123;
+*   but I'd rather the type reflected the 99.9% use case: a list or object of JsonValues
+*   so that you don't accidentally use just a JsonValue and get no compiler help
+* */
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
 
 
 export interface HttpMessage {

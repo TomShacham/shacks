@@ -19,6 +19,7 @@ Design choices:
 
     + composition over configuation (made easy because there is one simple http interface) 
     + http client responses 4xx or 5xx are not exceptions
+    + json body type?
 
 ## Todo
 
