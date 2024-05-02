@@ -9,12 +9,23 @@ export interface HttpHandler<R extends HttpRequest = HttpRequest> {
     handle(req: R): Promise<HttpResponse>
 }
 
-export interface TypedHttpHandler<R extends TypedHttpRequest = TypedHttpRequest> {
-    handle(req: R): Promise<HttpResponse>
+export interface TypedHttpHandler<
+    J extends JsonBody | undefined = undefined,
+    Path extends string = string,
+    M extends Method = Method
+> {
+    handle(req: TypedHttpRequest<J, Path, M>): Promise<HttpResponse>
 }
 
-export type Payload = string | Buffer;
-export type HttpMessageBody<J extends JsonBody | undefined = any> = stream.Readable | Payload | J;
+// non json
+export type TBody =
+    | stream.Readable
+    | string
+    | Buffer
+    | undefined;
+export type HttpMessageBody<J extends JsonBody | undefined = undefined> =
+    | TBody
+    | J;
 /*
 *  technically Json can be just a primitive eg "null" or 123;
 *   but I'd rather the type reflected the 99.9% use case: a list or object of JsonValues
@@ -24,18 +35,20 @@ type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string
 export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
 
 
-export interface HttpMessage {
+export interface HttpMessage<J extends JsonBody | undefined = undefined> {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: NodeJS.Dict<string>
-    body?: HttpMessageBody
+    body?: HttpMessageBody<J>
 }
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
+type BodyType<B> = B extends infer J extends JsonBody ? B : TBody
 
-export interface HttpRequest<P extends string = string, M extends Method = Method> extends HttpMessage {
+export interface HttpRequest<J extends JsonBody | undefined = undefined, P extends string = string, M extends Method = Method> extends HttpMessage<J> {
     method: M
     headers: IncomingHttpHeaders
     path: P
+    body: BodyType<J>,
     version?: string
 }
 
@@ -55,7 +68,7 @@ export class h22p {
     }
 
     static request(req?: Partial<HttpRequest>): HttpRequest {
-        return {method: 'GET', path: '/', headers: {}, ...req}
+        return {method: 'GET', path: '/', headers: {}, body: undefined, ...req}
     }
 
     static isRequest(msg: HttpMessage): msg is HttpRequest {
@@ -75,7 +88,7 @@ export class h22p {
     }
 
     static get(path: string = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
-        return {method: 'GET', path, headers}
+        return {method: 'GET', body: undefined, path, headers}
     }
 
     static post(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
@@ -104,11 +117,11 @@ export class h22p {
     }
 
     static options(path = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
-        return {method: 'OPTIONS', path, headers}
+        return {method: 'OPTIONS', path, headers, body: undefined}
     }
 
     static head(path = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
-        return {method: 'HEAD', path, headers}
+        return {method: 'HEAD', path, headers, body: undefined}
     }
 
 }

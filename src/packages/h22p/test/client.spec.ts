@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {h22p, HttpRequest, HttpResponse, Payload} from "../src/interface";
+import {h22p, HttpMessageBody, HttpRequest, HttpResponse} from "../src/interface";
 import {URI} from "../src/uri";
 import {Body} from "../src/body";
 import * as stream from "stream";
@@ -130,7 +130,7 @@ describe('http client', function () {
         await testMethod(patchResponseStream, 'PATCH', bodyString);
         await testMethod(deleteResponseStream, 'DELETE', bodyString);
 
-        async function testMethod(res: HttpResponse, expectedHeader: string, expectedBody: Payload) {
+        async function testMethod(res: HttpResponse, expectedHeader: string, expectedBody: HttpMessageBody) {
             expect(res.status).eq(200);
             expect(res.headers?.method).eq(expectedHeader);
             expect(await Body.text(res.body!)).deep.eq(expectedBody);
