@@ -4,11 +4,11 @@ import * as http from "http";
 import {TypedHttpRequest} from "./router";
 
 export class HttpClient implements HttpHandler {
-    constructor() {
+    constructor(public baseUrl: string = '') {
     }
 
     handle(req: HttpRequest | TypedHttpRequest): Promise<HttpResponse> {
-        const parsedUri = URI.of(req.path)
+        const parsedUri = URI.of(this.baseUrl + req.path)
         return new Promise(async resolve => {
             const options = {
                 hostname: parsedUri.hostname,

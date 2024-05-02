@@ -16,9 +16,9 @@ describe('client / server', function () {
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await h22p.client().handle({
+            const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `http://localhost:${port}/`,
+                path: `/`,
                 headers: {},
                 body: 'blah'
             });
@@ -55,9 +55,9 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await h22p.client().handle({
+            const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `http://localhost:${port}/`,
+                path: `/`,
                 headers: {},
                 body: fileStream
             });
@@ -77,9 +77,9 @@ describe('client / server', function () {
 
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const responseFromProxy = await h22p.client().handle({
+                const responseFromProxy = await h22p.client(`http://localhost:${proxyPort}`).handle({
                     method: "POST",
-                    path: `http://localhost:${proxyPort}`,
+                    path: `/`,
                     body: req.body, // file read stream
                     headers: {}
                 })
@@ -111,9 +111,9 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await h22p.client().handle({
+            const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `http://localhost:${port}/`,
+                path: `/`,
                 headers: {},
                 body: fileStream
             });
@@ -160,9 +160,9 @@ Upload test file
 --${boundary}--
 
 `
-            const response = await h22p.client().handle({
+            const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `http://localhost:${port}/`,
+                path: `/`,
                 headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
                 body: payload
             });

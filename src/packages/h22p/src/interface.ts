@@ -59,8 +59,8 @@ export class h22p {
         return 'status' in msg;
     }
 
-    static client(): HttpClient {
-        return new HttpClient()
+    static client(baseUrl: string): HttpClient {
+        return new HttpClient(baseUrl)
     }
 
     static async server(handler: HttpHandler, port = 0, host: string = '127.0.0.1'): Promise<HttpServer> {

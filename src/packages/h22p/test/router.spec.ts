@@ -97,9 +97,9 @@ describe('router', () => {
 
         const {port, close} = await h22p.server(router(Object.values(routing)))
         const contract = contractFrom(routing)
+
         const getRoute = contract.getRoute({id: '123'});
-        const withHost = {...getRoute, path: `http://localhost:${port}${getRoute.path}`}
-        const response = await h22p.client().handle(withHost);
+        const response = await h22p.client(`http://localhost:${port}`).handle(getRoute);
 
         expect(response.status).eq(200);
         expect(await Body.text(response.body!)).eq('Hello 123');
