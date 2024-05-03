@@ -3,9 +3,11 @@ import {
     HttpHandler,
     HttpMessageBody,
     HttpRequest,
+    HttpRequestBody,
     HttpResponse,
     JsonBody,
     Method,
+    MethodWithBody,
     TypedHttpHandler
 } from "./interface";
 
@@ -81,14 +83,13 @@ export function router(routes: Route<any, string, Method>[]) {
 }
 
 export function route<
-    J extends JsonBody | undefined,
+    J extends JsonBody,
     S extends string = string,
     M extends Method = Method,
     T extends TypedHttpRequest<J, S, M> = TypedHttpRequest<J, S, M>,
 >(
     method: M,
     path: S,
-    body: HttpMessageBody<J>,
     handler: (req: TypedHttpRequest<J, S, M>) => Promise<HttpResponse>): Route<J, S, M> {
     return {
         path,
@@ -106,14 +107,14 @@ export type PathParameters<Path> = {
 };
 
 export type TypedHttpRequest<
-    J extends JsonBody | undefined,
+    J extends JsonBody,
     Path extends string,
     M extends Method,
 > = HttpRequest<J, Path, M> & {
     vars: { path: PathParameters<Path>, wildcards: string[] }
 }
 
-export type Route<J extends JsonBody | undefined, Path extends string, Mtd extends Method> = {
+export type Route<J extends JsonBody, Path extends string, Mtd extends Method> = {
     path: Path;
     handler: TypedHttpHandler<J, Path, Mtd>;
     method: Mtd;
@@ -127,42 +128,34 @@ type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
 
 
 export type UntypedRoutes<
-    J extends JsonBody | undefined = undefined,
+    J extends JsonBody = any,
     Path extends string = string,
     M extends Method = Method
 > = { [k: string]: Route<J, Path, M> };
 
 export type Contract<
-    J extends JsonBody | undefined,
+    J extends JsonBody,
     Path extends string,
     Routes extends UntypedRoutes<J, Path>
 > = {
-    [Key in keyof Routes]: Routes[Key] extends Route<infer J extends JsonBody | undefined, infer Path extends string, infer Mtd extends Method>
-        ? (vars: PathParameters<Path>) => TypedHttpRequest<J, Path, Mtd>
-        : (vars: PathParameters<string>) => TypedHttpRequest<any, string, Method>
-};
-export type Api<
-    J extends JsonBody | undefined,
-    Path extends string,
-    Routes extends UntypedRoutes<J, Path>
-> = {
-    [Key in keyof Routes]: Routes[Key] extends Route<infer J extends JsonBody | undefined, infer Path extends string, infer Mtd extends Method>
-        ? Route<J, Path, Mtd>
-        : Route<any, string, Method>
+    [Key in keyof Routes]: Routes[Key] extends Route<infer J extends JsonBody, infer Path extends string, infer Mtd extends Method>
+        ? Mtd extends MethodWithBody
+            ? (vars: PathParameters<Path>, body: HttpRequestBody<J, Mtd>) => TypedHttpRequest<J, Path, Mtd>
+            : (vars: PathParameters<Path>) => TypedHttpRequest<J, Path, Mtd>
+        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>) => TypedHttpRequest<any, string, Method>
 };
 
 export function contractFrom<
-    J extends JsonBody | undefined,
+    J extends JsonBody,
     Path extends string,
     M extends Method,
     R extends UntypedRoutes<J, Path, M>,
-    T extends Api<J, Path, R>
 >(routes: R): Contract<J, Path, R> {
     let ret = {} as any;
     for (let f in routes) {
         let y: keyof typeof routes = f;
         const route = routes[f]
-        ret[y] = (vars: PathParameters<Path>) => {
+        ret[y] = (vars: PathParameters<Path>, body?: HttpMessageBody<J>) => {
             const keys = Object.keys(vars);
             const replaced = keys.reduce((acc, next) => {
                 // @ts-ignore
@@ -175,7 +168,7 @@ export function contractFrom<
                 path: replaced,
                 method: route.method,
                 headers: {},
-                body: route.body,
+                body: body,
             } as unknown as TypedHttpRequest<J, Path, M>;
         }
     }

@@ -98,10 +98,10 @@ describe('http client', function () {
         const client = h22p.client(`http://localhost:${port}`);
         const bodyString = 'hello, world!';
 
-        const postResponseString = await client.handle(h22p.post(`/`, bodyString))
-        const putResponseString = await client.handle(h22p.put(`/`, bodyString))
-        const patchResponseString = await client.handle(h22p.patch(`/`, bodyString))
-        const deleteResponseString = await client.handle(h22p.delete(`/`, bodyString))
+        const postResponseString = await client.handle(h22p.post(`/`, {}, bodyString))
+        const putResponseString = await client.handle(h22p.put(`/`, {}, bodyString))
+        const patchResponseString = await client.handle(h22p.patch(`/`, {}, bodyString))
+        const deleteResponseString = await client.handle(h22p.delete(`/`, {}, bodyString))
 
         await testMethod(postResponseString, 'POST', bodyString);
         await testMethod(putResponseString, 'PUT', bodyString);
@@ -110,20 +110,20 @@ describe('http client', function () {
 
         const bodyBuffer = Buffer.from(bodyString);
 
-        const postResponseBuffer = await client.handle(h22p.post(`/`, bodyBuffer))
-        const putResponseBuffer = await client.handle(h22p.put(`/`, bodyBuffer))
-        const patchResponseBuffer = await client.handle(h22p.patch(`/`, bodyBuffer))
-        const deleteResponseBuffer = await client.handle(h22p.delete(`/`, bodyBuffer))
+        const postResponseBuffer = await client.handle(h22p.post(`/`, {}, bodyBuffer))
+        const putResponseBuffer = await client.handle(h22p.put(`/`, {}, bodyBuffer))
+        const patchResponseBuffer = await client.handle(h22p.patch(`/`, {}, bodyBuffer))
+        const deleteResponseBuffer = await client.handle(h22p.delete(`/`, {}, bodyBuffer))
 
         await testMethod(postResponseBuffer, 'POST', bodyString);
         await testMethod(putResponseBuffer, 'PUT', bodyString);
         await testMethod(patchResponseBuffer, 'PATCH', bodyString);
         await testMethod(deleteResponseBuffer, 'DELETE', bodyString);
 
-        const postResponseStream = await client.handle(h22p.post(`/`, stream.Readable.from(bodyString)))
-        const putResponseStream = await client.handle(h22p.put(`/`, stream.Readable.from(bodyString)))
-        const patchResponseStream = await client.handle(h22p.patch(`/`, stream.Readable.from(bodyString)))
-        const deleteResponseStream = await client.handle(h22p.delete(`/`, stream.Readable.from(bodyString)))
+        const postResponseStream = await client.handle(h22p.post(`/`, {}, stream.Readable.from(bodyString)))
+        const putResponseStream = await client.handle(h22p.put(`/`, {}, stream.Readable.from(bodyString)))
+        const patchResponseStream = await client.handle(h22p.patch(`/`, {}, stream.Readable.from(bodyString)))
+        const deleteResponseStream = await client.handle(h22p.delete(`/`, {}, stream.Readable.from(bodyString)))
 
         await testMethod(postResponseStream, 'POST', bodyString);
         await testMethod(putResponseStream, 'PUT', bodyString);
@@ -148,7 +148,7 @@ describe('http client', function () {
         });
 
         const client = h22p.client(`http://localhost:${port}`);
-        const request = h22p.post(`/`, Body.asMultipartForm([{
+        const request = h22p.post(`/`, {}, Body.asMultipartForm([{
             headers: [{
                 name: 'content-type',
                 value: 'text/plain'
@@ -178,7 +178,7 @@ describe('http client', function () {
         });
 
         const client = h22p.client(`http://localhost:${port}`);
-        const request = h22p.post(`/`, Body.asMultipartForm([{
+        const request = h22p.post(`/`, {}, Body.asMultipartForm([{
             headers: [{
                 name: 'content-type',
                 value: 'text/plain'
@@ -208,7 +208,7 @@ describe('http client', function () {
         });
 
         const client = h22p.client(`http://localhost:${port}`);
-        const request = h22p.post(`/`, Body.asMultipartForm([
+        const request = h22p.post(`/`, {}, Body.asMultipartForm([
             {
                 headers: [{
                     name: 'content-type',

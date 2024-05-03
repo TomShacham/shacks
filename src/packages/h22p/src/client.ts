@@ -1,4 +1,4 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
 import {TypedHttpRequest} from "./router";
@@ -7,7 +7,7 @@ export class HttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
     }
 
-    handle(req: HttpRequest | TypedHttpRequest): Promise<HttpResponse> {
+    handle(req: HttpRequest | TypedHttpRequest<any, string, Method>): Promise<HttpResponse> {
         const parsedUri = URI.of(this.baseUrl + req.path)
         return new Promise(async resolve => {
             const options = {

@@ -10,7 +10,7 @@ export interface HttpHandler<R extends HttpRequest = HttpRequest> {
 }
 
 export interface TypedHttpHandler<
-    J extends JsonBody | undefined = undefined,
+    J extends JsonBody = any,
     Path extends string = string,
     M extends Method = Method
 > {
@@ -23,9 +23,12 @@ export type TBody =
     | string
     | Buffer
     | undefined;
-export type HttpMessageBody<J extends JsonBody | undefined = undefined> =
-    | TBody
-    | J;
+export type HttpMessageBody<J extends JsonBody = any> = TBody | J
+
+export type HttpRequestBody<J extends JsonBody, M extends Method> =
+    M extends 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+        ? TBody | J
+        : undefined;
 /*
 *  technically Json can be just a primitive eg "null" or 123;
 *   but I'd rather the type reflected the 99.9% use case: a list or object of JsonValues
@@ -35,48 +38,42 @@ type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string
 export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
 
 
-export interface HttpMessage<J extends JsonBody | undefined = undefined> {
+export interface HttpMessage<J extends JsonBody> {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: NodeJS.Dict<string>
-    body?: HttpMessageBody<J>
+    body: HttpMessageBody<J>
 }
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
-type BodyType<B> = B extends infer J extends JsonBody ? B : TBody
+export type MethodWithBody = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export interface HttpRequest<J extends JsonBody | undefined = undefined, P extends string = string, M extends Method = Method> extends HttpMessage<J> {
+export interface HttpRequest<J extends JsonBody = any, P extends string = string, M extends Method = Method> extends HttpMessage<J> {
     method: M
     headers: IncomingHttpHeaders
     path: P
-    body: BodyType<J>,
+    body: HttpMessageBody<J>,
     version?: string
 }
 
-export interface HttpResponse extends HttpMessage {
+export interface HttpResponse<
+    J extends JsonBody = any
+> extends HttpMessage<J> {
     headers: OutgoingHttpHeaders
     status: number
     statusText?: string
 }
 
-export function isSimpleBody(body: stream.Duplex | AsyncIterable<string | Buffer> | string | Buffer): body is string | Buffer {
+export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
     return typeof body === 'string' || body instanceof Buffer;
 }
 
 export class h22p {
-    static response(res?: Partial<HttpResponse>): HttpResponse {
-        return {status: 200, headers: {}, ...res}
+    static response<J extends JsonBody = any>(res?: Partial<HttpResponse<J>>): HttpResponse<J> {
+        return {status: 200, headers: {}, body: undefined, ...res}
     }
 
     static request(req?: Partial<HttpRequest>): HttpRequest {
         return {method: 'GET', path: '/', headers: {}, body: undefined, ...req}
-    }
-
-    static isRequest(msg: HttpMessage): msg is HttpRequest {
-        return 'method' in msg;
-    }
-
-    static isResponse(msg: HttpMessage): msg is HttpResponse {
-        return 'status' in msg;
     }
 
     static client(baseUrl: string): HttpClient {
@@ -91,19 +88,19 @@ export class h22p {
         return {method: 'GET', body: undefined, path, headers}
     }
 
-    static post(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static post<J extends JsonBody = any>(path = '/', headers: http.IncomingHttpHeaders = {}, body: HttpMessageBody<J>): HttpRequest<J> {
         return {method: 'POST', body, path, headers}
     }
 
-    static put(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static put<J extends JsonBody = any>(path = '/', headers: http.IncomingHttpHeaders = {}, body: HttpMessageBody<J>): HttpRequest<J> {
         return {method: 'PUT', body, path, headers}
     }
 
-    static patch(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static patch<J extends JsonBody = any>(path = '/', headers: http.IncomingHttpHeaders = {}, body: HttpMessageBody<J>): HttpRequest<J> {
         return {method: 'PATCH', body, path, headers}
     }
 
-    static delete(path = '/', body: HttpMessageBody = '', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static delete<J extends JsonBody = any>(path = '/', headers: http.IncomingHttpHeaders = {}, body: HttpMessageBody<J>): HttpRequest {
         /*
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...

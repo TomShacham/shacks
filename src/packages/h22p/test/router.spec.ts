@@ -89,13 +89,13 @@ describe('router', () => {
 
     it('can generate a client from router', async () => {
         const routing = {
-            getRoute: route('GET', "/resource/{id}", undefined, async (req) => {
+            getRoute: route('GET', "/resource/{id}/sub/{subId}", async (req) => {
                 const params = req.vars.path;
-                return h22p.response({status: 200, body: `Hello ${params.id}`})
+                return h22p.response({status: 200, body: `Hello ${params.id} ${params.subId}`})
             }),
-            postRoute: route('GET', "/resource/{id}", {foo: 'bar'}, async (req) => {
+            postRoute: route('POST', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
-                const body = req.body.foo;
+                const body = req.body;
                 return h22p.response({status: 200, body: `Hello ${params.id}`})
             })
         };
@@ -103,11 +103,12 @@ describe('router', () => {
         const {port, close} = await h22p.server(router(Object.values(routing)))
         const contract = contractFrom(routing)
 
-        const getRoute = contract.getRoute({id: '123'});
+        const getRoute = contract.getRoute({id: 'id-123', subId: 'sub-456'});
+        const postRoute = contract.postRoute({id: 'id-123'}, undefined);
         const response = await h22p.client(`http://localhost:${port}`).handle(getRoute);
 
         expect(response.status).eq(200);
-        expect(await Body.text(response.body!)).eq('Hello 123');
+        expect(await Body.text(response.body!)).eq('Hello id-123 sub-456');
 
         await close();
     })
