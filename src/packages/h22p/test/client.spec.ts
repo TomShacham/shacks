@@ -97,6 +97,8 @@ describe('http client', function () {
 
         const client = h22p.client(`http://localhost:${port}`);
         const bodyString = 'hello, world!';
+        const bodyJson = {"hello": "world"};
+        const bodyBuffer = Buffer.from(bodyString);
 
         const postResponseString = await client.handle(h22p.post(`/`, {}, bodyString))
         const putResponseString = await client.handle(h22p.put(`/`, {}, bodyString))
@@ -108,7 +110,16 @@ describe('http client', function () {
         await testMethod(patchResponseString, 'PATCH', bodyString);
         await testMethod(deleteResponseString, 'DELETE', bodyString);
 
-        const bodyBuffer = Buffer.from(bodyString);
+        const postResponseJson = await client.handle(h22p.post(`/`, {}, bodyJson))
+        const putResponseJson = await client.handle(h22p.put(`/`, {}, bodyJson))
+        const patchResponseJson = await client.handle(h22p.patch(`/`, {}, bodyJson))
+        const deleteResponseJson = await client.handle(h22p.delete(`/`, {}, bodyJson))
+
+        await testMethod(postResponseJson, 'POST', JSON.stringify(bodyJson));
+        await testMethod(putResponseJson, 'PUT', JSON.stringify(bodyJson));
+        await testMethod(patchResponseJson, 'PATCH', JSON.stringify(bodyJson));
+        await testMethod(deleteResponseJson, 'DELETE', JSON.stringify(bodyJson));
+
 
         const postResponseBuffer = await client.handle(h22p.post(`/`, {}, bodyBuffer))
         const putResponseBuffer = await client.handle(h22p.put(`/`, {}, bodyBuffer))

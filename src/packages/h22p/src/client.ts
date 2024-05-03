@@ -2,6 +2,7 @@ import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface"
 import {URI} from "./uri";
 import * as http from "http";
 import {TypedHttpRequest} from "./router";
+import stream from "node:stream";
 
 export class HttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
@@ -31,12 +32,14 @@ export class HttpClient implements HttpHandler {
                     }))
                 });
             });
-            if (typeof req.body === 'string' || req.body instanceof Uint8Array) {
-                nodeRequest.write(req.body)
-            } else if (req.body) {
+            if (req.body instanceof stream.Readable) {
                 for await (const chunk of req.body) {
                     nodeRequest.write(chunk)
                 }
+            } else if (req.body instanceof Buffer || typeof req.body === 'string') {
+                nodeRequest.write(req.body)
+            } else if (typeof req.body === 'object') {
+                nodeRequest.write(JSON.stringify(req.body))
             }
             nodeRequest.end()
         })
