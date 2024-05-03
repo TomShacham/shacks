@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {h22p} from "../src/interface";
-import {contractFrom, route, router, Router} from "../src/router";
+import {contractFrom, post, route, router, Router} from "../src/router";
 import {Body} from "../src";
 
 describe('router', () => {
@@ -93,22 +93,23 @@ describe('router', () => {
                 const params = req.vars.path;
                 return h22p.response({status: 200, body: `Hello ${params.id} ${params.subId}`})
             }),
-            postRoute: route('POST', "/resource/{id}", async (req) => {
+            postRoute: post<{ foo: string }>()('POST', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
-                const body = req.body;
-                return h22p.response({status: 200, body: `Hello ${params.id}`})
+                const body = await Body.json(req.body);
+                return h22p.response({status: 200, body: `Hello ${params.id} ${JSON.stringify(body)}`})
             })
         };
 
-        const {port, close} = await h22p.server(router(Object.values(routing)))
+        const {port, close} = await h22p.server(router(routing))
         const contract = contractFrom(routing)
 
         const getRoute = contract.getRoute({id: 'id-123', subId: 'sub-456'});
-        const postRoute = contract.postRoute({id: 'id-123'}, undefined);
-        const response = await h22p.client(`http://localhost:${port}`).handle(getRoute);
+        const postRoute = contract.postRoute({id: 'id-123'}, {foo: '123'});
+        console.log(postRoute);
+        const response = await h22p.client(`http://localhost:${port}`).handle(postRoute);
 
         expect(response.status).eq(200);
-        expect(await Body.text(response.body!)).eq('Hello id-123 sub-456');
+        expect(await Body.text(response.body!)).eq('Hello id-123 {"foo":"123"}');
 
         await close();
     })

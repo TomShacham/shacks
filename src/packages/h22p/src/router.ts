@@ -84,6 +84,25 @@ export function router(routes: Route<any, string, Method>[] | UntypedRoutes) {
     else return new Router(Object.values(routes))
 }
 
+export function post<
+    J extends JsonBody,
+>() {
+    return function <
+        S extends string = string,
+        M extends Method = Method,
+        T extends TypedHttpRequest<J, S, M> = TypedHttpRequest<J, S, M>,
+    >(
+        method: M,
+        path: S,
+        handler: (req: TypedHttpRequest<J, S, M>) => Promise<HttpResponse>): Route<J, S, M> {
+        return {
+            path,
+            method: method,
+            handler: {handle: handler}
+        }
+    }
+}
+
 export function route<
     J extends JsonBody,
     S extends string = string,
