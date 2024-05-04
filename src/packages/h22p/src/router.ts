@@ -15,9 +15,9 @@ export class Router implements HttpHandler {
     constructor(public routes: Route<any, string, Method>[]) {
     }
 
-    handle(req: HttpRequest): Promise<HttpResponse> {
+    handle(req: HttpRequest): Promise<HttpResponse<any>> {
         const notFoundHandler = {
-            async handle(req: HttpRequest): Promise<HttpResponse> {
+            async handle(req: HttpRequest): Promise<HttpResponse<string>> {
                 return h22p.response({status: 404, body: "Not found"})
             }
         };
@@ -91,10 +91,11 @@ export function post<
         S extends string = string,
         M extends Method = Method,
         T extends TypedHttpRequest<J, S, M> = TypedHttpRequest<J, S, M>,
+        Res extends HttpMessageBody = any
     >(
         method: M,
         path: S,
-        handler: (req: TypedHttpRequest<J, S, M>) => Promise<HttpResponse>): Route<J, S, M> {
+        handler: (req: TypedHttpRequest<J, S, M>) => Promise<HttpResponse<Res>>): Route<J, S, M> {
         return {
             path,
             method: method,
@@ -104,14 +105,15 @@ export function post<
 }
 
 export function route<
-    J extends JsonBody,
+    B extends HttpMessageBody,
     S extends string = string,
     M extends Method = Method,
-    T extends TypedHttpRequest<J, S, M> = TypedHttpRequest<J, S, M>,
+    T extends TypedHttpRequest<B, S, M> = TypedHttpRequest<B, S, M>,
+    Res extends HttpMessageBody = any
 >(
     method: M,
     path: S,
-    handler: (req: TypedHttpRequest<J, S, M>) => Promise<HttpResponse>): Route<J, S, M> {
+    handler: (req: TypedHttpRequest<B, S, M>) => Promise<HttpResponse<Res>>): Route<B, S, M> {
     return {
         path,
         method: method,
@@ -128,18 +130,20 @@ export type PathParameters<Path> = {
 };
 
 export type TypedHttpRequest<
-    J extends JsonBody,
+    B extends HttpMessageBody,
     Path extends string,
     M extends Method,
-> = HttpRequest<J, Path, M> & {
+> = HttpRequest<B, Path, M> & {
     vars: { path: PathParameters<Path>, wildcards: string[] }
 }
 
-export type Route<J extends JsonBody, Path extends string, Mtd extends Method> = {
+export type Route<
+    B extends HttpMessageBody,
+    Path extends string,
+    Mtd extends Method> = {
     path: Path;
-    handler: TypedHttpHandler<J, Path, Mtd>;
+    handler: TypedHttpHandler<B, Path, Mtd>;
     method: Mtd;
-    body?: HttpMessageBody<J>
 };
 
 type backToPath<Part, T extends pathParameters<Part> = pathParameters<Part>> = Part extends `{${infer Name}}` ? string : Part;
@@ -149,15 +153,15 @@ type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
 
 
 export type UntypedRoutes<
-    J extends JsonBody = any,
+    B extends HttpMessageBody = any,
     Path extends string = string,
     M extends Method = Method
-> = { [k: string]: Route<J, Path, M> };
+> = { [k: string]: Route<B, Path, M> };
 
 export type Contract<
-    J extends JsonBody,
+    B extends HttpMessageBody,
     Path extends string,
-    Routes extends UntypedRoutes<J, Path>
+    Routes extends UntypedRoutes<B, Path>
 > = {
     [Key in keyof Routes]: Routes[Key] extends Route<infer J extends JsonBody, infer Path extends string, infer Mtd extends Method>
         ? Mtd extends MethodWithBody
@@ -167,16 +171,16 @@ export type Contract<
 };
 
 export function contractFrom<
-    J extends JsonBody,
+    B extends HttpMessageBody,
     Path extends string,
     M extends Method,
-    R extends UntypedRoutes<J, Path, M>,
->(routes: R): Contract<J, Path, R> {
+    R extends UntypedRoutes<B, Path, M>,
+>(routes: R): Contract<B, Path, R> {
     let ret = {} as any;
     for (let f in routes) {
         let y: keyof typeof routes = f;
         const route = routes[f]
-        ret[y] = (vars: PathParameters<Path>, body?: HttpMessageBody<J>) => {
+        ret[y] = (vars: PathParameters<Path>, body?: B) => {
             const keys = Object.keys(vars);
             const replaced = keys.reduce((acc, next) => {
                 // @ts-ignore
@@ -190,7 +194,7 @@ export function contractFrom<
                 method: route.method,
                 headers: {},
                 body: body,
-            } as unknown as TypedHttpRequest<J, Path, M>;
+            } as unknown as TypedHttpRequest<B, Path, M>;
         }
     }
     return ret;

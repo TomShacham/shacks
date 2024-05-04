@@ -15,10 +15,17 @@ export class Body {
             return text;
         }
         const textDecoder = new TextDecoder();
-        for await (const chunk of body) {
-            text += textDecoder.decode(chunk);
+        if (body instanceof stream.Readable) {
+            for await (const chunk of body) {
+                text += textDecoder.decode(chunk);
+            }
+            return text;
         }
-        return text;
+        if (body instanceof Buffer) {
+            return textDecoder.decode(body)
+        }
+        if (typeof body === 'object') return JSON.stringify(body);
+        return body; // string
     }
 
     static async json(body: HttpMessageBody): Promise<Json> {

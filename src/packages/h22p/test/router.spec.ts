@@ -93,6 +93,7 @@ describe('router', () => {
             }),
             postRoute: post<{ foo: string }>()('POST', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
+                // TODO this should not give you req.body.foo until after Body.json()
                 const body = await Body.json(req.body);
                 return h22p.response({status: 200, body: `Hello ${params.id} ${JSON.stringify(body)}`})
             })
