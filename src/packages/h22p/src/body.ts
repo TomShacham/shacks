@@ -363,4 +363,26 @@ export function createReadable() {
     });
 }
 
+export class h22pStream<B extends HttpMessageBody> {
+    static create() {
+        return new h22pStream(new stream.Readable({
+            read() {
+            }
+        }));
+    }
+
+    __h22pStream: boolean = true;
+
+    constructor(public stream: stream.Readable) {
+    }
+}
+
+export function readable(s: stream.Readable) {
+    return new h22pStream(s)
+}
+
+export function isH22PStream(s: any): s is h22pStream<any> {
+    return '__h22pStream' in s;
+}
+
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };

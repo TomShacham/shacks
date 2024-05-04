@@ -47,12 +47,6 @@ export type BodyType<B extends HttpMessageBody> = B extends infer J extends Json
                 : typeof undefined
 
 
-export interface HttpMessage<B extends HttpMessageBody> {
-    headers?: OutgoingHttpHeaders | IncomingHttpHeaders
-    trailers?: NodeJS.Dict<string>
-    body: B
-}
-
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 export type MethodWithBody = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -60,19 +54,23 @@ export interface HttpRequest<
     B extends HttpMessageBody = any,
     P extends string = string,
     M extends Method = Method
-> extends HttpMessage<B> {
+> {
     method: M
     headers: IncomingHttpHeaders
     path: P
     version?: string
+    body: B
+    trailers?: NodeJS.Dict<string>
 }
 
 export interface HttpResponse<
     B extends HttpMessageBody = any,
-> extends HttpMessage<B> {
+> {
     headers: OutgoingHttpHeaders
     status: number
+    body: B
     statusText?: string
+    trailers?: NodeJS.Dict<string>
 }
 
 export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
