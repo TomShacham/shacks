@@ -1,7 +1,5 @@
 import {expect} from "chai";
-import {h22p} from "../src/interface";
-import {contractFrom, post, route, router, Router} from "../src/router";
-import {Body} from "../src";
+import {Body, contractFrom, h22p, post, route, Router, router} from "../src";
 
 describe('router', () => {
     it('not found default', async () => {

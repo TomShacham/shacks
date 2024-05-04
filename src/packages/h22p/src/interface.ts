@@ -23,11 +23,11 @@ export type TBody =
     | string
     | Buffer
     | undefined;
-export type HttpMessageBody<J extends JsonBody = any> = TBody | J
+export type HttpMessageBody<J extends JsonBody | undefined = any> = J extends undefined ? TBody : J
 
 export type HttpRequestBody<J extends JsonBody, M extends Method> =
     M extends 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-        ? TBody | J
+        ? J extends infer Json ? Json : TBody
         : undefined;
 /*
 *  technically Json can be just a primitive eg "null" or 123;
@@ -38,7 +38,7 @@ type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string
 export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
 
 
-export interface HttpMessage<J extends JsonBody> {
+export interface HttpMessage<J extends JsonBody | undefined> {
     headers?: OutgoingHttpHeaders | IncomingHttpHeaders
     trailers?: NodeJS.Dict<string>
     body: HttpMessageBody<J>
@@ -47,7 +47,11 @@ export interface HttpMessage<J extends JsonBody> {
 export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 export type MethodWithBody = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export interface HttpRequest<J extends JsonBody = any, P extends string = string, M extends Method = Method> extends HttpMessage<J> {
+export interface HttpRequest<
+    J extends JsonBody = any,
+    P extends string = string,
+    M extends Method = Method
+> extends HttpMessage<J> {
     method: M
     headers: IncomingHttpHeaders
     path: P
@@ -56,20 +60,20 @@ export interface HttpRequest<J extends JsonBody = any, P extends string = string
 }
 
 export interface HttpResponse<
-    J extends JsonBody = any
+    J extends JsonBody | undefined = any
 > extends HttpMessage<J> {
     headers: OutgoingHttpHeaders
     status: number
     statusText?: string
 }
 
-export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
+export function isSimpleBody(body: HttpMessageBody<any>): body is string | Buffer {
     return typeof body === 'string' || body instanceof Buffer;
 }
 
 export class h22p {
-    static response<J extends JsonBody = any>(res?: Partial<HttpResponse<J>>): HttpResponse<J> {
-        return {status: 200, headers: {}, body: undefined, ...res}
+    static response<J extends JsonBody | undefined = undefined>(res?: Partial<HttpResponse<J>>): HttpResponse<J> {
+        return {status: 200, headers: {}, body: undefined as HttpMessageBody<J>, ...res}
     }
 
     static request(req?: Partial<HttpRequest>): HttpRequest {
