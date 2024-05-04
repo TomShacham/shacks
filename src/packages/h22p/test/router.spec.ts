@@ -94,8 +94,8 @@ describe('router', () => {
             postRoute: post<{ foo: string }>()('POST', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
                 // TODO this should not give you req.body.foo until after Body.json()
-                const body = await Body.json(req.body);
-                return h22p.response({status: 200, body: `Hello ${params.id} ${JSON.stringify(body)}`})
+                const body = await Body.json(req.body)
+                return h22p.response({status: 200, body: `Hello ${params.id} ${body.foo}`})
             })
         };
 
@@ -103,12 +103,14 @@ describe('router', () => {
         const contract = contractFrom(routing)
 
         const getRoute = contract.getRoute({id: 'id-123', subId: 'sub-456'});
-        const postRoute = contract.postRoute({id: 'id-123'}, {foo: '123'});
-        console.log(postRoute);
-        const response = await h22p.client(`http://localhost:${port}`).handle(postRoute);
+        const postRoute = contract.postRoute({id: 'id-123'}, {foo: 'body-456'});
+        const getResponse = await h22p.client(`http://localhost:${port}`).handle(getRoute);
+        const postResponse = await h22p.client(`http://localhost:${port}`).handle(postRoute);
 
-        expect(response.status).eq(200);
-        expect(await Body.text(response.body!)).eq('Hello id-123 {"foo":"123"}');
+        expect(getResponse.status).eq(200);
+        expect(postResponse.status).eq(200);
+        expect(await Body.text(getResponse.body!)).eq('Hello id-123 sub-456');
+        expect(await Body.text(postResponse.body!)).eq('Hello id-123 body-456');
 
         await close();
     })

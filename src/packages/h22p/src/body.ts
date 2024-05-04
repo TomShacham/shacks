@@ -1,4 +1,4 @@
-import {HttpMessageBody, HttpRequest, isSimpleBody} from "./interface";
+import {BodyType, HttpMessageBody, HttpRequest, isSimpleBody, JsonBody} from "./interface";
 import * as stream from "stream";
 
 type MultipartFormPart<T = stream.Readable> = {
@@ -28,7 +28,7 @@ export class Body {
         return body; // string
     }
 
-    static async json(body: HttpMessageBody): Promise<Json> {
+    static async json<J extends JsonBody>(body: BodyType<J>): Promise<BodyType<J>> {
         return JSON.parse(await this.text(body));
     }
 

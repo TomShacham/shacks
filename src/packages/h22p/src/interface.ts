@@ -36,15 +36,15 @@ export type HttpRequestBody<J extends JsonBody, M extends Method> =
 * */
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
-// export type BodyType<B extends HttpMessageBody> = B extends infer J extends JsonBody
-//     ? B
-//     : B extends infer J extends string
-//         ? string :
-//         B extends infer J extends Buffer
-//             ? Buffer
-//             : B extends infer J extends stream.Readable
-//                 ? stream.Readable
-//                 : typeof undefined
+export type BodyType<B extends HttpMessageBody> = B extends infer J extends JsonBody
+    ? B
+    : B extends infer J extends string
+        ? string :
+        B extends infer J extends Buffer
+            ? Buffer
+            : B extends infer J extends stream.Readable
+                ? stream.Readable
+                : typeof undefined
 
 
 export interface HttpMessage<B extends HttpMessageBody> {
