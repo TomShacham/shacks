@@ -6,6 +6,16 @@ import {h22p} from "../src/interface";
 
 describe('body', () => {
 
+    describe('json body', () => {
+        it('throws if json parsing fails', async () => {
+            try {
+                await Body.json('{malformed')
+            } catch (e) {
+                expect((e as Error).message).eq(`Expected property name or '}' in JSON at position 1`)
+            }
+        })
+    })
+
     describe('multipart form', () => {
         /*
         *  the standard line end for headers and boundaries etc is CRLF (/r/n)
@@ -434,3 +444,4 @@ describe('body', () => {
         })
     })
 })
+

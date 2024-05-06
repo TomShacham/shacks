@@ -35,13 +35,14 @@ export class Body {
     }
 
     static async json<B extends HttpMessageBody>(body: MessageBody<B>): Promise<BodyType<B>> {
-        try {
-            const text = await this.text(body);
-            return JSON.parse(text);
-        } catch (e) {
-            console.error(e);
-            throw e;
-        }
+        // async-await syntax does not reject with an error if JSON.parse fails, so using explicit Promise syntax
+        return new Promise((res, rej) => {
+            this.text(body).then(t => {
+                res(JSON.parse(t))
+            }).catch(e => {
+                rej(e);
+            });
+        })
     }
 
     static asMultipartForm(parts: MultipartFormPart<HttpMessageBody>[], boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)): HttpMessageBody {
