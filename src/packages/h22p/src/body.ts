@@ -1,4 +1,4 @@
-import {BodyType, HttpMessageBody, HttpRequest, isSimpleBody, JsonBody} from "./interface";
+import {BodyType, HttpMessageBody, HttpRequest, isSimpleBody, MessageBody} from "./interface";
 import * as stream from "stream";
 
 type MultipartFormPart<T = stream.Readable> = {
@@ -7,7 +7,7 @@ type MultipartFormPart<T = stream.Readable> = {
 };
 
 export class Body {
-    static async text(body: HttpMessageBody): Promise<string> {
+    static async text<B extends HttpMessageBody>(body: MessageBody<B>): Promise<string> {
         let text = '';
         if (!body) return text;
         if (body instanceof stream.Readable && body.destroyed) {
@@ -15,6 +15,12 @@ export class Body {
             return text;
         }
         const textDecoder = new TextDecoder();
+        if (body instanceof h22pStream) {
+            for await (const chunk of body.stream ?? []) {
+                text += typeof chunk === 'string' ? chunk : textDecoder.decode(chunk);
+            }
+            return text;
+        }
         if (body instanceof stream.Readable) {
             for await (const chunk of body) {
                 text += textDecoder.decode(chunk);
@@ -28,8 +34,14 @@ export class Body {
         return body; // string
     }
 
-    static async json<J extends JsonBody>(body: BodyType<J>): Promise<BodyType<J>> {
-        return JSON.parse(await this.text(body));
+    static async json<B extends HttpMessageBody>(body: MessageBody<B>): Promise<BodyType<B>> {
+        try {
+            const text = await this.text(body);
+            return JSON.parse(text);
+        } catch (e) {
+            console.error(e);
+            throw e;
+        }
     }
 
     static asMultipartForm(parts: MultipartFormPart<HttpMessageBody>[], boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)): HttpMessageBody {
@@ -371,14 +383,22 @@ export class h22pStream<B extends HttpMessageBody> {
         }));
     }
 
+    static from<B extends HttpMessageBody>(arg: B): h22pStream<B> {
+        if (isSimpleBody(arg)) {
+            return new h22pStream<B>(stream.Readable.from(arg))
+        } else if (arg instanceof stream.Readable) {
+            return new h22pStream<B>(arg)
+        } else if (typeof arg === 'object') {
+            return new h22pStream<B>(stream.Readable.from(JSON.stringify(arg)))
+        } else {
+            return new h22pStream<B>(undefined)
+        }
+    }
+
     __h22pStream: boolean = true;
 
-    constructor(public stream: stream.Readable) {
+    constructor(public stream: stream.Readable | undefined) {
     }
-}
-
-export function readable(s: stream.Readable) {
-    return new h22pStream(s)
 }
 
 export function isH22PStream(s: any): s is h22pStream<any> {

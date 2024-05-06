@@ -5,11 +5,13 @@ import {
     HttpRequest,
     HttpRequestBody,
     HttpResponse,
-    JsonBody,
+    MessageBody,
     Method,
-    MethodWithBody,
-    TypedHttpHandler
+    ReadMethods,
+    TypedHttpHandler,
+    WriteMethods
 } from "./interface";
+import {h22pStream} from "./body";
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<any, string, Method>[]) {
@@ -23,12 +25,12 @@ export class Router implements HttpHandler {
         };
         const apiHandler = this.matches(req.path, req.method);
         if (apiHandler.route) {
-            const typedReq: TypedHttpRequest<any, string, Method> = Object.defineProperty(req, 'vars', {
+            const typedReq: TypedHttpRequest<any, any, string, Method> = Object.defineProperty(req, 'vars', {
                 value: {
                     path: apiHandler.data.matches,
                     wildcards: apiHandler.data.wildcards
                 }
-            }) as TypedHttpRequest<any, string, Method>;
+            }) as TypedHttpRequest<any, any, string, Method>;
             return apiHandler.route.handler.handle(typedReq);
         } else {
             return notFoundHandler.handle(req);
@@ -40,26 +42,28 @@ export class Router implements HttpHandler {
         data: { matches: NodeJS.Dict<string>, wildcards: string[] }
     } {
         for (const route of this.routes) {
-            const noTrailingSlash = (route.path !== '/' && route.path.endsWith('/')) ? route.path.slice(0, -1) : route.path;
-            const exactMatch = noTrailingSlash === path && route.method === method;
-            if (exactMatch) return {route, data: {matches: {}, wildcards: []}}
-            let s = noTrailingSlash
-                .replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
-            for (const wildcard of s.split('*')) {
-                s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.+)`)
-            }
-            const regExp = new RegExp(s);
-            const regExpMatches = regExp.test(path);
-            if (regExpMatches) {
-                const matches = path.match(regExp)!.groups as NodeJS.Dict<string>;
-                const data = matches
-                    ? Object.entries(matches).reduce((acc, [k, v]) => {
-                        if (k.startsWith('wildcard')) acc.wildcards.push(v!)
-                        else acc.matches[k] = v!;
-                        return acc;
-                    }, ({wildcards: [] as string[], matches: {} as { [k: string]: string }}))
-                    : {matches: {}, wildcards: []}
-                if (matches) return {route, data}
+            if (route.method === method) {
+                const noTrailingSlash = (route.path !== '/' && route.path.endsWith('/')) ? route.path.slice(0, -1) : route.path;
+                const exactMatch = noTrailingSlash === path;
+                if (exactMatch) return {route, data: {matches: {}, wildcards: []}}
+                let s = noTrailingSlash
+                    .replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
+                for (const wildcard of s.split('*')) {
+                    s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.+)`)
+                }
+                const regExp = new RegExp(s);
+                const regExpMatches = regExp.test(path);
+                if (regExpMatches) {
+                    const matches = path.match(regExp)!.groups as NodeJS.Dict<string>;
+                    const data = matches
+                        ? Object.entries(matches).reduce((acc, [k, v]) => {
+                            if (k.startsWith('wildcard')) acc.wildcards.push(v!)
+                            else acc.matches[k] = v!;
+                            return acc;
+                        }, ({wildcards: [] as string[], matches: {} as { [k: string]: string }}))
+                        : {matches: {}, wildcards: []}
+                    if (matches) return {route, data}
+                }
             }
         }
         return {data: {matches: {}, wildcards: []}}
@@ -84,18 +88,17 @@ export function router(routes: Route<any, string, Method>[] | UntypedRoutes) {
     else return new Router(Object.values(routes))
 }
 
-export function post<
-    J extends JsonBody,
+export function write<
+    B extends HttpMessageBody,
 >() {
     return function <
         S extends string = string,
-        M extends Method = Method,
-        T extends TypedHttpRequest<J, S, M> = TypedHttpRequest<J, S, M>,
+        M extends WriteMethods = WriteMethods,
         Res extends HttpMessageBody = any
     >(
         method: M,
         path: S,
-        handler: (req: TypedHttpRequest<J, S, M>) => Promise<HttpResponse<Res>>): Route<J, S, M> {
+        handler: (req: TypedHttpRequest<B, h22pStream<B>, S, M>) => Promise<HttpResponse<Res>>): Route<B, S, M> {
         return {
             path,
             method: method,
@@ -104,16 +107,16 @@ export function post<
     }
 }
 
-export function route<
+export function read<
     B extends HttpMessageBody,
     S extends string = string,
-    M extends Method = Method,
-    T extends TypedHttpRequest<B, S, M> = TypedHttpRequest<B, S, M>,
+    M extends ReadMethods = ReadMethods,
+    T extends TypedHttpRequest<B, MessageBody<B>, S, M> = TypedHttpRequest<B, MessageBody<B>, S, M>,
     Res extends HttpMessageBody = any
 >(
     method: M,
     path: S,
-    handler: (req: TypedHttpRequest<B, S, M>) => Promise<HttpResponse<Res>>): Route<B, S, M> {
+    handler: (req: TypedHttpRequest<B, MessageBody<B>, S, M>) => Promise<HttpResponse<Res>>): Route<B, S, M> {
     return {
         path,
         method: method,
@@ -131,18 +134,20 @@ export type PathParameters<Path> = {
 
 export type TypedHttpRequest<
     B extends HttpMessageBody,
+    Msg extends MessageBody<B>,
     Path extends string,
     M extends Method,
-> = HttpRequest<B, Path, M> & {
+> = HttpRequest<Msg, Path, M> & {
     vars: { path: PathParameters<Path>, wildcards: string[] }
 }
 
 export type Route<
     B extends HttpMessageBody,
     Path extends string,
-    Mtd extends Method> = {
+    Mtd extends Method,
+> = {
     path: Path;
-    handler: TypedHttpHandler<B, Path, Mtd>;
+    handler: TypedHttpHandler<B, h22pStream<B>, Path, Mtd>;
     method: Mtd;
 };
 
@@ -155,7 +160,8 @@ type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
 export type UntypedRoutes<
     B extends HttpMessageBody = any,
     Path extends string = string,
-    M extends Method = Method
+    M extends Method = Method,
+    Msg extends MessageBody<B> = MessageBody<B>,
 > = { [k: string]: Route<B, Path, M> };
 
 export type Contract<
@@ -163,11 +169,11 @@ export type Contract<
     Path extends string,
     Routes extends UntypedRoutes<B, Path>
 > = {
-    [Key in keyof Routes]: Routes[Key] extends Route<infer J extends JsonBody, infer Path extends string, infer Mtd extends Method>
-        ? Mtd extends MethodWithBody
-            ? (vars: PathParameters<Path>, body: HttpRequestBody<J, Mtd>) => TypedHttpRequest<J, Path, Mtd>
-            : (vars: PathParameters<Path>) => TypedHttpRequest<J, Path, Mtd>
-        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>) => TypedHttpRequest<any, string, Method>
+    [Key in keyof Routes]: Routes[Key] extends Route<infer B extends HttpMessageBody, infer Path extends string, infer Mtd extends Method>
+        ? Mtd extends WriteMethods
+            ? (vars: PathParameters<Path>, body: HttpRequestBody<B, Mtd>) => TypedHttpRequest<B, MessageBody<B>, Path, Mtd>
+            : (vars: PathParameters<Path>) => TypedHttpRequest<B, MessageBody<B>, Path, Mtd>
+        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>) => TypedHttpRequest<any, MessageBody<any>, string, Method>
 };
 
 export function contractFrom<
@@ -175,6 +181,7 @@ export function contractFrom<
     Path extends string,
     M extends Method,
     R extends UntypedRoutes<B, Path, M>,
+    Msg extends MessageBody<B> = MessageBody<B>,
 >(routes: R): Contract<B, Path, R> {
     let ret = {} as any;
     for (let f in routes) {
@@ -193,8 +200,8 @@ export function contractFrom<
                 path: replaced,
                 method: route.method,
                 headers: {},
-                body: body,
-            } as unknown as TypedHttpRequest<B, Path, M>;
+                body: h22pStream.from(body),
+            } as unknown as TypedHttpRequest<B, Msg, Path, M>;
         }
     }
     return ret;

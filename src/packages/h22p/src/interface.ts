@@ -4,6 +4,7 @@ import * as stream from "stream";
 import {HttpClient} from "./client";
 import {httpServer, HttpServer} from "./server";
 import {TypedHttpRequest} from "./router";
+import {h22pStream} from "./body";
 
 export interface HttpHandler<Req extends HttpRequest = HttpRequest, Res extends HttpResponse = HttpResponse> {
     handle(req: Req): Promise<Res>
@@ -11,11 +12,12 @@ export interface HttpHandler<Req extends HttpRequest = HttpRequest, Res extends 
 
 export interface TypedHttpHandler<
     B extends HttpMessageBody,
+    Msg extends MessageBody<B>,
     Path extends string = string,
     M extends Method = Method,
     Res extends HttpMessageBody = any,
 > {
-    handle(req: TypedHttpRequest<B, Path, M>): Promise<HttpResponse<Res>>
+    handle(req: TypedHttpRequest<B, Msg, Path, M>): Promise<HttpResponse<Res>>
 }
 
 // non json
@@ -24,10 +26,11 @@ export type SimpleBody =
     | string
     | Buffer;
 export type HttpMessageBody = JsonBody | SimpleBody | undefined;
+export type MessageBody<B extends HttpMessageBody> = h22pStream<B> | HttpMessageBody;
 
-export type HttpRequestBody<J extends JsonBody, M extends Method> =
+export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
     M extends 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-        ? J extends infer Json ? Json : SimpleBody
+        ? BodyType<B>
         : undefined;
 /*
 *  technically Json can be just a primitive eg "null" or 123;
@@ -47,11 +50,12 @@ export type BodyType<B extends HttpMessageBody> = B extends infer J extends Json
                 : typeof undefined
 
 
-export type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
-export type MethodWithBody = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type ReadMethods = 'GET' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
+export type WriteMethods = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type Method = ReadMethods | WriteMethods;
 
 export interface HttpRequest<
-    B extends HttpMessageBody = any,
+    B extends MessageBody<any> = any,
     P extends string = string,
     M extends Method = Method
 > {
@@ -98,28 +102,28 @@ export class h22p {
         return {method: 'GET', body: undefined, path, headers}
     }
 
-    static post<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
-        return {method: 'POST', body, path, headers}
+    static post<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+        return {method: 'POST', body: body, path, headers}
     }
 
-    static put<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
-        return {method: 'PUT', body, path, headers}
+    static put<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+        return {method: 'PUT', body: body, path, headers}
     }
 
-    static patch<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
-        return {method: 'PATCH', body, path, headers}
+    static patch<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+        return {method: 'PATCH', body: body, path, headers}
     }
 
-    static delete<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
+    static delete<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
         /*
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...
          */
         if (isSimpleBody(body)) {
             const contentLength = body.length.toString();
-            return {method: 'DELETE', body, path, headers: {...headers, "content-length": contentLength}}
+            return {method: 'DELETE', body: body, path, headers: {...headers, "content-length": contentLength}}
         } else {
-            return {method: 'DELETE', body, path, headers: {...headers, "transfer-encoding": "chunked"}}
+            return {method: 'DELETE', body: body, path, headers: {...headers, "transfer-encoding": "chunked"}}
         }
     }
 

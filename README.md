@@ -24,6 +24,8 @@ Design choices:
 ## Todo
 
 - typed http client from routes
+- routing precedence of routes test
+- add convenience obj for Status ?
 - open api spec generation
 - multipart form data
   - check works on other browsers - search internet for test suite to prove it works

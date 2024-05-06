@@ -1,14 +1,15 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse, Method} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpResponse, MessageBody, Method} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
 import {TypedHttpRequest} from "./router";
 import stream from "node:stream";
+import {h22pStream} from "./body";
 
 export class HttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
     }
 
-    handle(req: HttpRequest | TypedHttpRequest<any, string, Method>): Promise<HttpResponse> {
+    handle(req: HttpRequest | TypedHttpRequest<any, MessageBody<any>, string, Method>): Promise<HttpResponse> {
         const parsedUri = URI.of(this.baseUrl + req.path)
         return new Promise(async resolve => {
             const options = {
@@ -32,7 +33,15 @@ export class HttpClient implements HttpHandler {
                     }))
                 });
             });
-            if (req.body instanceof stream.Readable) {
+            if (req.body instanceof h22pStream) {
+                if (!req.body.stream) {
+                    nodeRequest.write('');
+                } else {
+                    for await (const chunk of req.body.stream) {
+                        nodeRequest.write(chunk)
+                    }
+                }
+            } else if (req.body instanceof stream.Readable) {
                 for await (const chunk of req.body) {
                     nodeRequest.write(chunk)
                 }
