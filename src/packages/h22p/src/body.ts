@@ -402,7 +402,5 @@ export class h22pStream<B extends HttpMessageBody> {
 }
 
 export function isH22PStream(s: any): s is h22pStream<any> {
-    return '__h22pStream' in s;
+    return s !== undefined && '__h22pStream' in s;
 }
-
-type Json = string | number | boolean | null | Json[] | { [key: string]: Json };

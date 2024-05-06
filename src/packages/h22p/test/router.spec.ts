@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Body, contractFrom, h22p, read, Router, router, write} from "../src";
+import {Body, contractFrom, h22p, read, router, Router, write} from "../src";
 import stream from "node:stream";
 
 describe('router', () => {
@@ -10,7 +10,7 @@ describe('router', () => {
             })]);
         const res = await router.handle(h22p.request({method: 'GET', path: '/not/found'}))
         expect(res.status).eq(404);
-        expect(res.body).eq('Not found');
+        expect(await Body.text(res.body)).eq('Not found');
     })
 
     it('simple route', async () => {
@@ -20,7 +20,7 @@ describe('router', () => {
             })]);
         const res = await router.handle(h22p.request({method: 'GET', path: '/'}))
         expect(res.status).eq(200);
-        expect(res.body).eq('Hello');
+        expect(await Body.text(res.body)).eq('Hello');
     })
 
     it('path param', async () => {
@@ -32,7 +32,7 @@ describe('router', () => {
         ]);
         const res = await router.handle(h22p.get('/resource/123/sub/456'))
         expect(res.status).eq(200);
-        expect(res.body).eq('Hello 123 456');
+        expect(await Body.text(res.body)).eq('Hello 123 456');
     })
 
     it('wildcard without path params', async () => {
@@ -44,7 +44,7 @@ describe('router', () => {
         ]);
         const res = await router.handle(h22p.get('bingo/bongo/resource/hanky/panky'))
         expect(res.status).eq(200);
-        expect(res.body).eq('Hello bingo/bongo::hanky/panky');
+        expect(await Body.text(res.body)).eq('Hello bingo/bongo::hanky/panky');
     })
 
     it('wildcard with path params', async () => {
@@ -59,7 +59,7 @@ describe('router', () => {
         ]);
         const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky'))
         expect(res.status).eq(200);
-        expect(res.body).eq('Hello bingo/bongo::hanky/panky 123 456');
+        expect(await Body.text(res.body)).eq('Hello bingo/bongo::hanky/panky 123 456');
     })
 
     it('trailing slash in route path is ignored', async () => {
@@ -71,7 +71,7 @@ describe('router', () => {
         ]);
         const res = await router.handle(h22p.get('/resource/123'))
         expect(res.status).eq(200);
-        expect(res.body).eq('Hello 123');
+        expect(await Body.text(res.body)).eq('Hello 123');
     })
 
     it('trailing slash in req path is ignored', async () => {
@@ -83,7 +83,7 @@ describe('router', () => {
         ]);
         const res = await router.handle(h22p.get('/resource/123/'))
         expect(res.status).eq(200);
-        expect(res.body).eq('Hello 123');
+        expect(await Body.text(res.body)).eq('Hello 123');
     })
 
     it('can generate a client from router', async () => {
@@ -94,6 +94,9 @@ describe('router', () => {
             }),
             jsonRoute: write<{ foo: string }>()('POST', "/resource/{id}", async (req) => {
                 const params = req.vars.path;
+                // TODO
+                // the whole reason for h22pStream is
+                // to make this mofo not have a .foo on it until Body.json has been called!!!
                 const body = await Body.json(req.body);
                 return h22p.response({status: 200, body: `Hello ${params.id} ${body.foo}`})
             }),
@@ -109,15 +112,7 @@ describe('router', () => {
             })
         };
 
-        // over the wire we always have a stream,
-        //      otherwise we have T : HttpMessageBody<B>
-        //      I want route to always provide a h22pStream<B>
-        // I want Body.text / json to be able to handle any kind of HttpMessageBody
-        //I want client and server to be able to handle any kind of HttpMessageBody too
-        // server should always return a node stream
-        // client should return
-
-        /// TODO unify the in memory and over the wire routing
+        /// TODO infer the response type as well!!!
 
         const {port, close} = await h22p.server(router(routing))
         const contract = contractFrom(routing)
@@ -134,6 +129,10 @@ describe('router', () => {
         const stringRoute = contract.stringRoute({id: 'id-123'}, 'string-123');
         const stringRouteResponse = await h22p.client(`http://localhost:${port}`).handle(stringRoute);
 
+        const stringRouteInMemory = contract.stringRoute({id: 'id-123'}, 'string-123');
+        // the in memory handler (ie routing.stringRoute.handler) receives an h22pStream just like over the wire
+        const stringRouteResponseInMemory = await routing.stringRoute.handler.handle(stringRouteInMemory);
+
         expect(getResponse.status).eq(200);
         expect(await Body.text(getResponse.body!)).eq('Hello id-123 sub-456');
         expect(postResponse.status).eq(200);
@@ -143,6 +142,18 @@ describe('router', () => {
         expect(stringRouteResponse.status).eq(200);
         expect(await Body.text(stringRouteResponse.body!)).eq('Hello id-123 10 chars');
 
+        // in memory is the same contract
+        expect(stringRouteResponse.status).eq(200);
+        expect(await Body.text(stringRouteResponseInMemory.body!)).eq('Hello id-123 10 chars');
+
         await close();
+
+        /*
+            The client and server both give you a node stream
+            but routing always has an h22pStream in the middle
+            thanks to read and write methods
+
+            use Body.text and Body.json to handle any type in-between
+         */
     })
 })

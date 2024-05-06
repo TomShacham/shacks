@@ -55,7 +55,8 @@ export type WriteMethods = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type Method = ReadMethods | WriteMethods;
 
 export interface HttpRequest<
-    B extends MessageBody<any> = any,
+    B extends HttpMessageBody = any,
+    Msg extends MessageBody<B> = MessageBody<B>,
     P extends string = string,
     M extends Method = Method
 > {
@@ -63,7 +64,7 @@ export interface HttpRequest<
     headers: IncomingHttpHeaders
     path: P
     version?: string
-    body: B
+    body: Msg
     trailers?: NodeJS.Dict<string>
 }
 
@@ -102,19 +103,19 @@ export class h22p {
         return {method: 'GET', body: undefined, path, headers}
     }
 
-    static post<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+    static post<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
         return {method: 'POST', body: body, path, headers}
     }
 
-    static put<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+    static put<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
         return {method: 'PUT', body: body, path, headers}
     }
 
-    static patch<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+    static patch<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
         return {method: 'PATCH', body: body, path, headers}
     }
 
-    static delete<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<MessageBody<B>> {
+    static delete<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
         /*
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...

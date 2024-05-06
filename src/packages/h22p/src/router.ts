@@ -11,7 +11,7 @@ import {
     TypedHttpHandler,
     WriteMethods
 } from "./interface";
-import {h22pStream} from "./body";
+import {h22pStream, isH22PStream} from "./body";
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<any, string, Method>[]) {
@@ -94,15 +94,27 @@ export function write<
     return function <
         S extends string = string,
         M extends WriteMethods = WriteMethods,
+        T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
         Res extends HttpMessageBody = any
     >(
         method: M,
         path: S,
-        handler: (req: TypedHttpRequest<B, h22pStream<B>, S, M>) => Promise<HttpResponse<Res>>): Route<B, S, M> {
+        handler: (req: T) => Promise<HttpResponse<Res>>): Route<B, S, M> {
         return {
             path,
             method: method,
-            handler: {handle: handler}
+            handler: {
+                handle: async (req: T) => {
+                    // Important: this guarantees the same contract in memory and over the wire
+                    // we want an h22pStream so that req.body always has the type of stream
+                    // but also preserves the type of the body (stream.Readable doesn't have a type parameter)
+                    if (!isH22PStream(req.body)) {
+                        req.body = h22pStream.from(req.body)
+                        return handler(req)
+                    }
+                    return handler(req);
+                }
+            }
         }
     }
 }
@@ -111,16 +123,27 @@ export function read<
     B extends HttpMessageBody,
     S extends string = string,
     M extends ReadMethods = ReadMethods,
-    T extends TypedHttpRequest<B, MessageBody<B>, S, M> = TypedHttpRequest<B, MessageBody<B>, S, M>,
+    T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
     Res extends HttpMessageBody = any
 >(
     method: M,
     path: S,
-    handler: (req: TypedHttpRequest<B, MessageBody<B>, S, M>) => Promise<HttpResponse<Res>>): Route<B, S, M> {
+    handler: (req: T) => Promise<HttpResponse<Res>>): Route<B, S, M> {
     return {
         path,
         method: method,
-        handler: {handle: handler}
+        handler: {
+            handle: async (req: T) => {
+                // Important: this guarantees the same contract in memory and over the wire
+                // we want an h22pStream so that req.body always has the type of stream
+                // but also preserves the type of the body (stream.Readable doesn't have a type parameter)
+                if (!isH22PStream(req.body)) {
+                    req.body = h22pStream.from(req.body)
+                    return handler(req)
+                }
+                return handler(req);
+            }
+        }
     };
 }
 
@@ -137,7 +160,7 @@ export type TypedHttpRequest<
     Msg extends MessageBody<B>,
     Path extends string,
     M extends Method,
-> = HttpRequest<Msg, Path, M> & {
+> = HttpRequest<B, Msg, Path, M> & {
     vars: { path: PathParameters<Path>, wildcards: string[] }
 }
 
@@ -171,9 +194,9 @@ export type Contract<
 > = {
     [Key in keyof Routes]: Routes[Key] extends Route<infer B extends HttpMessageBody, infer Path extends string, infer Mtd extends Method>
         ? Mtd extends WriteMethods
-            ? (vars: PathParameters<Path>, body: HttpRequestBody<B, Mtd>) => TypedHttpRequest<B, MessageBody<B>, Path, Mtd>
-            : (vars: PathParameters<Path>) => TypedHttpRequest<B, MessageBody<B>, Path, Mtd>
-        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>) => TypedHttpRequest<any, MessageBody<any>, string, Method>
+            ? (vars: PathParameters<Path>, body: HttpRequestBody<B, Mtd>) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd>
+            : (vars: PathParameters<Path>) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd>
+        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>) => TypedHttpRequest<any, h22pStream<any>, string, Method>
 };
 
 export function contractFrom<
@@ -201,7 +224,7 @@ export function contractFrom<
                 method: route.method,
                 headers: {},
                 body: h22pStream.from(body),
-            } as unknown as TypedHttpRequest<B, Msg, Path, M>;
+            } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M>;
         }
     }
     return ret;

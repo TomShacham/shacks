@@ -4,7 +4,6 @@ import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
 import {h22p} from "../src/interface";
 
-
 describe('body', () => {
 
     describe('multipart form', () => {
@@ -293,7 +292,6 @@ describe('body', () => {
             const postFile = `\r
 --${boundary}--\r
 `
-            console.log(__dirname);
             const inputStream = Buffer.concat([
                 Buffer.from(preFile, 'binary'),
                 fs.readFileSync(`${__dirname}/resources/hamburger.png`),
