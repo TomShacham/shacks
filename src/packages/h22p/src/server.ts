@@ -50,9 +50,13 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
         } else if (res.body instanceof stream.Readable) {
             res.body.on('end', () => nodeResponse.end())
             res.body.pipe(nodeResponse)
-        } else {
-            nodeResponse.write(res.body)
-            nodeResponse.end()
+        } else if (typeof res.body === 'object') {
+            nodeResponse.write(JSON.stringify(res.body));
+            nodeResponse.end();
+        }
+        {
+            nodeResponse.write(res.body);
+            nodeResponse.end();
         }
     })
     server.on('error', (err) => {
