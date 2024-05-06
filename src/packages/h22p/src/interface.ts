@@ -27,6 +27,7 @@ export type SimpleBody =
     | Buffer;
 export type HttpMessageBody = JsonBody | SimpleBody | undefined;
 export type MessageBody<B extends HttpMessageBody> = h22pStream<B> | HttpMessageBody;
+export type MessageType<Msg extends MessageBody<B> = MessageBody<any>, B extends HttpMessageBody = any> = Msg extends h22pStream<infer T> ? T : Msg;
 
 export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
     M extends 'POST' | 'PUT' | 'PATCH' | 'DELETE'

@@ -6,6 +6,7 @@ import {
     HttpRequestBody,
     HttpResponse,
     MessageBody,
+    MessageType,
     Method,
     ReadMethods,
     TypedHttpHandler,
@@ -89,13 +90,14 @@ export function router(routes: Route<any, string, Method>[] | UntypedRoutes) {
 }
 
 export function write<
-    B extends HttpMessageBody,
+    Msg extends MessageBody<B>,
+    Res extends HttpMessageBody = any,
+    B extends HttpMessageBody = MessageType<Msg>,
 >() {
     return function <
         S extends string = string,
         M extends WriteMethods = WriteMethods,
         T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
-        Res extends HttpMessageBody = any
     >(
         method: M,
         path: S,
@@ -120,31 +122,34 @@ export function write<
 }
 
 export function read<
-    B extends HttpMessageBody,
-    S extends string = string,
-    M extends ReadMethods = ReadMethods,
-    T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
     Res extends HttpMessageBody = any
->(
-    method: M,
-    path: S,
-    handler: (req: T) => Promise<HttpResponse<Res>>): Route<B, S, M> {
-    return {
-        path,
-        method: method,
-        handler: {
-            handle: async (req: T) => {
-                // Important: this guarantees the same contract in memory and over the wire
-                // we want an h22pStream so that req.body always has the type of stream
-                // but also preserves the type of the body (stream.Readable doesn't have a type parameter)
-                if (!isH22PStream(req.body)) {
-                    req.body = h22pStream.from(req.body)
-                    return handler(req)
+>() {
+    return function <
+        B extends HttpMessageBody,
+        S extends string = string,
+        M extends ReadMethods = ReadMethods,
+        T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
+    >(
+        method: M,
+        path: S,
+        handler: (req: T) => Promise<HttpResponse<Res>>): Route<B, S, M> {
+        return {
+            path,
+            method: method,
+            handler: {
+                handle: async (req: T) => {
+                    // Important: this guarantees the same contract in memory and over the wire
+                    // we want an h22pStream so that req.body always has the type of stream
+                    // but also preserves the type of the body (stream.Readable doesn't have a type parameter)
+                    if (!isH22PStream(req.body)) {
+                        req.body = h22pStream.from(req.body)
+                        return handler(req)
+                    }
+                    return handler(req);
                 }
-                return handler(req);
             }
-        }
-    };
+        };
+    }
 }
 
 type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
@@ -173,12 +178,6 @@ export type Route<
     handler: TypedHttpHandler<B, h22pStream<B>, Path, Mtd>;
     method: Mtd;
 };
-
-type backToPath<Part, T extends pathParameters<Part> = pathParameters<Part>> = Part extends `{${infer Name}}` ? string : Part;
-type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
-    ? `${backToPath<PartA>}/${reversePathParameters<PartB>}`
-    : backToPath<Path>;
-
 
 export type UntypedRoutes<
     B extends HttpMessageBody = any,

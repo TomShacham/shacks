@@ -39,6 +39,7 @@ Design choices:
   - streaming files to s3
   - simple json api
   - htmx
+  - browser testing with react
 - performance test
 - security e.g. header obfuscation etc. (node should handle this?)
 - content-range
