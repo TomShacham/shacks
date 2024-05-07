@@ -12,4 +12,15 @@ export class Query {
 
         return params;
     }
+
+    static stringify(params: NodeJS.Dict<string>): string {
+        const queryStringParts: string[] = [];
+
+        for (const key in params) {
+            const value = params[key] as string;
+            queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+        }
+
+        return queryStringParts.join('&');
+    }
 }

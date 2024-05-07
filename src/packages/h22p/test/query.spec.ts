@@ -37,4 +37,37 @@ describe('query', () => {
         const parsedParams = Query.parse(queryString);
         expect(parsedParams).to.deep.equal(expectedParams);
     });
-})
+
+    it('should stringify a parsed query object into a query string', () => {
+        const parsedParams = {
+            name: "John",
+            age: "30",
+            city: "New York"
+        };
+        const expectedQueryString = "name=John&age=30&city=New%20York";
+        const queryString = Query.stringify(parsedParams);
+        expect(queryString).to.equal(expectedQueryString);
+    });
+
+    it('should handle special characters in values correctly', () => {
+        const parsedParams = {
+            name: "John Doe",
+            email: "john@example.com"
+        };
+        const expectedQueryString = "name=John%20Doe&email=john%40example.com";
+        const queryString = Query.stringify(parsedParams);
+        expect(queryString).to.equal(expectedQueryString);
+    });
+
+    it('should handle duplicate keys correctly', () => {
+        const parsedParams = {
+            name: "John",
+            age: "30",
+            hobby: "Reading"
+        };
+        const expectedQueryString = "name=John&age=30&hobby=Reading";
+        const queryString = Query.stringify(parsedParams);
+        expect(queryString).to.equal(expectedQueryString);
+    });
+});
+
