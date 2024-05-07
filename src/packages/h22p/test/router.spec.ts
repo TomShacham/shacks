@@ -127,35 +127,35 @@ describe('router', () => {
         const {port, close} = await h22p.server(router(routing));
         const contract = contractFrom(routing);
 
-        const readRoute = contract.readRoute({id: 'id-123', subId: 'sub-456'}, {h1: 'foo'});
-        const readResponse = await h22p.client(`http://localhost:${port}`).handle(readRoute);
+        const readRequest = contract.readRoute({id: 'id-123', subId: 'sub-456'}, {h1: 'foo'});
+        const readResponse = await h22p.client(`http://localhost:${port}`).handle(readRequest);
 
-        const jsonRoute = contract.jsonRoute({id: 'id-123'}, {foo: 'body-456'}, {h2: 'thing'});
-        const jsonResponse = await h22p.client(`http://localhost:${port}`).handle(jsonRoute);
+        const jsonRequest = contract.jsonRoute({id: 'id-123'}, {foo: 'body-456'}, {h2: 'thing'});
+        const jsonResponse = await h22p.client(`http://localhost:${port}`).handle(jsonRequest);
 
-        const streamRoute = contract.streamRoute({id: 'id-123'}, stream.Readable.from('stream-123'), {h3: ['foo']});
-        const streamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(streamRoute);
+        const streamRequest = contract.streamRoute({id: 'id-123'}, stream.Readable.from('stream-123'), {h3: ['foo']});
+        const streamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(streamRequest);
 
-        const h22pStreamRouteRoute = contract.h22pStreamRoute({id: 'id-123'}, {foo: '123'});
-        const h22pStreamRouteRouteResponse = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRouteRoute);
+        const h22pStreamRequest = contract.h22pStreamRoute({id: 'id-123'}, {foo: '123'});
+        const h22pStreamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRequest);
 
-        const stringRoute = contract.stringRoute({id: 'id-123'}, 'string-123');
-        const stringRouteResponse = await h22p.client(`http://localhost:${port}`).handle(stringRoute);
+        const stringRequest = contract.stringRoute({id: 'id-123'}, 'string-123');
+        const stringRouteResponse = await h22p.client(`http://localhost:${port}`).handle(stringRequest);
 
-        const stringRouteInMemory = contract.stringRoute({id: 'id-123'}, 'string-123',);
+        const stringRouteInMemoryRequest = contract.stringRoute({id: 'id-123'}, 'string-123',);
         // the in memory handler (ie routing.stringRoute.handler) receives an h22pStream just like over the wire
-        const stringRouteResponseInMemory = await routing.stringRoute.handler.handle(stringRouteInMemory);
-
-        // TODO query parameters
-
+        const stringRouteResponseInMemory = await routing.stringRoute.handler.handle(stringRouteInMemoryRequest);
+        //
+        // // TODO query parameters
+        //
         expect(readResponse.status).eq(200);
         expect(await Body.text(readResponse.body!)).eq('Hello id-123 sub-456');
         expect(jsonResponse.status).eq(200);
         expect(await Body.text(jsonResponse.body!)).eq('Hello id-123 body-456');
         expect(streamRouteResponse.status).eq(200);
         expect(await Body.text(streamRouteResponse.body!)).eq('Hello id-123 stream-123');
-        expect(h22pStreamRouteRouteResponse.status).eq(200);
-        expect(await Body.text(h22pStreamRouteRouteResponse.body!)).eq('Hello id-123 {"foo":"123"}');
+        expect(h22pStreamRouteResponse.status).eq(200);
+        expect(await Body.text(h22pStreamRouteResponse.body!)).eq('Hello id-123 {"foo":"123"}');
         expect(stringRouteResponse.status).eq(200);
         expect(await Body.text(stringRouteResponse.body!)).eq('Hello id-123 10 chars');
 
@@ -164,13 +164,5 @@ describe('router', () => {
         expect(await Body.text(stringRouteResponseInMemory.body!)).eq('Hello id-123 10 chars');
 
         await close();
-
-        /*
-            The client and server both give you a node stream
-            but routing always has an h22pStream in the middle
-            thanks to read and write methods
-
-            use Body.text and Body.json to handle any type in-between
-         */
     })
 })

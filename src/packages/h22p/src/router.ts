@@ -6,6 +6,7 @@ import {
     HttpRequestBody,
     HttpRequestHeaders,
     HttpResponse,
+    isReadMethod,
     MessageBody,
     MessageType,
     Method,
@@ -149,14 +150,8 @@ export function read<
             headers,
             handler: {
                 handle: async (req: T) => {
-                    // Important: this guarantees the same contract in memory and over the wire
-                    // we want an h22pStream so that req.body always has the type of stream
-                    // but also preserves the type of the body (stream.Readable doesn't have a type parameter)
-                    if (!isH22PStream(req.body)) {
-                        req.body = h22pStream.from(req.body)
-                        return handler(req)
-                    }
-                    return handler(req);
+                    // doesn't need an h22p stream because there is no request body for read
+                    return handler(req)
                 }
             }
         };
@@ -225,6 +220,8 @@ export type Contract<
 type NonEmptyObject<O extends { [Key in keyof O]: O[Key] }> = keyof O extends never ? never : O;
 type EmptyObject<O extends object> = O extends NonEmptyObject<O> ? never : O;
 
+// TODO should contract give you an HttpRequest or a TypedHttpRequest?
+// should it have this h22pStream body or should it be more universal
 
 export function contractFrom<
     B extends HttpMessageBody,
@@ -238,22 +235,40 @@ export function contractFrom<
     for (let f in routes) {
         let y: keyof typeof routes = f;
         const route = routes[f]
-        ret[y] = (vars: PathParameters<Path>, body?: B, headers?: Hds) => {
-            const keys = Object.keys(vars);
-            const replaced = keys.reduce((acc, next) => {
-                // @ts-ignore
-                const var1 = vars[next];
-                return acc.replace(`{${next}}`, var1)
-            }, route.path) as any;
+        const isRead = isReadMethod(route.method);
+        ret[y] = isRead
+            ? (vars: PathParameters<Path>, headers?: Hds) => {
+                const keys = Object.keys(vars);
+                const replaced = keys.reduce((acc, next) => {
+                    // @ts-ignore
+                    const var1 = vars[next];
+                    return acc.replace(`{${next}}`, var1)
+                }, route.path) as any;
 
-            return {
-                vars: {...{path: vars}, wildcards: []},
-                path: replaced,
-                method: route.method,
-                headers: headers,
-                body: h22pStream.from(body),
-            } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
-        }
+                return {
+                    vars: {...{path: vars}, wildcards: []},
+                    path: replaced,
+                    method: route.method,
+                    headers: headers,
+                    body: h22pStream.from(undefined),
+                } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
+            }
+            : (vars: PathParameters<Path>, body?: B, headers?: Hds) => {
+                const keys = Object.keys(vars);
+                const replaced = keys.reduce((acc, next) => {
+                    // @ts-ignore
+                    const var1 = vars[next];
+                    return acc.replace(`{${next}}`, var1)
+                }, route.path) as any;
+
+                return {
+                    vars: {...{path: vars}, wildcards: []},
+                    path: replaced,
+                    method: route.method,
+                    headers: headers,
+                    body: h22pStream.from(body),
+                } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
+            }
     }
     return ret;
 }
