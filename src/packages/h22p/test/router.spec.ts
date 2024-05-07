@@ -35,16 +35,16 @@ describe('router', () => {
         expect(await Body.text(res.body)).eq('Hello 123 456');
     })
 
-    it('wildcard without path params', async () => {
+    it('wildcard in path', async () => {
         const router = new Router([
             read()('GET', "*/resource/*", async (req) => {
                 const params = req.vars.path;
-                return h22p.response({status: 200, body: `Hello ${req.vars.wildcards.join('::')}`})
+                return h22p.response({status: 200, body: `Hello ${req.vars.wildcards.join(' ')}`})
             })
         ]);
         const res = await router.handle(h22p.get('bingo/bongo/resource/hanky/panky'))
         expect(res.status).eq(200);
-        expect(await Body.text(res.body)).eq('Hello bingo/bongo::hanky/panky');
+        expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky');
     })
 
     it('wildcard with path params', async () => {
@@ -53,13 +53,13 @@ describe('router', () => {
                 const params = req.vars.path;
                 return h22p.response({
                     status: 200,
-                    body: `Hello ${req.vars.wildcards.join('::')} ${params.id} ${params.subId}`
+                    body: `Hello ${req.vars.wildcards.join(' ')} ${params.id} ${params.subId}`
                 })
             })
         ]);
         const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky'))
         expect(res.status).eq(200);
-        expect(await Body.text(res.body)).eq('Hello bingo/bongo::hanky/panky 123 456');
+        expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456');
     })
 
     it('trailing slash in route path is ignored', async () => {
@@ -88,9 +88,13 @@ describe('router', () => {
 
     it('can generate a client from router', async () => {
         const routing = {
-            readRoute: read<string, { h1: string }>()('GET', "/resource/{id}/sub/{subId}", async (req) => {
-                const params = req.vars.path;
-                return h22p.response({status: 200, body: `Hello ${params.id} ${params.subId}`})
+            readRoute: read<string, { h1: string }>()('GET', "/resource/{id}/sub/{subId}/?q1&q2", async (req) => {
+                const pathParams = req.vars.path;
+                const queryParams = req.vars.query;
+                return h22p.response({
+                    status: 200,
+                    body: `Hello ${pathParams.id} ${pathParams.subId} ${queryParams.q1} ${queryParams.q2}`
+                })
             }),
             jsonRoute: write<
                 { foo: string },
@@ -127,29 +131,32 @@ describe('router', () => {
         const {port, close} = await h22p.server(router(routing));
         const contract = contractFrom(routing);
 
-        const readRequest = contract.readRoute({id: 'id-123', subId: 'sub-456'}, {h1: 'foo'});
+        const readRequest = contract.readRoute({
+            path: {id: 'id-123', subId: 'sub-456'},
+            query: {q1: "value1", q2: "value2"}
+        }, {h1: 'foo'});
         const readResponse = await h22p.client(`http://localhost:${port}`).handle(readRequest);
 
-        const jsonRequest = contract.jsonRoute({id: 'id-123'}, {foo: 'body-456'}, {h2: 'thing'});
+        const jsonRequest = contract.jsonRoute({path: {id: 'id-123'}}, {foo: 'body-456'}, {h2: 'thing'});
         const jsonResponse = await h22p.client(`http://localhost:${port}`).handle(jsonRequest);
 
-        const streamRequest = contract.streamRoute({id: 'id-123'}, stream.Readable.from('stream-123'), {h3: ['foo']});
+        const streamRequest = contract.streamRoute({path: {id: 'id-123'}}, stream.Readable.from('stream-123'), {h3: ['foo']});
         const streamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(streamRequest);
 
-        const h22pStreamRequest = contract.h22pStreamRoute({id: 'id-123'}, {foo: '123'});
+        const h22pStreamRequest = contract.h22pStreamRoute({path: {id: 'id-123'}}, {foo: '123'});
         const h22pStreamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRequest);
 
-        const stringRequest = contract.stringRoute({id: 'id-123'}, 'string-123');
+        const stringRequest = contract.stringRoute({path: {id: 'id-123'}}, 'string-123');
         const stringRouteResponse = await h22p.client(`http://localhost:${port}`).handle(stringRequest);
 
-        const stringRouteInMemoryRequest = contract.stringRoute({id: 'id-123'}, 'string-123',);
+        const stringRouteInMemoryRequest = contract.stringRoute({path: {id: 'id-123'}}, 'string-123',);
         // the in memory handler (ie routing.stringRoute.handler) receives an h22pStream just like over the wire
         const stringRouteResponseInMemory = await routing.stringRoute.handler.handle(stringRouteInMemoryRequest);
         //
         // // TODO query parameters
         //
         expect(readResponse.status).eq(200);
-        expect(await Body.text(readResponse.body!)).eq('Hello id-123 sub-456');
+        expect(await Body.text(readResponse.body!)).eq('Hello id-123 sub-456 value1 value2');
         expect(jsonResponse.status).eq(200);
         expect(await Body.text(jsonResponse.body!)).eq('Hello id-123 body-456');
         expect(streamRouteResponse.status).eq(200);

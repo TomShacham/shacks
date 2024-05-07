@@ -1,7 +1,22 @@
-import {assert} from "chai";
-import {URI} from "../src/uri";
+import {assert, expect} from "chai";
+import {URI} from "../src";
 
 describe('uri', () => {
+    it('doesnt blow up if not a URI', () => {
+        const match = URI.of('');
+
+        expect(match).deep.eq({
+            "fragment": undefined,
+            "hostname": undefined,
+            "password": undefined,
+            "path": undefined,
+            "port": undefined,
+            "protocol": undefined,
+            "query": undefined,
+            "username": undefined,
+        })
+    });
+
     it('should parse path by itself', () => {
         const uriString = '/path/to/resource?query1=value1&query2=value2#fragment';
         const match = URI.of(uriString);

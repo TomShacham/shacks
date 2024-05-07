@@ -59,8 +59,8 @@ export function isReadMethod<R, B, Path, M>(method: Method) {
     return method === 'GET' || method === 'OPTIONS' || method === 'HEAD' || method === 'TRACE' || method === 'CONNECT';
 }
 
-export type HttpRequestHeaders = { [name: keyof IncomingHttpHeaders]: string | string[] }
-export type HttpResponseHeaders = { [name: keyof OutgoingHttpHeaders]: string | string[] }
+export type HttpRequestHeaders = { [name: keyof IncomingHttpHeaders]: string | string[] | undefined }
+export type HttpResponseHeaders = { [name: keyof OutgoingHttpHeaders]: string | string[] | undefined }
 export type HttpHeaders = HttpRequestHeaders | HttpResponseHeaders;
 
 export interface HttpRequest<
