@@ -1,4 +1,4 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse, MessageBody, Method} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, MessageBody, Method} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
 import {TypedHttpRequest} from "./router";
@@ -9,7 +9,7 @@ export class HttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
     }
 
-    handle(req: HttpRequest | TypedHttpRequest<any, MessageBody<any>, string, Method>): Promise<HttpResponse> {
+    handle(req: HttpRequest | TypedHttpRequest<any, MessageBody<any>, string, Method, HttpRequestHeaders>): Promise<HttpResponse> {
         const parsedUri = URI.of(this.baseUrl + req.path)
         return new Promise(async resolve => {
             const options = {
@@ -23,12 +23,13 @@ export class HttpClient implements HttpHandler {
             };
             const nodeRequest = http.request(options, nodeResponse => {
                 const {statusCode, statusMessage, headers, trailers} = nodeResponse;
+                // TODO what do headers really look like;do we get the value as `number` as IncomingHttpHeaders suggests
                 nodeResponse.once('readable', () => {
                     resolve(h22p.response({
                         status: statusCode,
                         statusText: statusMessage,
                         body: nodeResponse,
-                        headers,
+                        headers: (headers as HttpRequestHeaders),
                         trailers
                     }))
                 });

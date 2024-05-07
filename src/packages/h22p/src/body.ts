@@ -149,6 +149,8 @@ export class MultipartForm {
          *         - if it sees the final boundary (two extra dashes at the end) then it pushes null to end the stream
          */
         const contentType = msg.headers?.["content-type"];
+        // TODO test this
+        if (typeof contentType !== 'string') throw new Error('Received more than one content-type header');
         const boundary = /boundary=(?<boundary>(.+))/.exec(contentType!)?.groups?.boundary
         const withHyphens = '--' + boundary;
         const inputStream = msg.body! as stream.Readable;

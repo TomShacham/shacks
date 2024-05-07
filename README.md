@@ -23,15 +23,16 @@ Design choices:
 
 ## Todo
 
-- typed http client from routes
 - routing precedence of routes test
 - add convenience obj for Status ?
 - open api spec generation
 - multipart form data
   - check works on other browsers - search internet for test suite to prove it works
+  - test if content-type header or content-disposition header is supplied more than once ie is string[]
 - handle application/x-www-form-urlencoded
 - figure out what things to not export and hide
 - continue with h22p statics for discoverability or move to globals?
+- deploy to cloudflare cos heroku $$$
 - example app
   - filter examples like 404 catch all and tracing
   - database with transactions
@@ -40,6 +41,7 @@ Design choices:
   - simple json api
   - htmx
   - browser testing with react
+  - deploy to cloudflare and use wrangler to test it locally
 - performance test
 - security e.g. header obfuscation etc. (node should handle this?)
 - content-range

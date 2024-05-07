@@ -1,4 +1,3 @@
-import * as http from "http";
 import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
 import * as stream from "stream";
 import {HttpClient} from "./client";
@@ -15,9 +14,10 @@ export interface TypedHttpHandler<
     Msg extends MessageBody<B>,
     Path extends string = string,
     M extends Method = Method,
+    Hds extends HttpRequestHeaders = HttpRequestHeaders,
     Res extends HttpMessageBody = any,
 > {
-    handle(req: TypedHttpRequest<B, Msg, Path, M>): Promise<HttpResponse<Res>>
+    handle(req: TypedHttpRequest<B, Msg, Path, M, Hds>): Promise<HttpResponse<Res>>
 }
 
 // non json
@@ -55,6 +55,10 @@ export type ReadMethods = 'GET' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 export type WriteMethods = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type Method = ReadMethods | WriteMethods;
 
+export type HttpRequestHeaders = { [name: keyof IncomingHttpHeaders]: string | string[] }
+export type HttpResponseHeaders = { [name: keyof OutgoingHttpHeaders]: string | string[] }
+export type HttpHeaders = HttpRequestHeaders | HttpResponseHeaders;
+
 export interface HttpRequest<
     B extends HttpMessageBody = any,
     Msg extends MessageBody<B> = MessageBody<B>,
@@ -62,7 +66,7 @@ export interface HttpRequest<
     M extends Method = Method
 > {
     method: M
-    headers: IncomingHttpHeaders
+    headers: HttpRequestHeaders
     path: P
     version?: string
     body: Msg
@@ -72,7 +76,7 @@ export interface HttpRequest<
 export interface HttpResponse<
     B extends HttpMessageBody = any,
 > {
-    headers: OutgoingHttpHeaders
+    headers: HttpResponseHeaders
     status: number
     body: B
     statusText?: string
@@ -100,23 +104,23 @@ export class h22p {
         return httpServer(handler, port, host);
     }
 
-    static get(path: string = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static get(path: string = '/', headers: HttpRequestHeaders = {}): HttpRequest {
         return {method: 'GET', body: undefined, path, headers}
     }
 
-    static post<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
+    static post<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
         return {method: 'POST', body: body, path, headers}
     }
 
-    static put<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
+    static put<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
         return {method: 'PUT', body: body, path, headers}
     }
 
-    static patch<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
+    static patch<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
         return {method: 'PATCH', body: body, path, headers}
     }
 
-    static delete<B extends HttpMessageBody>(path = '/', headers: http.IncomingHttpHeaders = {}, body: B): HttpRequest<B> {
+    static delete<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
         /*
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...
@@ -129,11 +133,11 @@ export class h22p {
         }
     }
 
-    static options(path = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static options(path = '/', headers: HttpRequestHeaders = {}): HttpRequest {
         return {method: 'OPTIONS', path, headers, body: undefined}
     }
 
-    static head(path = '/', headers: http.IncomingHttpHeaders = {}): HttpRequest {
+    static head(path = '/', headers: HttpRequestHeaders = {}): HttpRequest {
         return {method: 'HEAD', path, headers, body: undefined}
     }
 

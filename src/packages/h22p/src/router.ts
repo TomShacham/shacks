@@ -4,6 +4,7 @@ import {
     HttpMessageBody,
     HttpRequest,
     HttpRequestBody,
+    HttpRequestHeaders,
     HttpResponse,
     MessageBody,
     MessageType,
@@ -15,7 +16,7 @@ import {
 import {h22pStream, isH22PStream} from "./body";
 
 export class Router implements HttpHandler {
-    constructor(public routes: Route<any, string, Method>[]) {
+    constructor(public routes: Route<any, string, Method, HttpRequestHeaders>[]) {
     }
 
     handle(req: HttpRequest): Promise<HttpResponse<any>> {
@@ -26,12 +27,12 @@ export class Router implements HttpHandler {
         };
         const apiHandler = this.matches(req.path, req.method);
         if (apiHandler.route) {
-            const typedReq: TypedHttpRequest<any, any, string, Method> = Object.defineProperty(req, 'vars', {
+            const typedReq: TypedHttpRequest<any, any, string, Method, HttpRequestHeaders> = Object.defineProperty(req, 'vars', {
                 value: {
                     path: apiHandler.data.matches,
                     wildcards: apiHandler.data.wildcards
                 }
-            }) as TypedHttpRequest<any, any, string, Method>;
+            }) as TypedHttpRequest<any, any, string, Method, HttpRequestHeaders>;
             return apiHandler.route.handler.handle(typedReq);
         } else {
             return notFoundHandler.handle(req);
@@ -39,7 +40,7 @@ export class Router implements HttpHandler {
     }
 
     private matches(path: string, method: string): {
-        route?: Route<any, string, Method>,
+        route?: Route<any, string, Method, HttpRequestHeaders>,
         data: { matches: NodeJS.Dict<string>, wildcards: string[] }
     } {
         for (const route of this.routes) {
@@ -83,7 +84,7 @@ export class Router implements HttpHandler {
     }
 }
 
-export function router(routes: Route<any, string, Method>[] | UntypedRoutes) {
+export function router(routes: Route<any, string, Method, HttpRequestHeaders>[] | UntypedRoutes) {
     if (Array.isArray(routes))
         return new Router(routes);
     else return new Router(Object.values(routes))
@@ -92,19 +93,24 @@ export function router(routes: Route<any, string, Method>[] | UntypedRoutes) {
 export function write<
     Msg extends MessageBody<B>,
     Res extends HttpMessageBody = any,
+    // required headers
+    Hds extends HttpRequestHeaders = {},
     B extends HttpMessageBody = MessageType<Msg>,
 >() {
     return function <
         S extends string = string,
         M extends WriteMethods = WriteMethods,
-        T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
+        T extends TypedHttpRequest<B, h22pStream<B>, S, M, Hds> = TypedHttpRequest<B, h22pStream<B>, S, M, Hds>,
     >(
         method: M,
         path: S,
-        handler: (req: T) => Promise<HttpResponse<Res>>): Route<B, S, M> {
+        handler: (req: T) => Promise<HttpResponse<Res>>,
+        headers: Hds = ({} as Hds),
+    ): Route<B, S, M, Hds> {
         return {
             path,
             method: method,
+            headers,
             handler: {
                 handle: async (req: T) => {
                     // Important: this guarantees the same contract in memory and over the wire
@@ -122,20 +128,25 @@ export function write<
 }
 
 export function read<
-    Res extends HttpMessageBody = any
+    ResB extends HttpMessageBody,
+    // required headers
+    Hds extends HttpRequestHeaders = {},
 >() {
     return function <
         B extends HttpMessageBody,
         S extends string = string,
         M extends ReadMethods = ReadMethods,
-        T extends TypedHttpRequest<B, h22pStream<B>, S, M> = TypedHttpRequest<B, h22pStream<B>, S, M>,
+        T extends TypedHttpRequest<B, h22pStream<B>, S, M, Hds> = TypedHttpRequest<B, h22pStream<B>, S, M, Hds>,
     >(
         method: M,
         path: S,
-        handler: (req: T) => Promise<HttpResponse<Res>>): Route<B, S, M> {
+        handler: (req: T) => Promise<HttpResponse<ResB>>,
+        headers: Hds = ({} as Hds),
+    ): Route<B, S, M, Hds> {
         return {
             path,
             method: method,
+            headers,
             handler: {
                 handle: async (req: T) => {
                     // Important: this guarantees the same contract in memory and over the wire
@@ -165,7 +176,9 @@ export type TypedHttpRequest<
     Msg extends MessageBody<B>,
     Path extends string,
     M extends Method,
+    H extends HttpRequestHeaders,
 > = HttpRequest<B, Msg, Path, M> & {
+    headers: H & HttpRequestHeaders,
     vars: { path: PathParameters<Path>, wildcards: string[] }
 }
 
@@ -173,10 +186,12 @@ export type Route<
     B extends HttpMessageBody,
     Path extends string,
     Mtd extends Method,
+    H extends HttpRequestHeaders,
 > = {
     path: Path;
-    handler: TypedHttpHandler<B, h22pStream<B>, Path, Mtd>;
     method: Mtd;
+    handler: TypedHttpHandler<B, h22pStream<B>, Path, Mtd>;
+    headers: H,
 };
 
 export type UntypedRoutes<
@@ -184,32 +199,46 @@ export type UntypedRoutes<
     Path extends string = string,
     M extends Method = Method,
     Msg extends MessageBody<B> = MessageBody<B>,
-> = { [k: string]: Route<B, Path, M> };
+    H extends HttpRequestHeaders = HttpRequestHeaders,
+> = { [k: string]: Route<B, Path, M, H> };
 
 export type Contract<
     B extends HttpMessageBody,
     Path extends string,
     Routes extends UntypedRoutes<B, Path>
 > = {
-    [Key in keyof Routes]: Routes[Key] extends Route<infer B extends HttpMessageBody, infer Path extends string, infer Mtd extends Method>
+    [Key in keyof Routes]: Routes[Key] extends Route<
+            infer B extends HttpMessageBody,
+            infer Path extends string,
+            infer Mtd extends Method,
+            infer Hds extends HttpRequestHeaders>
         ? Mtd extends WriteMethods
-            ? (vars: PathParameters<Path>, body: HttpRequestBody<B, Mtd>) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd>
-            : (vars: PathParameters<Path>) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd>
-        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>) => TypedHttpRequest<any, h22pStream<any>, string, Method>
+            ? keyof Hds extends never
+                ? (vars: PathParameters<Path>, body: HttpRequestBody<B, Mtd>) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd, Hds>
+                : (vars: PathParameters<Path>, body: HttpRequestBody<B, Mtd>, headers: Hds) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd, Hds>
+            : keyof Hds extends never
+                ? (vars: PathParameters<Path>) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd, Hds>
+                : (vars: PathParameters<Path>, headers: Hds) => TypedHttpRequest<B, h22pStream<B>, Path, Mtd, Hds>
+        : (vars: PathParameters<string>, body: HttpRequestBody<any, Method>, headers: HttpRequestHeaders) => TypedHttpRequest<any, h22pStream<any>, string, Method, HttpRequestHeaders>
 };
+
+type NonEmptyObject<O extends { [Key in keyof O]: O[Key] }> = keyof O extends never ? never : O;
+type EmptyObject<O extends object> = O extends NonEmptyObject<O> ? never : O;
+
 
 export function contractFrom<
     B extends HttpMessageBody,
     Path extends string,
     M extends Method,
     R extends UntypedRoutes<B, Path, M>,
+    Hds extends HttpRequestHeaders = {},
     Msg extends MessageBody<B> = MessageBody<B>,
 >(routes: R): Contract<B, Path, R> {
     let ret = {} as any;
     for (let f in routes) {
         let y: keyof typeof routes = f;
         const route = routes[f]
-        ret[y] = (vars: PathParameters<Path>, body?: B) => {
+        ret[y] = (vars: PathParameters<Path>, body?: B, headers?: Hds) => {
             const keys = Object.keys(vars);
             const replaced = keys.reduce((acc, next) => {
                 // @ts-ignore
@@ -221,9 +250,9 @@ export function contractFrom<
                 vars: {...{path: vars}, wildcards: []},
                 path: replaced,
                 method: route.method,
-                headers: {},
+                headers: headers,
                 body: h22pStream.from(body),
-            } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M>;
+            } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
         }
     }
     return ret;
