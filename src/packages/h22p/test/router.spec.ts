@@ -151,23 +151,25 @@ describe('router', () => {
         expect(await Body.text(res.body)).eq('Hello 123');
     })
 
-    it('routing precedence - matches first route that matches', async () => {
+    it('combining routes - precedence is in the order you pass them in', async () => {
         // Object.values does not guarantee ordering, but generally it is ordered (by implementations)
-        const routes = router({
+        const barRoute = {
+            bar: read()('GET', "/resource/{id}", async (req) => {
+                const params = req.vars.path;
+                return h22p.response({status: 200, body: `Hello 456`})
+            })
+        };
+        const fooRoute = {
             foo:
                 read()('GET', "/resource/{id}", async (req) => {
                     const params = req.vars.path;
                     return h22p.response({status: 200, body: `Hello ${params.id}`})
                 }),
-            bar: read()('GET', "/resource/{id}", async (req) => {
-                const params = req.vars.path;
-                return h22p.response({status: 200, body: `Hello 456`})
-            })
-        });
+        };
+        const routes = router({...barRoute, ...fooRoute});
         const res = await routes.handle(h22p.get('/resource/123/'))
         expect(res.status).eq(200);
-        // we do not get Hello 456
-        expect(await Body.text(res.body)).eq('Hello 123');
+        expect(await Body.text(res.body)).eq('Hello 456');
     })
 
     describe('generating type-safe client from routing', () => {
