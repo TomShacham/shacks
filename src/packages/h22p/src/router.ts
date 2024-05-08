@@ -37,28 +37,34 @@ export class Router implements HttpHandler {
 
     private matches(path: string, method: string): {
         route?: Route<any, string, Method, HttpRequestHeaders>,
-        vars: { path: NodeJS.Dict<string>, query: NodeJS.Dict<string>, wildcards: string[] }
+        vars: {
+            path: NodeJS.Dict<string>,
+            query: NodeJS.Dict<string>,
+            fragment: string | undefined,
+            wildcards: string[]
+        }
     } {
         for (const route of this.routes) {
             if (route.method === method && route.path !== undefined) {
-                const query = Query.parse(URI.of(path).query);
+                const uri = URI.of(path);
+                const query = Query.parse(uri.query);
                 const noQuery = route.path.split("?")[0];
                 const noTrailingSlash = (noQuery !== '/' && noQuery.endsWith('/')) ? noQuery.slice(0, -1) : noQuery;
                 const exactMatch = noTrailingSlash === path;
-                if (exactMatch) return {route, vars: {path: {}, query, wildcards: []}}
+                if (exactMatch) return {route, vars: {path: {}, query, wildcards: [], fragment: uri.fragment?.slice(1)}}
                 const regex = this.regexCapturingVars(noTrailingSlash);
                 const pathNoQuery = path.split("?")[0];
                 const matches = regex.test(pathNoQuery);
                 if (matches) {
                     const groups = pathNoQuery.match(regex)!.groups as NodeJS.Dict<string>;
                     if (groups) return {
-                        route, vars: this.populateVars(groups, query)
+                        route, vars: this.populateVars(groups, query, uri.fragment?.slice(1))
 
                     }
                 }
             }
         }
-        return {vars: {path: {}, query: {}, wildcards: []}}
+        return {vars: {path: {}, query: {}, wildcards: [], fragment: undefined}}
     }
 
     private regexCapturingVars(noTrailingSlash: string) {
@@ -69,7 +75,7 @@ export class Router implements HttpHandler {
         return new RegExp(s);
     }
 
-    private populateVars(groups: NodeJS.Dict<string>, query: NodeJS.Dict<string>) {
+    private populateVars(groups: NodeJS.Dict<string>, query: NodeJS.Dict<string>, fragment: string | undefined) {
         return Object.entries(groups).reduce((acc, [k, v]) => {
             if (k.startsWith('wildcard')) acc.wildcards.push(v!)
             else acc.path[k] = v!;
@@ -77,7 +83,8 @@ export class Router implements HttpHandler {
         }, ({
             wildcards: [] as string[],
             path: {} as { [k: string]: string },
-            query: query
+            query: query,
+            fragment
         }));
     }
 
@@ -179,10 +186,12 @@ type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
 type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
     ? isPathParameter<PartA> | pathParameters<PartB>
     : isPathParameter<Path>;
-type isQueryParameter<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | isQueryParameter<Rest> : Part;
+
+type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
 type queryParameters<Path> = Path extends `${infer PartA}?${infer PartB}`
-    ? isQueryParameter<PartB>
+    ? queriesFromString<withoutFragment<PartB>>
     : never;
+type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
 
 export type PathParameters<Path> = {
     [Key in pathParameters<Path>]: string;
@@ -224,7 +233,7 @@ export type TypedHttpRequest<
     H extends HttpRequestHeaders,
 > = HttpRequest<B, Msg, Path, M> & {
     headers: H & HttpRequestHeaders,
-    vars: { path: PathParameters<Path>, query: QueryParameters<Path>, wildcards: string[] }
+    vars: { path: PathParameters<Path>, query: QueryParameters<Path>, fragment: string, wildcards: string[] }
 }
 
 export type Route<

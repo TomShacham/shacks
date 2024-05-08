@@ -25,17 +25,20 @@ Design choices:
       through streaming 
     + 
 
+Questions:
+
+    - do we like the h22p static for exposing the api
+      - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
+
 ## Todo
 
 - split into separate module
-- add convenience obj for Status ?
 - open api spec generation
 - multipart form data
   - check works on other browsers - search internet for test suite to prove it works
   - test if content-type header or content-disposition header is supplied more than once ie is string[]
 - handle application/x-www-form-urlencoded
 - figure out what things to not export and hide
-- continue with h22p statics for discoverability or move to globals?
 - deploy to cloudflare cos heroku $$$
 - example app
   - filter examples like 404 catch all and tracing
