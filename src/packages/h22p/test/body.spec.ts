@@ -6,13 +6,110 @@ import {h22p} from "../src/interface";
 
 describe('body', () => {
 
-    describe('json body', () => {
+    describe('Body.json', () => {
         it('throws if json parsing fails', async () => {
             try {
                 await Body.json('{malformed')
             } catch (e) {
                 expect((e as Error).message).eq(`Expected property name or '}' in JSON at position 1`)
             }
+        })
+    })
+
+    describe('response helpers', () => {
+        it('doesnt let you set the status, or statusText its always 200', () => {
+            // cannot pass status or statusText in as a property
+            expect(h22p.ok().status).eq(200);
+            expect(h22p.ok().statusText).eq('OK');
+
+            expect(h22p.created().status).eq(201);
+            expect(h22p.created().statusText).eq('Created');
+
+            expect(h22p.noContent().status).eq(204);
+            expect(h22p.noContent().statusText).eq('No Content');
+
+            const movedPermanently = h22p.movedPermanently({
+                headers: {
+                    "Location": "must-provide",
+                    "Content-type": "text/plain"
+                }
+            });
+            expect(movedPermanently.status).eq(301);
+            expect(movedPermanently.statusText).eq('Moved Permanently');
+            expect(movedPermanently.headers).deep.eq({
+                "Content-type": "text/plain",
+                "Location": "must-provide"
+            })
+
+            const found = h22p.found({headers: {"Location": "must-provide", "Content-type": "text/plain"}});
+            expect(found.status).eq(302);
+            expect(found.statusText).eq('Found');
+            expect(found.headers).deep.eq({
+                "Content-type": "text/plain",
+                "Location": "must-provide"
+            })
+
+            const seeOther = h22p.seeOther({headers: {"Location": "must-provide", "Content-type": "text/plain"}});
+            expect(seeOther.status).eq(303);
+            expect(seeOther.statusText).eq('See Other');
+            expect(seeOther.headers).deep.eq({
+                "Content-type": "text/plain",
+                "Location": "must-provide"
+            });
+
+            const temporaryRedirect = h22p.temporaryRedirect({
+                headers: {
+                    "Location": "must-provide",
+                    "Content-type": "text/plain"
+                }
+            });
+            expect(temporaryRedirect.status).eq(307);
+            expect(temporaryRedirect.statusText).eq('Temporary Redirect');
+            expect(temporaryRedirect.headers).deep.eq({
+                "Content-type": "text/plain",
+                "Location": "must-provide"
+            });
+
+            const permanentRedirect = h22p.permanentRedirect({
+                headers: {
+                    "Location": "must-provide",
+                    "Content-type": "text/plain"
+                }
+            });
+            expect(permanentRedirect.status).eq(308);
+            expect(permanentRedirect.statusText).eq('Permanent Redirect');
+            expect(permanentRedirect.headers).deep.eq({
+                "Content-type": "text/plain",
+                "Location": "must-provide"
+            });
+
+            expect(h22p.badRequest().status).eq(400);
+            expect(h22p.badRequest().statusText).eq('Bad Request');
+
+            expect(h22p.unauthorized().status).eq(401);
+            expect(h22p.unauthorized().statusText).eq('Unauthorized');
+
+            expect(h22p.forbidden().status).eq(403);
+            expect(h22p.forbidden().statusText).eq('Forbidden');
+
+            expect(h22p.notFound().status).eq(404);
+            expect(h22p.notFound().statusText).eq('Not Found');
+
+            expect(h22p.methodNotAllowed().status).eq(405);
+            expect(h22p.methodNotAllowed().statusText).eq('Method Not Allowed');
+
+            expect(h22p.internalServerError().status).eq(500);
+            expect(h22p.internalServerError().statusText).eq('Internal Server Error');
+
+            expect(h22p.badGateway().status).eq(502);
+            expect(h22p.badGateway().statusText).eq('Bad Gateway');
+
+            expect(h22p.serviceUnavailable().status).eq(503);
+            expect(h22p.serviceUnavailable().statusText).eq('Service Unavailable');
+
+            expect(h22p.gatewayTimeout().status).eq(504);
+            expect(h22p.gatewayTimeout().statusText).eq('Gateway Timeout');
+
         })
     })
 
