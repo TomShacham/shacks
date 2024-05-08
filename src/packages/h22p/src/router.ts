@@ -102,7 +102,7 @@ export class Router implements HttpHandler {
     }
 }
 
-export function router(routes: Route<any, string, Method, HttpRequestHeaders>[] | UntypedRoutes) {
+export function router(routes: Route<any, string, Method, HttpRequestHeaders>[] | UntypedRoutes): Router {
     if (Array.isArray(routes))
         return new Router(routes);
     else return new Router(Object.values(routes))

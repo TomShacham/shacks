@@ -17,9 +17,13 @@ Simple because:
 
 Design choices:
 
-    + composition over configuation (made easy because there is one simple http interface) 
+    + composition over configuation (made easy because there is one simple http interface)
+      h22p is light on configuration options, instead you can implement HttpHandler and delegate
     + http client responses 4xx or 5xx are not exceptions
-    + json body type?
+      unlike a lot of clients out there, we do not throw an exception so you do not need to try/catch requests
+    + type-safe routing uses h22pStream (a light wrapper around stream.Readable) to preserve type safety
+      through streaming 
+    + 
 
 ## Todo
 
