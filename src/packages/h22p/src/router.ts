@@ -41,35 +41,44 @@ export class Router implements HttpHandler {
     } {
         for (const route of this.routes) {
             if (route.method === method && route.path !== undefined) {
+                const query = Query.parse(URI.of(path).query);
                 const noQuery = route.path.split("?")[0];
                 const noTrailingSlash = (noQuery !== '/' && noQuery.endsWith('/')) ? noQuery.slice(0, -1) : noQuery;
                 const exactMatch = noTrailingSlash === path;
-                const query = Query.parse(URI.of(path).query);
                 if (exactMatch) return {route, vars: {path: {}, query, wildcards: []}}
-                let s = noTrailingSlash.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
-                for (const wildcard of s.split('*')) {
-                    s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.+)`)
-                }
-                const regExpCapturingPathParams = new RegExp(s);
-                const matches = regExpCapturingPathParams.test(path);
+                const regex = this.regexCapturingVars(noTrailingSlash);
+                const pathNoQuery = path.split("?")[0];
+                const matches = regex.test(pathNoQuery);
                 if (matches) {
-                    const groups = path.match(regExpCapturingPathParams)!.groups as NodeJS.Dict<string>;
-                    const vars = groups
-                        ? Object.entries(groups).reduce((acc, [k, v]) => {
-                            if (k.startsWith('wildcard')) acc.wildcards.push(v!)
-                            else acc.path[k] = v!;
-                            return acc;
-                        }, ({
-                            wildcards: [] as string[],
-                            path: {} as { [k: string]: string },
-                            query: query
-                        }))
-                        : {path: {}, query, wildcards: []}
-                    if (groups) return {route, vars}
+                    const groups = pathNoQuery.match(regex)!.groups as NodeJS.Dict<string>;
+                    if (groups) return {
+                        route, vars: this.populateVars(groups, query)
+
+                    }
                 }
             }
         }
         return {vars: {path: {}, query: {}, wildcards: []}}
+    }
+
+    private regexCapturingVars(noTrailingSlash: string) {
+        let s = noTrailingSlash.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
+        for (const wildcard of s.split('*')) {
+            s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.+)`)
+        }
+        return new RegExp(s);
+    }
+
+    private populateVars(groups: NodeJS.Dict<string>, query: NodeJS.Dict<string>) {
+        return Object.entries(groups).reduce((acc, [k, v]) => {
+            if (k.startsWith('wildcard')) acc.wildcards.push(v!)
+            else acc.path[k] = v!;
+            return acc;
+        }, ({
+            wildcards: [] as string[],
+            path: {} as { [k: string]: string },
+            query: query
+        }));
     }
 
     private notFound() {

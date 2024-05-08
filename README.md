@@ -24,6 +24,7 @@ Design choices:
 ## Todo
 
 - routing precedence of routes test
+  - split into separate module
 - add convenience obj for Status ?
 - open api spec generation
 - multipart form data

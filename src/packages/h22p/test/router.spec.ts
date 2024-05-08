@@ -47,6 +47,18 @@ describe('router', () => {
         expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky');
     })
 
+    it('wildcard in middle of path', async () => {
+        const router = new Router([
+            read()('GET', "*/resource/*/more", async (req) => {
+                const params = req.vars.path;
+                return h22p.response({status: 200, body: `Hello ${req.vars.wildcards.join(' ')} more`})
+            })
+        ]);
+        const res = await router.handle(h22p.get('bingo/bongo/resource/hanky/panky/tinky/tanky/more'))
+        expect(res.status).eq(200);
+        expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky/tinky/tanky more');
+    })
+
     it('wildcard with path params', async () => {
         const router = new Router([
             read()('GET', "*/resource/{id}/sub/{subId}/*", async (req) => {
@@ -60,6 +72,23 @@ describe('router', () => {
         const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky'))
         expect(res.status).eq(200);
         expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456');
+    })
+
+    it('wildcard with path params and query params', async () => {
+        const router = new Router([
+            read()('GET', "*/resource/{id}/sub/{subId}/*?q1&q2", async (req) => {
+                const pathParams = req.vars.path;
+                const queryParams = req.vars.query;
+                const wilcards = req.vars.wildcards.join(' ');
+                return h22p.response({
+                    status: 200,
+                    body: `Hello ${wilcards} ${pathParams.id} ${pathParams.subId} ${queryParams.q1} ${queryParams.q2}`
+                })
+            })
+        ]);
+        const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky?q1=v1&q2=v2'))
+        expect(res.status).eq(200);
+        expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456 v1 v2');
     })
 
     it('trailing slash in route path is ignored', async () => {
@@ -136,7 +165,7 @@ describe('router', () => {
             expect(await Body.text(stringRouteResponse.body!)).eq('Hello id-123 10 chars');
 
             // in memory is the same contract
-            expect(stringRouteResponse.status).eq(200);
+            expect(stringRouteResponseInMemory.status).eq(200);
             expect(await Body.text(stringRouteResponseInMemory.body!)).eq('Hello id-123 10 chars');
 
             await close();
@@ -144,7 +173,6 @@ describe('router', () => {
 
         it('write json body', async () => {
             const routing = {
-
                 jsonRoute: write<
                     { foo: string },
                     string | { foo: string },
@@ -166,8 +194,14 @@ describe('router', () => {
             const jsonRequest = contract.jsonRoute({path: {id: 'id-123'}}, {foo: 'body-456'}, {h2: 'thing'});
             const jsonResponse = await h22p.client(`http://localhost:${port}`).handle(jsonRequest);
 
+            const jsonRequestInMemory = contract.jsonRoute({path: {id: 'id-123'}}, {foo: 'body-456'}, {h2: 'thing'});
+            const jsonResponseInMemory = await h22p.client(`http://localhost:${port}`).handle(jsonRequestInMemory);
+
             expect(jsonResponse.status).eq(200);
             expect(await Body.text(jsonResponse.body!)).eq('Hello id-123 body-456');
+
+            expect(jsonResponseInMemory.status).eq(200);
+            expect(await Body.text(jsonResponseInMemory.body!)).eq('Hello id-123 body-456');
 
             await close();
         })
@@ -195,13 +229,24 @@ describe('router', () => {
             const streamRequest = contract.streamRoute({path: {id: 'id-123'}}, stream.Readable.from('stream-123'), {h3: ['foo']});
             const streamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(streamRequest);
 
+            const streamRequestInMemory = contract.streamRoute({path: {id: 'id-123'}}, stream.Readable.from('stream-123'), {h3: ['foo']});
+            const streamRouteResponseInMemory = await h22p.client(`http://localhost:${port}`).handle(streamRequestInMemory);
+
             const h22pStreamRequest = contract.h22pStreamRoute({path: {id: 'id-123'}}, {foo: '123'});
             const h22pStreamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRequest);
 
+            const h22pStreamRequestInMemory = contract.h22pStreamRoute({path: {id: 'id-123'}}, {foo: '123'});
+            const h22pStreamRouteResponseInMemory = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRequestInMemory);
+
             expect(streamRouteResponse.status).eq(200);
             expect(await Body.text(streamRouteResponse.body!)).eq('Hello id-123 stream-123');
+            expect(streamRouteResponseInMemory.status).eq(200);
+            expect(await Body.text(streamRouteResponseInMemory.body!)).eq('Hello id-123 stream-123');
+
             expect(h22pStreamRouteResponse.status).eq(200);
             expect(await Body.text(h22pStreamRouteResponse.body!)).eq('Hello id-123 {"foo":"123"}');
+            expect(h22pStreamRouteResponseInMemory.status).eq(200);
+            expect(await Body.text(h22pStreamRouteResponseInMemory.body!)).eq('Hello id-123 {"foo":"123"}');
 
             await close();
         })
