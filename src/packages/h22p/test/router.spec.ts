@@ -299,7 +299,7 @@ describe('router', () => {
             await close();
         })
 
-        it('write stream body', async () => {
+        it('write stream body; h22pStream preserves type in stream', async () => {
             const routing = {
                 streamRoute: write<stream.Readable, any, { h3: string[] }>()('PUT', "/resource/{id}", async (req) => {
                     const params = req.vars.path;
@@ -308,10 +308,10 @@ describe('router', () => {
                     //   but if you know what the type will be then use an h22pStream like below
                     return h22p.response({status: 200, body: `Hello ${params.id} ${body}`})
                 }),
-                h22pStreamRoute: write<h22pStream<{ foo: string }>>()('PUT', "/resource/{id}", async (req) => {
+                h22pStreamRoute: write<h22pStream<{ foo: string }>>()('POST', "/resource/{id}", async (req) => {
                     const params = req.vars.path;
                     const body = await Body.json(req.body);
-                    return h22p.response({status: 200, body: `Hello ${params.id} ${body.foo}`})
+                    return h22p.response({status: 200, body: `Hello ${params.id} ${body.foo}`});
                 }),
             };
 
@@ -337,11 +337,37 @@ describe('router', () => {
             expect(await Body.text(streamRouteResponseInMemory.body!)).eq('Hello id-123 stream-123');
 
             expect(h22pStreamRouteResponse.status).eq(200);
-            expect(await Body.text(h22pStreamRouteResponse.body!)).eq('Hello id-123 {"foo":"123"}');
+            expect(await Body.text(h22pStreamRouteResponse.body!)).eq('Hello id-123 123');
             expect(h22pStreamRouteResponseInMemory.status).eq(200);
-            expect(await Body.text(h22pStreamRouteResponseInMemory.body!)).eq('Hello id-123 {"foo":"123"}');
+            expect(await Body.text(h22pStreamRouteResponseInMemory.body!)).eq('Hello id-123 123');
 
             await close();
         })
+
+        it('pipe h22pStream stream body', async () => {
+            const routing = {
+                h22pStreamRoute: write<h22pStream<{ foo: string }>>()('POST', "/resource/{id}", async (req) => {
+                    // simply pipe the body through
+                    return h22p.response({status: 200, body: req.body})
+                }),
+            };
+
+            const {port, close} = await h22p.server(router(routing));
+            const contract = contractFrom(routing);
+
+            const h22pStreamRequest = contract.h22pStreamRoute({path: {id: 'id-123'}}, {foo: '123'});
+            const h22pStreamRouteResponse = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRequest);
+
+            const h22pStreamRequestInMemory = contract.h22pStreamRoute({path: {id: 'id-123'}}, {foo: '123'});
+            const h22pStreamRouteResponseInMemory = await h22p.client(`http://localhost:${port}`).handle(h22pStreamRequestInMemory);
+
+            expect(h22pStreamRouteResponse.status).eq(200);
+            expect(await Body.text(h22pStreamRouteResponse.body!)).eq('{"foo":"123"}');
+            expect(h22pStreamRouteResponseInMemory.status).eq(200);
+            expect(await Body.text(h22pStreamRouteResponseInMemory.body!)).eq('{"foo":"123"}');
+
+            await close();
+        })
+
     })
 })

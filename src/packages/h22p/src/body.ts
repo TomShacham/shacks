@@ -15,12 +15,6 @@ export class Body {
             return text;
         }
         const textDecoder = new TextDecoder();
-        if (body instanceof h22pStream) {
-            for await (const chunk of body.stream ?? []) {
-                text += typeof chunk === 'string' ? chunk : textDecoder.decode(chunk);
-            }
-            return text;
-        }
         if (body instanceof stream.Readable) {
             for await (const chunk of body) {
                 text += textDecoder.decode(chunk);
@@ -378,32 +372,18 @@ export function createReadable() {
     });
 }
 
-export class h22pStream<B extends HttpMessageBody> {
-    static create() {
-        return new h22pStream(new stream.Readable({
-            read() {
-            }
-        }));
-    }
+type h22pStreamType<B extends HttpMessageBody> = B | stream.Readable;
 
-    static from<B extends HttpMessageBody>(arg: B): h22pStream<B> {
+export class h22pStream<B extends HttpMessageBody> extends stream.Readable {
+    static of<B extends HttpMessageBody>(arg: B): h22pStreamType<B> {
         if (isSimpleBody(arg)) {
-            return new h22pStream<B>(stream.Readable.from(arg))
+            return stream.Readable.from(arg)
         } else if (arg instanceof stream.Readable) {
-            return new h22pStream<B>(arg)
+            return arg
         } else if (typeof arg === 'object') {
-            return new h22pStream<B>(stream.Readable.from(JSON.stringify(arg)))
+            return stream.Readable.from(JSON.stringify(arg))
         } else {
-            return new h22pStream<B>(undefined)
+            return stream.Readable.from('')
         }
     }
-
-    __h22pStream: boolean = true;
-
-    constructor(public stream: stream.Readable | undefined) {
-    }
-}
-
-export function isH22PStream(s: any): s is h22pStream<any> {
-    return s !== undefined && '__h22pStream' in s;
 }

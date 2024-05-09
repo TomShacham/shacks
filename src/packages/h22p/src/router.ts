@@ -14,7 +14,7 @@ import {
     TypedHttpHandler,
     WriteMethods
 } from "./interface";
-import {h22pStream, isH22PStream} from "./body";
+import {h22pStream} from "./body";
 import {URI} from "./uri";
 import {Query} from "./query";
 
@@ -137,16 +137,7 @@ export function write<
             method: method,
             headers,
             handler: {
-                handle: async (req: T) => {
-                    // Important: this guarantees the same contract in memory and over the wire
-                    // we want an h22pStream so that req.body always has the type of stream
-                    // but also preserves the type of the body (stream.Readable doesn't have a type parameter)
-                    if (!isH22PStream(req.body)) {
-                        req.body = h22pStream.from(req.body)
-                        return handler(req)
-                    }
-                    return handler(req);
-                }
+                handle: handler
             }
         }
     }
@@ -302,7 +293,7 @@ export function contractFrom<
                     path: fullPath,
                     method: route.method,
                     headers: headers,
-                    body: h22pStream.from(undefined),
+                    body: undefined,
                 } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
             }
             : (vars: UriParameters<Path>, body?: B, headers?: Hds) => {
@@ -313,7 +304,7 @@ export function contractFrom<
                     path: replaced,
                     method: route.method,
                     headers: headers,
-                    body: h22pStream.from(body),
+                    body: body,
                 } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
             }
     }

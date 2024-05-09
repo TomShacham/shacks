@@ -4,7 +4,6 @@ import {AddressInfo, Server} from "node:net";
 import * as timers from "timers";
 import * as stream from "stream";
 import process from 'node:process';
-import {h22pStream} from "./body";
 
 export type HttpServer = {
     server: Server;
@@ -44,10 +43,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
         }));
         if (method?.toLowerCase() === 'head') setDefaultHeadResponseHeaders(res);
         nodeResponse.writeHead(res.status, res.headers)
-        if (res.body instanceof h22pStream) {
-            res.body.stream?.on('end', () => nodeResponse.end());
-            res.body.stream?.pipe(nodeResponse);
-        } else if (res.body instanceof stream.Readable) {
+        if (res.body instanceof stream.Readable) {
             res.body.on('end', () => nodeResponse.end())
             res.body.pipe(nodeResponse)
         } else if (typeof res.body === 'object') {

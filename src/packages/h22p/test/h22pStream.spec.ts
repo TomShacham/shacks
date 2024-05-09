@@ -1,21 +1,20 @@
 import stream from "node:stream";
-import {Body, h22pStream, isH22PStream} from "../src";
-import {expect} from "chai";
+import {BodyType, h22pStream} from "../src";
 
 describe('h22p stream', () => {
 
-    it('create and see if h22pStream or not', () => {
-        const str = h22pStream.from(stream.Readable.from('foo'));
-        expect(isH22PStream(str)).eq(true);
-        expect(isH22PStream(stream.Readable.from('foo'))).eq(false);
-    });
+    it('infer type', async () => {
+        const typeChecks = (result: true) => console.log(result)
+        const doesNotTypeCheck = (result: false) => console.log(result)
 
-    it('create h22pStream from different HttpMessageBody types', async () => {
-        expect(await Body.text(h22pStream.from('123'))).eq('123');
-        expect(await Body.text(h22pStream.from({"some": "json"}))).eq('{"some":"json"}');
-        expect(await Body.text(h22pStream.from(stream.Readable.from('123')))).eq('123');
-        expect(await Body.text(h22pStream.from(Buffer.from('123')))).eq('123');
-        expect(await Body.text(h22pStream.from(undefined))).eq('');
+        const stream: stream.Readable | { foo: string } = h22pStream.of({foo: 'bar'})
+
+        type streamType = typeof stream;
+        type streamTypeOnceRead = BodyType<streamType>;
+
+        typeChecks(true as ((stream.Readable | { foo: string; }) extends streamType ? true : false));
+        doesNotTypeCheck(false as ((stream.Readable | { bar: string; }) extends streamType ? true : false));
+        typeChecks(true as ({ foo: string; } extends streamTypeOnceRead ? true : false));
     });
 
 });

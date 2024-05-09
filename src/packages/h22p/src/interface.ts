@@ -46,9 +46,11 @@ export type BodyType<B extends HttpMessageBody> = B extends infer J extends Json
         ? string :
         B extends infer J extends Buffer
             ? Buffer
-            : B extends infer J extends stream.Readable
-                ? stream.Readable
-                : typeof undefined
+            : B extends infer J extends h22pStream<infer X>
+                ? X
+                : B extends infer J extends stream.Readable
+                    ? stream.Readable
+                    : typeof undefined
 
 
 export type ReadMethods = 'GET' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
