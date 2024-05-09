@@ -175,25 +175,26 @@ Upload test file
     })
 
     it('sends and receives headers (check case sensitivity)', async () => {
+        /*
+            header names are down-cased but header values preserve their casing
+         */
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const headers = {...req.headers, "location": "/path"};
+                const headers = {...req.headers, "location": "/path", "FoO": "BaR"};
                 return h22p.seeOther({headers: headers, body: ''})
             }
         };
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await h22p.client(`http://localhost:${port}`).handle({
-                method: 'GET',
-                path: `/`,
-                headers: {"request-header": "r1"},
-                body: 'blah'
-            });
+            const response = await h22p.client(`http://localhost:${port}`).handle(
+                h22p.get(`/`, {"ReQuEsT-HeAdEr": "r1"})
+            );
             expect(response.status).to.eq(303);
             expect(response.statusText).to.eq("See Other");
             expect(response.headers["request-header"]).to.eq(`r1`)
             expect(response.headers["location"]).to.eq(`/path`)
+            expect(response.headers["foo"]).to.eq(`BaR`)
             expect(await Body.text(response.body)).to.eq(``);
         } finally {
             await close()
