@@ -1,5 +1,5 @@
 import stream from "node:stream";
-import {BodyType, h22pStream} from "../src";
+import {Body, h22pStream} from "../src";
 
 describe('h22p stream', () => {
 
@@ -7,14 +7,21 @@ describe('h22p stream', () => {
         const typeChecks = (result: true) => console.log(result)
         const doesNotTypeCheck = (result: false) => console.log(result)
 
-        const stream: stream.Readable | { foo: string } = h22pStream.of({foo: 'bar'})
+        // cast as an h22pStream
+        const stream = h22pStream.of({foo: 'bar'}) as h22pStream<{ foo: string }>
 
         type streamType = typeof stream;
-        type streamTypeOnceRead = BodyType<streamType>;
+        const json = await Body.json(stream)
+        type streamTypeOnceRead = typeof json;
 
-        typeChecks(true as ((stream.Readable | { foo: string; }) extends streamType ? true : false));
+        // stream has type Readable or whatever T is ( here it's {foo: string} )
+        typeChecks(true as ((stream.Readable) extends streamType ? true : false));
         doesNotTypeCheck(false as ((stream.Readable | { bar: string; }) extends streamType ? true : false));
+
+        // once we read it
         typeChecks(true as ({ foo: string; } extends streamTypeOnceRead ? true : false));
+        doesNotTypeCheck(false as (streamTypeOnceRead extends h22pStream<{ foo: string; }> ? true : false))
+        doesNotTypeCheck(false as (streamTypeOnceRead extends { foo: string; bar: string; } ? true : false))
     });
 
 });
