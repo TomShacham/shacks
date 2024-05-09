@@ -26,7 +26,7 @@ describe('client / server', function () {
             expect(response.statusText).to.eq("Created");
             expect(response.headers["host"]).to.eq(`localhost:${port}`)
             let body = '';
-            for await (const chunk of response.body ?? ['foooooock']) {
+            for await (const chunk of response.body) {
                 body += chunk
             }
             expect(body).to.eq(`blah`);
@@ -173,6 +173,33 @@ Upload test file
             await closeServer()
         }
     })
+
+    it('sends and receives headers (check case sensitivity)', async () => {
+        const handler = {
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                const headers = {...req.headers, "location": "/path"};
+                return h22p.seeOther({headers: headers, body: ''})
+            }
+        };
+        const {port, close} = await httpServer(handler);
+
+        try {
+            const response = await h22p.client(`http://localhost:${port}`).handle({
+                method: 'GET',
+                path: `/`,
+                headers: {"request-header": "r1"},
+                body: 'blah'
+            });
+            expect(response.status).to.eq(303);
+            expect(response.statusText).to.eq("See Other");
+            expect(response.headers["request-header"]).to.eq(`r1`)
+            expect(response.headers["location"]).to.eq(`/path`)
+            expect(await Body.text(response.body)).to.eq(``);
+        } finally {
+            await close()
+        }
+    })
+
 })
 
 function data(bytes: number) {

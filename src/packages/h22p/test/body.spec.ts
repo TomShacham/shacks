@@ -30,57 +30,57 @@ describe('body', () => {
 
             const movedPermanently = h22p.movedPermanently({
                 headers: {
-                    "Location": "must-provide",
-                    "Content-type": "text/plain"
+                    "location": "must-provide",
+                    "content-type": "text/plain"
                 }
             });
             expect(movedPermanently.status).eq(301);
             expect(movedPermanently.statusText).eq('Moved Permanently');
             expect(movedPermanently.headers).deep.eq({
-                "Content-type": "text/plain",
-                "Location": "must-provide"
+                "content-type": "text/plain",
+                "location": "must-provide"
             })
 
-            const found = h22p.found({headers: {"Location": "must-provide", "Content-type": "text/plain"}});
+            const found = h22p.found({headers: {"location": "must-provide", "content-type": "text/plain"}});
             expect(found.status).eq(302);
             expect(found.statusText).eq('Found');
             expect(found.headers).deep.eq({
-                "Content-type": "text/plain",
-                "Location": "must-provide"
+                "content-type": "text/plain",
+                "location": "must-provide"
             })
 
-            const seeOther = h22p.seeOther({headers: {"Location": "must-provide", "Content-type": "text/plain"}});
+            const seeOther = h22p.seeOther({headers: {"location": "must-provide", "content-type": "text/plain"}});
             expect(seeOther.status).eq(303);
             expect(seeOther.statusText).eq('See Other');
             expect(seeOther.headers).deep.eq({
-                "Content-type": "text/plain",
-                "Location": "must-provide"
+                "content-type": "text/plain",
+                "location": "must-provide"
             });
 
             const temporaryRedirect = h22p.temporaryRedirect({
                 headers: {
-                    "Location": "must-provide",
-                    "Content-type": "text/plain"
+                    "location": "must-provide",
+                    "content-type": "text/plain"
                 }
             });
             expect(temporaryRedirect.status).eq(307);
             expect(temporaryRedirect.statusText).eq('Temporary Redirect');
             expect(temporaryRedirect.headers).deep.eq({
-                "Content-type": "text/plain",
-                "Location": "must-provide"
+                "content-type": "text/plain",
+                "location": "must-provide"
             });
 
             const permanentRedirect = h22p.permanentRedirect({
                 headers: {
-                    "Location": "must-provide",
-                    "Content-type": "text/plain"
+                    "location": "must-provide",
+                    "content-type": "text/plain"
                 }
             });
             expect(permanentRedirect.status).eq(308);
             expect(permanentRedirect.statusText).eq('Permanent Redirect');
             expect(permanentRedirect.headers).deep.eq({
-                "Content-type": "text/plain",
-                "Location": "must-provide"
+                "content-type": "text/plain",
+                "location": "must-provide"
             });
 
             expect(h22p.badRequest().status).eq(400);

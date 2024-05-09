@@ -24,15 +24,6 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
         res(e)
     }))
 
-    function setDefaultHeadResponseHeaders(res: HttpResponse) {
-        if (res.headers["content-length"] === undefined && (typeof res.body === 'string' || res.body instanceof Buffer)) {
-            res.headers["content-length"] = res.body.length.toString()
-        }
-        if (res.headers["content-type"] === undefined && (typeof res.body === 'string')) {
-            res.headers["content-type"] = 'text/plain'
-        }
-    }
-
     server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {
         const {headers, method, url} = nodeReq;
         const res = await handler.handle(h22p.request({
@@ -41,7 +32,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
             method: method as Method,
             path: url
         }));
-        if (method?.toLowerCase() === 'head') setDefaultHeadResponseHeaders(res);
+        if (method?.toLowerCase() === 'head') setDefaultContentLengthAndType(res);
         nodeResponse.writeHead(res.status, res.headers)
         if (res.body instanceof stream.Readable) {
             res.body.on('end', () => nodeResponse.end())
@@ -49,16 +40,15 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
         } else if (typeof res.body === 'object') {
             nodeResponse.write(JSON.stringify(res.body));
             nodeResponse.end();
-        }
-        {
+        } else {
             nodeResponse.write(res.body);
             nodeResponse.end();
         }
     })
+
     server.on('error', (err) => {
         console.log(err);
     })
-
     server.on('clientError', (err, socket) => {
         console.error('client error', err);
         socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
@@ -74,6 +64,15 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
             }),
             new Promise(res => timers.setTimeout(() => res(null), timeout))
         ]);
+    }
+
+    function setDefaultContentLengthAndType(res: HttpResponse) {
+        if (res.headers["content-length"] === undefined && (typeof res.body === 'string' || res.body instanceof Buffer)) {
+            res.headers["content-length"] = res.body.length.toString()
+        }
+        if (res.headers["content-type"] === undefined && (typeof res.body === 'string')) {
+            res.headers["content-type"] = 'text/plain'
+        }
     }
 
     return {server, port, close};

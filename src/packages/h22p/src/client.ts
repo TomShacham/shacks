@@ -1,4 +1,13 @@
-import {h22p, HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, MessageBody, Method} from "./interface";
+import {
+    h22p,
+    HttpHandler,
+    HttpRequest,
+    HttpRequestHeaders,
+    HttpResponse,
+    isReadMethod,
+    MessageBody,
+    Method
+} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
 import {TypedHttpRequest} from "./router";
@@ -33,14 +42,16 @@ export class HttpClient implements HttpHandler {
                     }))
                 });
             });
-            if (req.body instanceof stream.Readable) {
+            if (isReadMethod(req.method)) {
+                // do not write a body if it's a GET or HEAD etc
+            } else if (req.body instanceof stream.Readable) {
                 for await (const chunk of req.body) {
                     nodeRequest.write(chunk)
                 }
             } else if (req.body instanceof Buffer || typeof req.body === 'string') {
-                nodeRequest.write(req.body)
+                nodeRequest.write(req.body);
             } else if (typeof req.body === 'object') {
-                nodeRequest.write(JSON.stringify(req.body))
+                nodeRequest.write(JSON.stringify(req.body));
             }
             nodeRequest.end()
         })

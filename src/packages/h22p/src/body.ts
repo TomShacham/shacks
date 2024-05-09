@@ -17,7 +17,7 @@ export class Body {
         const textDecoder = new TextDecoder();
         if (body instanceof stream.Readable) {
             for await (const chunk of body) {
-                text += textDecoder.decode(chunk);
+                text += typeof chunk === 'string' ? chunk : textDecoder.decode(chunk);
             }
             return text;
         }

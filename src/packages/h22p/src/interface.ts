@@ -111,31 +111,31 @@ export class h22p {
     }
 
     static movedPermanently<B extends HttpMessageBody>(res: {
-        headers: { "Location": string } & HttpResponseHeaders
+        headers: { "location": string } & HttpResponseHeaders
     } & Partial<Omit<HttpResponse<B>, 'status' | 'statusText'>>): HttpResponse<B> {
         return {status: 301, statusText: 'Moved Permanently', body: undefined as B, ...res};
     }
 
     static found<B extends HttpMessageBody>(res: {
-        headers: { "Location": string } & HttpResponseHeaders
+        headers: { "location": string } & HttpResponseHeaders
     } & Partial<Omit<HttpResponse<B>, 'status' | 'statusText'>>): HttpResponse<B> {
         return {status: 302, statusText: 'Found', body: undefined as B, ...res};
     }
 
     static seeOther<B extends HttpMessageBody>(res: {
-        headers: { "Location": string } & HttpResponseHeaders
+        headers: { "location": string } & HttpResponseHeaders
     } & Partial<Omit<HttpResponse<B>, 'status' | 'statusText'>>): HttpResponse<B> {
         return {status: 303, statusText: 'See Other', body: undefined as B, ...res};
     }
 
     static temporaryRedirect<B extends HttpMessageBody>(res: {
-        headers: { "Location": string } & HttpResponseHeaders
+        headers: { "location": string } & HttpResponseHeaders
     } & Partial<Omit<HttpResponse<B>, 'status' | 'statusText'>>): HttpResponse<B> {
         return {status: 307, statusText: 'Temporary Redirect', body: undefined as B, ...res};
     }
 
     static permanentRedirect<B extends HttpMessageBody>(res: {
-        headers: { "Location": string } & HttpResponseHeaders
+        headers: { "location": string } & HttpResponseHeaders
     } & Partial<Omit<HttpResponse<B>, 'status' | 'statusText'>>): HttpResponse<B> {
         return {status: 308, statusText: 'Permanent Redirect', body: undefined as B, ...res};
     }
