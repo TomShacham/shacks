@@ -38,6 +38,7 @@ export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
 *   but I'd rather the type reflected the 99.9% use case: a list or object of JsonValues
 *   so that you don't accidentally use just a JsonValue and get no compiler help
 * */
+export type DictString = { [key: string]: string };
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
 export type BodyType<B extends HttpMessageBody> = B extends infer J extends JsonBody
@@ -61,8 +62,8 @@ export function isReadMethod<R, B, Path, M>(method: Method) {
     return method === 'GET' || method === 'OPTIONS' || method === 'HEAD' || method === 'TRACE' || method === 'CONNECT';
 }
 
-export type HttpRequestHeaders = { [name: keyof IncomingHttpHeaders]: string | string[] | undefined }
-export type HttpResponseHeaders = { [name: keyof OutgoingHttpHeaders]: string | string[] | undefined }
+export type HttpRequestHeaders = IncomingHttpHeaders
+export type HttpResponseHeaders = OutgoingHttpHeaders
 export type HttpHeaders = HttpRequestHeaders | HttpResponseHeaders;
 
 export interface HttpRequest<

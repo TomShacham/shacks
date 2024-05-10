@@ -1,6 +1,5 @@
 import {httpServer} from "../../src/server";
-import {h22p, HttpRequest, HttpResponse} from "../../src/interface";
-import {MultipartForm} from "../../src/body";
+import {h22p, HttpRequest, HttpResponse, MultipartForm} from "../../src";
 import * as fs from "fs";
 
 async function multipartFormServer() {

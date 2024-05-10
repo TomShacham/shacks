@@ -32,9 +32,7 @@ Questions:
 
 ## Todo
 
-- split into separate module
-- test header sending and receiving over the wire
-  - eg case sensitivity and securely obscuring certain headers
+- split into separate module (later)
 - open api spec generation
 - multipart form data
   - check works on other browsers - search internet for test suite to prove it works

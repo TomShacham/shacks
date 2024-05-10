@@ -1,5 +1,7 @@
+import {DictString} from "./interface";
+
 export class Query {
-    static parse(str: string | undefined): NodeJS.Dict<string> {
+    static parse(str: string | undefined): DictString {
         const params: Record<string, string> = {};
         if (str === undefined) return {};
 
@@ -7,7 +9,7 @@ export class Query {
         const keyValuePairs = str.split('&');
         for (const pair of keyValuePairs) {
             const [key, value] = pair.split('=');
-            params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+            params[decodeURIComponent(key)] = unescape(decodeURIComponent(escape(value || '')));
         }
 
         return params;
@@ -18,7 +20,7 @@ export class Query {
 
         for (const key in params) {
             const value = params[key] as string;
-            queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+            queryStringParts.push(`${unescape(encodeURIComponent(key))}=${unescape(encodeURIComponent(value))}`);
         }
 
         return queryStringParts.join('&');

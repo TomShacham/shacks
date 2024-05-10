@@ -16,6 +16,37 @@ describe('body', () => {
         })
     })
 
+    describe('Body.form', () => {
+        it('throws if header is not present', async () => {
+            try {
+                const form = await Body.form(h22p.post('/', {}, 'name=tom&pic=plom'))
+            } catch (e) {
+                expect((e as Error).message).eq('Content type is not application/x-www-form-urlencoded so bailing on parsing form')
+            }
+        });
+
+        it('parses application/x-www-form-urlencoded', async () => {
+            const form = await Body.form(
+                h22p.post('/', {"content-type": "application/x-www-form-urlencoded"}, 'name=tom&pic=plom')
+            )
+            expect(form).deep.eq({"name": "tom", "pic": "plom"})
+        });
+
+        it('handles special characters', async () => {
+            const form = await Body.form(
+                h22p.post('/',
+                    {"content-type": "application/x-www-form-urlencoded"},
+                    'name=tom&pic=foo%21%40%A3%24%25%5E%26*%28%29-%3D_%2B%7B%7D%7C%22%3A%3F%3E%3C%2C.%7E%60%23')
+            )
+
+            //TODO test all utf-8 chars and decide what to do about non-utf8 chars like "€"
+            expect(form).deep.eq({
+                "name": "tom",
+                "pic": "foo!@£$%^&*()-=_+{}|\":?><,.~`#"
+            })
+        });
+    })
+
     describe('response helpers', () => {
         it('doesnt let you set the status, or statusText; redirects have to provide a location', () => {
             // cannot pass status or statusText in as a property

@@ -14,7 +14,10 @@ describe('query', () => {
     });
 
     it('parse a query string with special characters', () => {
-        const queryString = "name=John%20Doe&email=john%40example.com";
+        console.log(new TextDecoder().decode(Buffer.from("foo%21%40%A3%24%25%5E%26*bar")));
+
+        console.log(encodeURIComponent('foo!@£$%^&*bar'));
+        const queryString = "name=John%20Doe&email=john%40example.com&plop=foo!%40%C2%A3%24%25%5E%26*bar";
         const expectedParams = {
             name: "John Doe",
             email: "john@example.com"

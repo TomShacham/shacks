@@ -1,5 +1,6 @@
-import {BodyType, HttpMessageBody, HttpRequest, isSimpleBody, MessageBody} from "./interface";
+import {BodyType, DictString, HttpMessageBody, HttpRequest, isSimpleBody, MessageBody} from "./interface";
 import * as stream from "stream";
+import {Query} from "./query";
 
 type MultipartFormPart<T = stream.Readable> = {
     headers: MultipartFormHeader[],
@@ -27,7 +28,6 @@ export class Body {
         if (typeof body === 'object') return JSON.stringify(body);
         return body; // string
     }
-
     static async json<B extends HttpMessageBody>(body: MessageBody<B>): Promise<BodyType<B>> {
         // async-await syntax does not reject with an error if JSON.parse fails, so using explicit Promise syntax
         return new Promise((res, rej) => {
@@ -37,6 +37,19 @@ export class Body {
                 rej(e);
             });
         })
+    }
+
+    static async form(msg: HttpRequest): Promise<DictString> {
+        const contentType = msg.headers?.["content-type"];
+        if (contentType?.includes('application/x-www-form-urlencoded')) {
+            if (msg.body instanceof stream.Readable) await new Promise((resolve) => {
+                (msg.body! as stream.Readable).once('readable', () => resolve(null));
+            })
+            const str = await Body.text(msg.body);
+            return Query.parse(str)
+        } else {
+            throw new Error("Content type is not application/x-www-form-urlencoded so bailing on parsing form")
+        }
     }
 
     static asMultipartForm(parts: MultipartFormPart<HttpMessageBody>[], boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)): HttpMessageBody {
