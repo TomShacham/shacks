@@ -174,7 +174,7 @@ Upload test file
         }
     })
 
-    it('sends and receives headers (check case sensitivity)', async () => {
+    it('sends and receives headers (check case sensitivity and array of values)', async () => {
         /*
             header names are down-cased but header values preserve their casing
          */
@@ -188,13 +188,15 @@ Upload test file
 
         try {
             const response = await h22p.client(`http://localhost:${port}`).handle(
-                h22p.get(`/`, {"ReQuEsT-HeAdEr": "r1"})
+                h22p.get(`/`, {"ReQuEsT-HeAdEr": "r1", "array": ["1", "2", "3"]})
             );
             expect(response.status).to.eq(303);
             expect(response.statusText).to.eq("See Other");
             expect(response.headers["request-header"]).to.eq(`r1`)
             expect(response.headers["location"]).to.eq(`/path`)
             expect(response.headers["foo"]).to.eq(`BaR`)
+            // gets concatenated together
+            expect(response.headers["array"]).to.eq(`1, 2, 3`)
             expect(await Body.text(response.body)).to.eq(``);
         } finally {
             await close()
