@@ -21,20 +21,19 @@ Design choices:
       h22p is light on configuration options, instead you can implement HttpHandler and delegate
     + http client responses 4xx or 5xx are not exceptions
       unlike a lot of clients out there, we do not throw an exception so you do not need to try/catch requests
-    + type-safe routing uses h22pStream (a light wrapper around stream.Readable) to preserve type safety
-      through streaming 
+    + type-safe routing to preserve type safety 
     + 
 
 Questions:
 
     - do we like the h22p static for exposing the api
       - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
+    - can we generate open api spec from just types :S might need some other api around routing
 
 ## Todo
 
 - open api spec generation
 - multipart form data
-  - check works on other browsers - search internet for test suite to prove it works
   - test if content-type header or content-disposition header is supplied more than once ie is string[]
 - handle application/x-www-form-urlencoded
   - handle diff charsets like qs does
@@ -48,11 +47,17 @@ Questions:
   - streaming files to s3
   - simple json api
   - htmx
+  - react + happydom in-memory e2e testing
   - browser testing with react
   - deploy to cloudflare and use wrangler to test it locally
+  - CRDTs?
+  - websockets?
+  - pulumi? or some IaC to define our service
+    - example monorepo sharing a client across it
 - performance test
+  - look at express's benchmarking
 - security e.g. header obfuscation etc. (node should handle this?)
-- content-range[.nvmrc](.nvmrc)
+- content-range
 - trailers
 - does node handle inflate/deflate ?
   - if not then we can write some filters that do

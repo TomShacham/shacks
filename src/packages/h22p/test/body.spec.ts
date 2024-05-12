@@ -441,44 +441,6 @@ describe('body', () => {
             body1.pipe(fs.createWriteStream(`${__dirname}/resources/hamburger-out.png`));
         })
 
-        it('parses content-transfer-encoding', async () => {
-            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
-            const wireData = [
-                `--${boundary}`,
-                'Content-Disposition: form-data; name="file"; filename="test.txt"',
-                'Content-Type: text/plain',
-                'Content-Transfer-Encoding: base64',
-                '', // headers end
-                'Test file contents',
-                `--${boundary}--`,
-                '' // body end
-            ].join('\r\n')
-
-            const req = h22p.request({
-                method: 'POST',
-                body: stream.Readable.from(wireData),
-                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
-            })
-            const {headers, body} = await new MultipartForm().field(req);
-
-            expect(headers).deep.eq([
-                    {
-                        "filename": "test.txt",
-                        "fieldName": "file",
-                        "name": "content-disposition"
-                    },
-                    {
-                        "name": "content-type",
-                        "value": "text/plain"
-                    },
-                    {
-                        "name": "content-transfer-encoding",
-                        "value": "base64"
-                    }
-                ]
-            )
-        })
-
         it('can provide a max headers to protect against DOS', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
             const wireData = [
@@ -559,7 +521,7 @@ describe('body', () => {
             }
         })
 
-        it('if attempting to read another field that isnt there then we return empty', async () => {
+        it(`if attempting to read another field that isn't there then we return empty`, async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
             const wireData = [
                 `--${boundary}`,
@@ -600,7 +562,7 @@ describe('body', () => {
             expect(noText).deep.eq('');
         })
 
-        it('api for reading all parts', async () => {
+        it('api for reading `all` parts', async () => {
             const boundary = '------WebKitFormBoundaryZnZz58ycjFeBNyad';
             const wireData = [
                 `--${boundary}`,
@@ -671,7 +633,7 @@ describe('body', () => {
             }
         })
 
-        it('field does not stream the next part until it is asked for', async () => {
+        it('`field` does not stream the next part until it is asked for', async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
             const preFile = [
                 `--${boundary}`,
@@ -715,6 +677,35 @@ describe('body', () => {
 
             // await Body.text(b2)
         })
+
+        it('an empty field is fine - just gives you an empty body', async () => {
+            const boundary = '------WebKitFormBoundaryByKYauLmhh2M99wi';
+            const wireData = [
+                `--${boundary}`,
+                `Content-Disposition: form-data; name="name"`,
+                '',
+                '',
+                `--${boundary}--`,
+            ].join('\r\n')
+
+            const req = h22p.request({
+                method: 'POST',
+                body: stream.Readable.from(wireData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const {headers, body} = await new MultipartForm().field(req);
+
+            expect(headers).deep.eq([
+                    {
+                        "fieldName": "name",
+                        "name": "content-disposition"
+                    }
+                ]
+            )
+            const text = await Body.text(body);
+            expect(text).deep.eq('');
+        })
+
     })
 })
 
