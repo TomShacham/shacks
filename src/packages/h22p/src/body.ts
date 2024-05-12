@@ -28,6 +28,7 @@ export class Body {
         if (typeof body === 'object') return JSON.stringify(body);
         return body; // string
     }
+
     static async json<B extends HttpMessageBody>(body: MessageBody<B>): Promise<BodyType<B>> {
         // async-await syntax does not reject with an error if JSON.parse fails, so using explicit Promise syntax
         return new Promise((res, rej) => {
@@ -46,7 +47,8 @@ export class Body {
                 (msg.body! as stream.Readable).once('readable', () => resolve(null));
             })
             const str = await Body.text(msg.body);
-            return Query.parse(str)
+            var strWithoutPlus = str.replace(/\+/g, ' ');
+            return Query.parse(strWithoutPlus)
         } else {
             throw new Error("Content type is not application/x-www-form-urlencoded so bailing on parsing form")
         }
@@ -109,19 +111,51 @@ export class Body {
 }
 
 export class MultipartForm {
-    static async multipartFormField(
+    private state: undefined | AsyncGenerator<MultipartFormPart>;
+
+    async field(
         msg: HttpRequest,
         options: MultipartOptions = {maxHeadersSizeBytes: 2048}
     ): Promise<MultipartFormPart> {
+        const iterator = this.state
+            ? this.state
+            : this.state = (await this.all(msg, options))[Symbol.asyncIterator]();
+        const thing = await iterator.next()
+        if (thing.done) return {headers: [], body: stream.Readable.from('')}
+        return thing.value;
+    }
+
+    async all(
+        msg: HttpRequest,
+        options: MultipartOptions = {maxHeadersSizeBytes: 2048}
+    ): Promise<{ [Symbol.asyncIterator](): AsyncGenerator<MultipartFormPart> }> {
         const contentType = msg.headers?.["content-type"];
         if (contentType?.includes('multipart/form-data')) {
             await new Promise((resolve) => {
                 (msg.body! as stream.Readable).once('readable', () => resolve(null));
             })
-            const {headers, body} = await MultipartForm.parsePart(msg, options.maxHeadersSizeBytes)
-            return {headers, body: body}
+            let finished = false;
+            return {
+                async* [Symbol.asyncIterator]() {
+                    while (true) {
+                        // stream isn't set to readable=false til next tick
+                        await new Promise(res => setImmediate(() => {
+                            if (!(msg.body! as stream.Readable).readable) finished = true
+                            res(null);
+                        }));
+                        if (finished) break;
+                        const part = await MultipartForm.parsePart(msg, options.maxHeadersSizeBytes)
+                        yield part
+                    }
+                }
+            }
         } else {
-            return {headers: [], body: stream.Readable.from('')}
+            return {
+                async* [Symbol.asyncIterator]() {
+                    yield {headers: [], body: stream.Readable.from('')}
+                }
+            }
+
         }
     }
 
@@ -156,7 +190,7 @@ export class MultipartForm {
          *         - if it sees the final boundary (two extra dashes at the end) then it pushes null to end the stream
          */
         const contentType = msg.headers?.["content-type"];
-        // TODO test this
+        // TODO test this content header check
         if (typeof contentType !== 'string') throw new Error('Received more than one content-type header');
         const boundary = /boundary=(?<boundary>(.+))/.exec(contentType!)?.groups?.boundary
         const withHyphens = '--' + boundary;

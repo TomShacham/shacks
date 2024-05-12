@@ -135,8 +135,8 @@ describe('client / server', function () {
     it('multipart form data', async () => {
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const {headers: h1, body: b1} = await MultipartForm.multipartFormField(req);
-                const {headers: h2, body: b2} = await MultipartForm.multipartFormField(req);
+                const {headers: h1, body: b1} = await new MultipartForm().field(req);
+                const {headers: h2, body: b2} = await new MultipartForm().field(req);
                 const text1 = await Body.text(b1);
                 const text2 = await Body.text(b2);
 

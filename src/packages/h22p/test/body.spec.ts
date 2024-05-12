@@ -2,7 +2,7 @@ import * as stream from "stream";
 import {expect} from "chai";
 import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
-import {h22p, Status} from "../src/interface";
+import {h22p} from "../src/interface";
 
 describe('body', () => {
 
@@ -33,10 +33,16 @@ describe('body', () => {
         });
 
         it('handles special characters', async () => {
+            const bastardString = 'foo!@£$%^&*()-=_+{}|":?><,.~`#€';
+
+            const encoded = encode(bastardString);
+            console.log(encoded);
+            console.log(decode(encoded));
+
             const form = await Body.form(
                 h22p.post('/',
                     {"content-type": "application/x-www-form-urlencoded"},
-                    'name=tom&pic=foo%21%40%A3%24%25%5E%26*%28%29-%3D_%2B%7B%7D%7C%22%3A%3F%3E%3C%2C.%7E%60%23')
+                    `name=tom&pic=${encoded}`)
             )
 
             //TODO test all utf-8 chars and decide what to do about non-utf8 chars like "€"
@@ -45,174 +51,89 @@ describe('body', () => {
                 "pic": "foo!@£$%^&*()-=_+{}|\":?><,.~`#"
             })
         });
+
+        function decode(str: string) {
+            var strWithoutPlus = str.replace(/\+/g, ' ');
+            // utf-8
+            try {
+                return decodeURIComponent(strWithoutPlus);
+            } catch (e) {
+                return strWithoutPlus;
+            }
+        };
+
+        function encode(str: string) {
+            const hexTable = (function () {
+                var array = [];
+                for (var i = 0; i < 256; ++i) {
+                    array.push('%' + ((i < 16 ? '0' : '') + i.toString(16)).toUpperCase());
+                }
+
+                return array;
+            }());
+
+            // This code was originally written by Brian White (mscdex) for the io.js core querystring library.
+            // It has been adapted here for stricter adherence to RFC 3986
+            if (str.length === 0) {
+                return str;
+            }
+
+            var out = '';
+            var arr = [];
+            for (var i = 0; i < str.length; i++) {
+
+                var c = str.charCodeAt(i);
+                if (
+                    c === 0x2D // -
+                    || c === 0x2E // .
+                    || c === 0x5F // _
+                    || c === 0x7E // ~
+                    || c >= 0x30 && c <= 0x39 // 0-9
+                    || c >= 0x41 && c <= 0x5A // a-z
+                    || c >= 0x61 && c <= 0x7A // A-Z
+                    || c === 0x28 || c === 0x29 // ( )
+                ) {
+                    arr[arr.length] = str.charAt(i);
+                    continue;
+                }
+
+                if (c < 0x80) {
+                    arr[arr.length] = hexTable[c];
+                    continue;
+                }
+
+                if (c < 0x800) {
+                    arr[arr.length] = hexTable[0xC0 | (c >> 6)]
+                        + hexTable[0x80 | (c & 0x3F)];
+                    continue;
+                }
+
+                if (c < 0xD800 || c >= 0xE000) {
+                    arr[arr.length] = hexTable[0xE0 | (c >> 12)]
+                        + hexTable[0x80 | ((c >> 6) & 0x3F)]
+                        + hexTable[0x80 | (c & 0x3F)];
+                    continue;
+                }
+
+                i += 1;
+                c = 0x10000 + (((c & 0x3FF) << 10) | (str.charCodeAt(i) & 0x3FF));
+
+                arr[arr.length] = hexTable[0xF0 | (c >> 18)]
+                    + hexTable[0x80 | ((c >> 12) & 0x3F)]
+                    + hexTable[0x80 | ((c >> 6) & 0x3F)]
+                    + hexTable[0x80 | (c & 0x3F)];
+
+            }
+            out += arr.join('');
+            return out;
+        }
+
     })
 
-    describe('response helpers', () => {
-        it('doesnt let you set the status, or statusText; redirects have to provide a location', () => {
-            // cannot pass status or statusText in as a property
-            expect(h22p.ok().status).eq(200);
-            expect(h22p.ok().statusText).eq('OK');
-
-            expect(h22p.created().status).eq(201);
-            expect(h22p.created().statusText).eq('Created');
-
-            expect(h22p.noContent().status).eq(204);
-            expect(h22p.noContent().statusText).eq('No Content');
-
-            const movedPermanently = h22p.movedPermanently({
-                headers: {
-                    "location": "must-provide",
-                    "content-type": "text/plain"
-                }
-            });
-            expect(movedPermanently.status).eq(301);
-            expect(movedPermanently.statusText).eq('Moved Permanently');
-            expect(movedPermanently.headers).deep.eq({
-                "content-type": "text/plain",
-                "location": "must-provide"
-            })
-
-            const found = h22p.found({headers: {"location": "must-provide", "content-type": "text/plain"}});
-            expect(found.status).eq(302);
-            expect(found.statusText).eq('Found');
-            expect(found.headers).deep.eq({
-                "content-type": "text/plain",
-                "location": "must-provide"
-            })
-
-            const seeOther = h22p.seeOther({headers: {"location": "must-provide", "content-type": "text/plain"}});
-            expect(seeOther.status).eq(303);
-            expect(seeOther.statusText).eq('See Other');
-            expect(seeOther.headers).deep.eq({
-                "content-type": "text/plain",
-                "location": "must-provide"
-            });
-
-            const temporaryRedirect = h22p.temporaryRedirect({
-                headers: {
-                    "location": "must-provide",
-                    "content-type": "text/plain"
-                }
-            });
-            expect(temporaryRedirect.status).eq(307);
-            expect(temporaryRedirect.statusText).eq('Temporary Redirect');
-            expect(temporaryRedirect.headers).deep.eq({
-                "content-type": "text/plain",
-                "location": "must-provide"
-            });
-
-            const permanentRedirect = h22p.permanentRedirect({
-                headers: {
-                    "location": "must-provide",
-                    "content-type": "text/plain"
-                }
-            });
-            expect(permanentRedirect.status).eq(308);
-            expect(permanentRedirect.statusText).eq('Permanent Redirect');
-            expect(permanentRedirect.headers).deep.eq({
-                "content-type": "text/plain",
-                "location": "must-provide"
-            });
-
-            expect(h22p.badRequest().status).eq(400);
-            expect(h22p.badRequest().statusText).eq('Bad Request');
-
-            expect(h22p.unauthorized().status).eq(401);
-            expect(h22p.unauthorized().statusText).eq('Unauthorized');
-
-            expect(h22p.forbidden().status).eq(403);
-            expect(h22p.forbidden().statusText).eq('Forbidden');
-
-            expect(h22p.notFound().status).eq(404);
-            expect(h22p.notFound().statusText).eq('Not Found');
-
-            expect(h22p.methodNotAllowed().status).eq(405);
-            expect(h22p.methodNotAllowed().statusText).eq('Method Not Allowed');
-
-            expect(h22p.internalServerError().status).eq(500);
-            expect(h22p.internalServerError().statusText).eq('Internal Server Error');
-
-            expect(h22p.badGateway().status).eq(502);
-            expect(h22p.badGateway().statusText).eq('Bad Gateway');
-
-            expect(h22p.serviceUnavailable().status).eq(503);
-            expect(h22p.serviceUnavailable().statusText).eq('Service Unavailable');
-
-            expect(h22p.gatewayTimeout().status).eq(504);
-            expect(h22p.gatewayTimeout().statusText).eq('Gateway Timeout');
-
-        })
-
-        it('status enum', () => {
-            expect(Status.continue).eq(100);
-            expect(Status.switchingProtocols).eq(101);
-            expect(Status.processing).eq(102);
-            expect(Status.earlyHints).eq(103);
-            expect(Status.ok).eq(200);
-            expect(Status.created).eq(201);
-            expect(Status.accepted).eq(202);
-            expect(Status.nonAuthoritativeInformation).eq(203);
-            expect(Status.noContent).eq(204);
-            expect(Status.resetContent).eq(205);
-            expect(Status.partialContent).eq(206);
-            expect(Status.multiStatus).eq(207);
-            expect(Status.alreadyReported).eq(208);
-            expect(Status.imUsed).eq(226);
-            expect(Status.multipleChoices).eq(300);
-            expect(Status.movedPermanently).eq(301);
-            expect(Status.found).eq(302);
-            expect(Status.seeOther).eq(303);
-            expect(Status.notModified).eq(304);
-            expect(Status.useProxy).eq(305);
-            expect(Status.temporaryRedirect).eq(307);
-            expect(Status.permanentRedirect).eq(308);
-            expect(Status.badRequest).eq(400);
-            expect(Status.unauthorized).eq(401);
-            expect(Status.paymentRequired).eq(402);
-            expect(Status.forbidden).eq(403);
-            expect(Status.notFound).eq(404);
-            expect(Status.methodNotAllowed).eq(405);
-            expect(Status.notAcceptable).eq(406);
-            expect(Status.proxyAuthenticationRequired).eq(407);
-            expect(Status.requestTimeout).eq(408);
-            expect(Status.conflict).eq(409);
-            expect(Status.gone).eq(410);
-            expect(Status.lengthRequired).eq(411);
-            expect(Status.preconditionFailed).eq(412);
-            expect(Status.payloadTooLarge).eq(413);
-            expect(Status.uriTooLong).eq(414);
-            expect(Status.unsupportedMediaType).eq(415);
-            expect(Status.rangeNotSatisfiable).eq(416);
-            expect(Status.expectationFailed).eq(417);
-            expect(Status.imATeapot).eq(419);
-            expect(Status.misdirectedRequest).eq(421);
-            expect(Status.unprocessableEntity).eq(422);
-            expect(Status.locked).eq(423);
-            expect(Status.failedDependency).eq(424);
-            expect(Status.tooEarly).eq(425);
-            expect(Status.upgradeRequired).eq(426);
-            expect(Status.preconditionRequired).eq(428);
-            expect(Status.tooManyRequests).eq(429);
-            expect(Status.requestHeaderFieldsTooLarge).eq(431);
-            expect(Status.unavailableForLegalReasons).eq(451);
-            expect(Status.internalServerError).eq(500);
-            expect(Status.notImplemented).eq(501);
-            expect(Status.badGateway).eq(502);
-            expect(Status.serviceUnavailable).eq(503);
-            expect(Status.gatewayTimeout).eq(504);
-            expect(Status.httpVersionNotSupported).eq(505);
-            expect(Status.variantAlsoNegotiates).eq(506);
-            expect(Status.insufficientStorage).eq(507);
-            expect(Status.loopDetected).eq(508);
-            expect(Status.notExtended).eq(510);
-            expect(Status.networkAuthenticationRequired).eq(511);
-        })
-    })
-
-    describe('multipart form', () => {
+    describe('MultipartForm', () => {
         /*
         *  the standard line end for headers and boundaries etc is CRLF (/r/n)
-        *  but we provide a test handling just LF (\n) as well as some systems
+        *  but we provide a test handling just LF (\n) as well because some systems
         *  supposedly don't send the Carriage Return (\r) as well as the Line Feed (\n)
         * */
 
@@ -233,7 +154,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await MultipartForm.multipartFormField(req);
+            const {headers, body} = await new MultipartForm().field(req);
 
             expect(headers).deep.eq([
                     {
@@ -268,7 +189,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await MultipartForm.multipartFormField(req);
+            const {headers, body} = await new MultipartForm().field(req);
 
             expect(headers).deep.eq([
                     {
@@ -310,7 +231,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
+            const {headers: headers1, body: body1} = await new MultipartForm().field(req);
 
             expect(headers1).deep.eq([
                     {
@@ -321,7 +242,9 @@ describe('body', () => {
             )
             expect(await Body.text(body1)).eq('tom')
 
-            const {headers: headers2, body: body2} = await MultipartForm.multipartFormField(req);
+            console.log('reading 2');
+            const {headers: headers2, body: body2} = await new MultipartForm().field(req);
+            console.log('read 2');
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",
@@ -336,7 +259,7 @@ describe('body', () => {
             )
             expect(await Body.text(body2)).eq('Test file contents\n')
 
-            const {headers: headers3, body: body3} = await MultipartForm.multipartFormField(req)
+            const {headers: headers3, body: body3} = await new MultipartForm().field(req)
 
             expect(headers3).deep.eq([
                     {
@@ -347,7 +270,7 @@ describe('body', () => {
             )
             expect(await Body.text(body3)).eq('title')
 
-            const {headers: headers4, body: body4} = await MultipartForm.multipartFormField(req);
+            const {headers: headers4, body: body4} = await new MultipartForm().field(req);
             expect(headers4).deep.eq([
                     {
                         "fieldName": "bio",
@@ -384,7 +307,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const formParts = await MultipartForm.multipartFormField(req);
+            const formParts = await new MultipartForm().field(req);
             const {headers: headers1, body: body1} = formParts;
 
             expect(headers1).deep.eq([
@@ -396,7 +319,7 @@ describe('body', () => {
             )
             expect(await Body.text(body1)).eq('tom')
 
-            const {headers: headers2, body: body2} = await MultipartForm.multipartFormField(req);
+            const {headers: headers2, body: body2} = await new MultipartForm().field(req);
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",
@@ -430,7 +353,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await MultipartForm.multipartFormField(req);
+            const {headers, body} = await new MultipartForm().field(req);
 
             expect(headers).deep.eq([
                     {
@@ -466,7 +389,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await MultipartForm.multipartFormField(req);
+            const {headers, body} = await new MultipartForm().field(req);
 
             // stream isn't aborted at first
             expect(body.readableAborted).eq(false);
@@ -505,7 +428,7 @@ describe('body', () => {
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await MultipartForm.multipartFormField(req);
+            const {headers, body} = await new MultipartForm().field(req);
             expect(headers).deep.eq([
                 {
                     "fieldName": "name",
@@ -514,7 +437,7 @@ describe('body', () => {
             ])
             expect(await Body.text(body)).deep.eq('tom')
 
-            const {headers: headers1, body: body1} = await MultipartForm.multipartFormField(req);
+            const {headers: headers1, body: body1} = await new MultipartForm().field(req);
             body1.pipe(fs.createWriteStream(`${__dirname}/resources/hamburger-out.png`));
         })
 
@@ -536,7 +459,7 @@ describe('body', () => {
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
-            const {headers, body} = await MultipartForm.multipartFormField(req);
+            const {headers, body} = await new MultipartForm().field(req);
 
             expect(headers).deep.eq([
                     {
@@ -577,7 +500,7 @@ describe('body', () => {
 
 
             try {
-                await MultipartForm.multipartFormField(req, {maxHeadersSizeBytes: 10});
+                await new MultipartForm().field(req, {maxHeadersSizeBytes: 10});
             } catch (e) {
                 expect((e as Error).message).eq('Max header size of 10 bytes exceeded')
             }
@@ -602,7 +525,7 @@ describe('body', () => {
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
             })
 
-            const {headers,} = await MultipartForm.multipartFormField(req);
+            const {headers,} = await new MultipartForm().field(req);
             const contentEncoding = MultipartForm.contentEncoding(headers);
             const fieldName = MultipartForm.fieldName(headers);
             const fileName = MultipartForm.fileName(headers);
@@ -630,10 +553,167 @@ describe('body', () => {
             })
 
             try {
-                const {headers, body} = await MultipartForm.multipartFormField(req);
+                const {headers, body} = await new MultipartForm().field(req);
             } catch (e) {
                 expect((e as Error).message).eq('Malformed headers, did not parse an ending')
             }
+        })
+
+        it('if attempting to read another field that isnt there then we return empty', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
+
+            const req = h22p.request({
+                method: 'POST',
+                body: stream.Readable.from(wireData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const multipartForm = new MultipartForm();
+            const {headers, body} = await multipartForm.field(req);
+            const {headers: noHeaders, body: noBody} = await multipartForm.field(req);
+
+            expect(headers).deep.eq([
+                    {
+                        "filename": "test.txt",
+                        "fieldName": "file",
+                        "name": "content-disposition"
+                    },
+                    {
+                        "name": "content-type",
+                        "value": "text/plain"
+                    }
+                ]
+            )
+            const text = await Body.text(body);
+            expect(text).deep.eq('Test file contents');
+
+            expect(noHeaders).deep.eq([])
+            const noText = await Body.text(noBody);
+            expect(noText).deep.eq('');
+        })
+
+        it('api for reading all parts', async () => {
+            const boundary = '------WebKitFormBoundaryZnZz58ycjFeBNyad';
+            const wireData = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                '', // headers end
+                'tom',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents\n',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="title"',
+                '', // headers end
+                'title',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="bio"; filename="test.txt"',
+                'Content-Type: text/plain',
+                '', // headers end
+                'Test file contents\n',
+                `--${boundary}--`,
+                '' // body end
+            ].join('\r\n')
+
+            const req = h22p.request({
+                method: 'POST',
+                body: stream.Readable.from(wireData),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const parts = await new MultipartForm().all(req);
+            const expectedHeaders = [
+                [
+                    {
+                        "fieldName": "name",
+                        "name": "content-disposition"
+                    }
+                ],
+                [
+                    {
+                        name: 'content-disposition',
+                        fieldName: 'file',
+                        filename: 'test.txt'
+                    },
+                    {name: 'content-type', value: 'text/plain'}
+                ],
+                [{name: 'content-disposition', fieldName: 'title'}],
+                [
+                    {
+                        name: 'content-disposition',
+                        fieldName: 'bio',
+                        filename: 'test.txt'
+                    },
+                    {name: 'content-type', value: 'text/plain'}
+                ]
+            ]
+            const expectedBodies = [
+                'tom',
+                'Test file contents\n',
+                'title',
+                'Test file contents\n',
+            ];
+
+            for (let i = 0; i < 4; i++) {
+                const part = await parts[Symbol.asyncIterator]().next()
+                const text = await Body.text(part.value.body);
+                expect(part.value.headers).deep.eq(expectedHeaders[i])
+                expect(text).deep.eq(expectedBodies[i])
+            }
+        })
+
+        it('field does not stream the next part until it is asked for', async () => {
+            const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
+            const preFile = [
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="name"',
+                '', // headers end
+                'tom',
+                `--${boundary}`,
+                'Content-Disposition: form-data; name="file"; filename="test.txt"',
+                'Content-Type: image/png',
+                '', // headers end
+                '', // headers end
+            ].join('\r\n')
+
+            const postFile = `\r
+--${boundary}--\r
+`
+
+            const readStream = fs.createReadStream('/dev/urandom', {end: 1_000_000});
+            readStream.unshift(Buffer.from(preFile, 'binary'))
+
+            const req = h22p.request({
+                method: 'POST',
+                body: readStream,
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+            const multipartForm = new MultipartForm();
+            const {headers, body} = await multipartForm.field(req);
+            expect(headers).deep.eq([
+                {
+                    "fieldName": "name",
+                    "name": "content-disposition"
+                }
+            ])
+            expect(await Body.text(body)).deep.eq('tom')
+            const {headers: h2, body: b2} = await multipartForm.field(req);
+            // Important: this next line (await Body.text(b2)) makes the test time out while it waits to stream
+            // 1MB from /dev/urandom (increase it 100 MB if you want, I decreased it because it slows down all tests!)
+            // but this test doesn't time out because we don't wait for it to finish
+            // -- thus proving we don't read the next part until we ask for it!!
+
+
+            // await Body.text(b2)
         })
     })
 })

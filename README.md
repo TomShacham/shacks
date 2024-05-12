@@ -32,12 +32,13 @@ Questions:
 
 ## Todo
 
-- split into separate module (later)
 - open api spec generation
 - multipart form data
   - check works on other browsers - search internet for test suite to prove it works
   - test if content-type header or content-disposition header is supplied more than once ie is string[]
 - handle application/x-www-form-urlencoded
+  - handle diff charsets like qs does
+  - support chars not properly decoded by decodeURIComponent like €
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$
 - example app
@@ -51,7 +52,7 @@ Questions:
   - deploy to cloudflare and use wrangler to test it locally
 - performance test
 - security e.g. header obfuscation etc. (node should handle this?)
-- content-range
+- content-range[.nvmrc](.nvmrc)
 - trailers
 - does node handle inflate/deflate ?
   - if not then we can write some filters that do

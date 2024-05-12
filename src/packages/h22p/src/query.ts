@@ -9,7 +9,7 @@ export class Query {
         const keyValuePairs = str.split('&');
         for (const pair of keyValuePairs) {
             const [key, value] = pair.split('=');
-            params[decodeURIComponent(key)] = unescape(decodeURIComponent(escape(value || '')));
+            params[decodeURIComponent(key)] = decodeURIComponent(value || '');
         }
 
         return params;

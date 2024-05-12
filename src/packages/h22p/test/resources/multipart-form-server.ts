@@ -8,7 +8,7 @@ async function multipartFormServer() {
     const {server, close} = await httpServer({
         async handle(req: HttpRequest): Promise<HttpResponse> {
             if (req.method === 'POST') {
-                const {headers, body} = await MultipartForm.multipartFormField(req);
+                const {headers, body} = await new MultipartForm().field(req);
                 const fieldName = MultipartForm.fieldName(headers);
                 const fileName = MultipartForm.fileName(headers);
                 const contentType = MultipartForm.contentType(headers);
@@ -19,8 +19,8 @@ async function multipartFormServer() {
                 // for await ({headers, body} of multipartFormFields(req)) {
                 // do whatever you want
                 // }
-
-                body.pipe(fs.createWriteStream(`./src/http/test/resources/${fieldName}-${rand}.${contentTypeOrTxt}`))
+                console.log(fieldName, contentTypeOrTxt, __dirname);
+                body.pipe(fs.createWriteStream(`${__dirname}/${fieldName}-${rand}.${contentTypeOrTxt}`))
             }
             if (req.method === 'GET') {
                 return h22p.response({body: html(), status: 200})
