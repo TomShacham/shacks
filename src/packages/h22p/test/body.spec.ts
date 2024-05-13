@@ -33,7 +33,7 @@ describe('body', () => {
         });
 
         it('handles special characters', async () => {
-            const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60';
+            const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60%2B';
 
             const form = await Body.form(
                 h22p.post('/',
@@ -43,7 +43,19 @@ describe('body', () => {
 
             expect(form).deep.eq({
                 "name": "tom",
-                "pic": "!@£$%^*€}{[]\":<>~`"
+                "pic": "!@£$%^*€}{[]\":<>~`+"
+            })
+        });
+
+        it('handles plus - turns into a space', async () => {
+            const form = await Body.form(
+                h22p.post('/',
+                    {"content-type": "application/x-www-form-urlencoded"},
+                    `name=t+o%2Bm`)
+            )
+
+            expect(form).deep.eq({
+                "name": "t o+m",
             })
         });
 

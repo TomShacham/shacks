@@ -59,6 +59,17 @@ describe('query', () => {
         expect(queryString).to.equal(expectedQueryString);
     });
 
+    it('plus gets turned into space', () => {
+        const queryString = "foo=ba+r&baz=q%20uux%2B";
+        const parsedParams = {
+            foo: "ba r",
+            baz: "q uux+"
+        };
+        expect(Query.parse(queryString)).deep.eq(parsedParams);
+        const stringify = Query.stringify(parsedParams);
+        expect(stringify).to.equal("foo=ba%20r&baz=q%20uux%2B");
+    });
+
     it('handle duplicate keys correctly', () => {
         const parsedParams = {
             name: "John",

@@ -34,8 +34,7 @@ Questions:
 
 - open api spec generation
 - handle application/x-www-form-urlencoded
-  - handle diff charsets like qs does
-  - support chars not properly decoded by decodeURIComponent like €
+  - handle diff charsets?
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)
@@ -55,6 +54,7 @@ Questions:
 - performance test
   - look at express's benchmarking
 - security e.g. header obfuscation etc. (node should handle this?)
+- Server sent events
 - content-range
 - trailers
 - does node handle inflate/deflate ?

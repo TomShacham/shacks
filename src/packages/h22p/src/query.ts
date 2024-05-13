@@ -6,6 +6,7 @@ export class Query {
         if (str === undefined) return {};
 
         str = str.startsWith('?') ? str.slice(1) : str;
+        str = str.replaceAll("+", " ");
         const keyValuePairs = str.split('&');
         for (const pair of keyValuePairs) {
             const [key, value] = pair.split('=');
