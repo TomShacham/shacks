@@ -521,6 +521,21 @@ describe('body', () => {
             }
         })
 
+        it('if only sent a termination boundary (e.g. input has no name) then we blow up instead of hanging', async () => {
+            const boundary = '------WebKitFormBoundaryByKYauLmhh2M99wi';
+            const req = h22p.request({
+                method: 'POST',
+                body: stream.Readable.from(`--${boundary}--`),
+                headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
+            })
+
+            try {
+                const {headers, body} = await new MultipartForm().field(req);
+            } catch (e) {
+                expect((e as Error).message).to.eq('Malformed headers, did not parse an ending')
+            }
+        })
+
         it(`if attempting to read another field that isn't there then we return empty`, async () => {
             const boundary = '------WebKitFormBoundaryiyDVEBDBpn3PxxQy';
             const wireData = [

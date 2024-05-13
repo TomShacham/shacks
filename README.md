@@ -33,15 +33,13 @@ Questions:
 ## Todo
 
 - open api spec generation
-- multipart form data
-  - test if content-type header or content-disposition header is supplied more than once ie is string[]
 - handle application/x-www-form-urlencoded
   - handle diff charsets like qs does
   - support chars not properly decoded by decodeURIComponent like €
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$
-- example app
-  - filter examples like 404 catch all and tracing
+- example app (idea is to iterate the library through using it to actually build stuff)
+  - so-called "filters" like 404 catch all and tracing and 5xx translation
   - database with transactions
   - streaming files to db eg csv with manipulation on the fly including totals
   - streaming files to s3

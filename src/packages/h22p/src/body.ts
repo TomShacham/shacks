@@ -120,9 +120,9 @@ export class MultipartForm {
         const iterator = this.state
             ? this.state
             : this.state = (await this.all(msg, options))[Symbol.asyncIterator]();
-        const thing = await iterator.next()
-        if (thing.done) return {headers: [], body: stream.Readable.from('')}
-        return thing.value;
+        const iteration = await iterator.next()
+        if (iteration.done) return {headers: [], body: stream.Readable.from('')}
+        return iteration.value;
     }
 
     async all(
@@ -190,8 +190,6 @@ export class MultipartForm {
          *         - if it sees the final boundary (two extra dashes at the end) then it pushes null to end the stream
          */
         const contentType = msg.headers?.["content-type"];
-        // TODO test this content header check
-        if (typeof contentType !== 'string') throw new Error('Received more than one content-type header');
         const boundary = /boundary=(?<boundary>(.+))/.exec(contentType!)?.groups?.boundary
         const withHyphens = '--' + boundary;
         const inputStream = msg.body! as stream.Readable;
@@ -314,7 +312,6 @@ export class MultipartForm {
         let headers: MultipartFormHeader[] = []
         let header = '';
         let lastFour = ['x', 'x', 'x', 'x'];
-
 
         for (let j = 0; j < chunk.length; j++) {
             if (j > maxHeadersSizeBytes) throw new Error(`Max header size of ${maxHeadersSizeBytes} bytes exceeded`)
