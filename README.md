@@ -60,5 +60,12 @@ Questions:
 - does node handle inflate/deflate ?
   - if not then we can write some filters that do
 
+## Documentation gotcha reminders
+
+- Try/catch your multipart form `field` if you have reason to believe the input could be malformed
+  - ie if the input has no name then chrome sends just a final boundary and parsing will blow up
+- application/x-www-urlencoded forms // note chrome only sends this if either a) you specify accept-charset on your form
+  or b) you send a response header of content-type "text/html; charset=utf-8"
+
 ## Open questions
 

@@ -47,8 +47,7 @@ export class Body {
                 (msg.body! as stream.Readable).once('readable', () => resolve(null));
             })
             const str = await Body.text(msg.body);
-            var strWithoutPlus = str.replace(/\+/g, ' ');
-            return Query.parse(strWithoutPlus)
+            return Query.parse(str)
         } else {
             throw new Error("Content type is not application/x-www-form-urlencoded so bailing on parsing form")
         }

@@ -23,7 +23,7 @@ async function multipartFormServer() {
                     console.log(fieldName, contentTypeOrTxt, __dirname);
                     body.pipe(fs.createWriteStream(`${__dirname}/${fieldName}-${rand}.${contentTypeOrTxt}`))
                 } catch (e) {
-                    console.log('GOT IT');
+                    console.log('Errored reading multipart');
                 }
 
             }

@@ -33,101 +33,35 @@ describe('body', () => {
         });
 
         it('handles special characters', async () => {
-            const bastardString = 'foo!@£$%^&*()-=_+{}|":?><,.~`#€';
-
-            const encoded = encode(bastardString);
-            console.log(encoded);
-            console.log(decode(encoded));
+            const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60';
 
             const form = await Body.form(
                 h22p.post('/',
                     {"content-type": "application/x-www-form-urlencoded"},
-                    `name=tom&pic=${encoded}`)
+                    `name=tom&pic=${specialChars}`)
             )
 
-            //TODO test all utf-8 chars and decide what to do about non-utf8 chars like "€"
             expect(form).deep.eq({
                 "name": "tom",
-                "pic": "foo!@£$%^&*()-=_+{}|\":?><,.~`#"
+                "pic": "!@£$%^*€}{[]\":<>~`"
             })
         });
 
-        function decode(str: string) {
-            var strWithoutPlus = str.replace(/\+/g, ' ');
-            // utf-8
-            try {
-                return decodeURIComponent(strWithoutPlus);
-            } catch (e) {
-                return strWithoutPlus;
-            }
-        };
+        it('handles unicode characters', async () => {
+            const stringWithUnicodeChar = 'field=%E2%82%AC'; // € sign encoded in utf-8
+            // note chrome only sends this if either a) you specify accept-charset on your form
+            //   or b) you send a response header of content-type "text/html; charset=utf-8"
 
-        function encode(str: string) {
-            const hexTable = (function () {
-                var array = [];
-                for (var i = 0; i < 256; ++i) {
-                    array.push('%' + ((i < 16 ? '0' : '') + i.toString(16)).toUpperCase());
-                }
+            const form = await Body.form(
+                h22p.post('/',
+                    {"content-type": "application/x-www-form-urlencoded"},
+                    stringWithUnicodeChar)
+            )
 
-                return array;
-            }());
-
-            // This code was originally written by Brian White (mscdex) for the io.js core querystring library.
-            // It has been adapted here for stricter adherence to RFC 3986
-            if (str.length === 0) {
-                return str;
-            }
-
-            var out = '';
-            var arr = [];
-            for (var i = 0; i < str.length; i++) {
-
-                var c = str.charCodeAt(i);
-                if (
-                    c === 0x2D // -
-                    || c === 0x2E // .
-                    || c === 0x5F // _
-                    || c === 0x7E // ~
-                    || c >= 0x30 && c <= 0x39 // 0-9
-                    || c >= 0x41 && c <= 0x5A // a-z
-                    || c >= 0x61 && c <= 0x7A // A-Z
-                    || c === 0x28 || c === 0x29 // ( )
-                ) {
-                    arr[arr.length] = str.charAt(i);
-                    continue;
-                }
-
-                if (c < 0x80) {
-                    arr[arr.length] = hexTable[c];
-                    continue;
-                }
-
-                if (c < 0x800) {
-                    arr[arr.length] = hexTable[0xC0 | (c >> 6)]
-                        + hexTable[0x80 | (c & 0x3F)];
-                    continue;
-                }
-
-                if (c < 0xD800 || c >= 0xE000) {
-                    arr[arr.length] = hexTable[0xE0 | (c >> 12)]
-                        + hexTable[0x80 | ((c >> 6) & 0x3F)]
-                        + hexTable[0x80 | (c & 0x3F)];
-                    continue;
-                }
-
-                i += 1;
-                c = 0x10000 + (((c & 0x3FF) << 10) | (str.charCodeAt(i) & 0x3FF));
-
-                arr[arr.length] = hexTable[0xF0 | (c >> 18)]
-                    + hexTable[0x80 | ((c >> 12) & 0x3F)]
-                    + hexTable[0x80 | ((c >> 6) & 0x3F)]
-                    + hexTable[0x80 | (c & 0x3F)];
-
-            }
-            out += arr.join('');
-            return out;
-        }
-
+            expect(form).deep.eq({
+                "field": "€",
+            })
+        });
     })
 
     describe('MultipartForm', () => {
@@ -242,9 +176,7 @@ describe('body', () => {
             )
             expect(await Body.text(body1)).eq('tom')
 
-            console.log('reading 2');
             const {headers: headers2, body: body2} = await new MultipartForm().field(req);
-            console.log('read 2');
             expect(headers2).deep.eq([
                     {
                         "filename": "test.txt",

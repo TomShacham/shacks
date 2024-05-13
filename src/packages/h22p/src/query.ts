@@ -20,7 +20,7 @@ export class Query {
 
         for (const key in params) {
             const value = params[key] as string;
-            queryStringParts.push(`${unescape(encodeURIComponent(key))}=${unescape(encodeURIComponent(value))}`);
+            queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
         }
 
         return queryStringParts.join('&');
