@@ -1,0 +1,85 @@
+Disclaimer: performance of the http layer is not often a bottleneck in your system;
+  choose the technology you prefer for all kinds of other reasons:
+- what your team knows how to use
+- what your company already uses
+- some feature you really need
+- battle tested / good support / documentation / stackoverflow answers
+- personal taste
+
+Putting all that to one side ;)
+Comparing h22p and express performance:
+- h22p handles about 4x the number of requests per second versus express
+- h22p average latency is around 5x lower
+- h22p max latency is *much* lower esp at 250+ connections
+  (i.e. worst case response time, important for head-of-line blocking and tail latency amplification)
+- express is probably fine for you at 100 concurrent connections or less, potentially problematic at 250+
+  (so it's probably fine for the vast majority of use-cases)
+- if you really care about http latency, then h22p is possibly the better choice
+
+
+h22p                                                     | express
+                                                         |
+ make                                                    |   make
+                                                         |
+  50 connections                                         |     50 connections
+Running 10s test @ http://localhost:3333/                |   Running 10s test @ http://localhost:3333/
+  2 threads and 50 connections                           |     2 threads and 50 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev      |     Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   593.02us  505.79us  22.66ms   98.01%       |       Latency     2.61ms    3.97ms 128.48ms   99.09%
+    Req/Sec    43.79k     3.83k   46.86k    96.04%       |       Req/Sec    10.68k     1.08k   11.56k    92.57%
+  Latency Distribution                                   |     Latency Distribution
+     50%  539.00us                                       |        50%    2.15ms
+     75%  570.00us                                       |        75%    2.25ms
+     90%  632.00us                                       |        90%    3.02ms
+     99%    1.22ms                                       |        99%    5.95ms
+  880293 requests in 10.10s, 129.28MB read               |     214633 requests in 10.10s, 48.72MB read
+Requests/sec:  87153.26                                  |   Requests/sec:  21247.04
+Transfer/sec:     12.80MB                                |   Transfer/sec:      4.82MB
+                                                         |
+  100 connections                                        |     100 connections
+Running 10s test @ http://localhost:3333/                |   Running 10s test @ http://localhost:3333/
+  2 threads and 100 connections                          |     2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev      |     Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.21ms  597.71us  23.36ms   96.83%       |       Latency     6.08ms   15.07ms 326.14ms   98.59%
+    Req/Sec    42.35k     3.54k   44.79k    95.05%       |       Req/Sec    10.78k     1.07k   15.54k    91.54%
+  Latency Distribution                                   |     Latency Distribution
+     50%    1.14ms                                       |        50%    4.32ms
+     75%    1.19ms                                       |        75%    4.53ms
+     90%    1.27ms                                       |        90%    5.51ms
+     99%    2.45ms                                       |        99%   50.01ms
+  851368 requests in 10.10s, 125.04MB read               |     215492 requests in 10.10s, 48.91MB read
+Requests/sec:  84280.54                                  |   Requests/sec:  21331.47
+Transfer/sec:     12.38MB                                |   Transfer/sec:      4.84MB
+                                                         |
+  250 connections                                        |     250 connections
+Running 10s test @ http://localhost:3333/                |   Running 10s test @ http://localhost:3333/
+  2 threads and 250 connections                          |     2 threads and 250 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev      |     Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     3.02ms  821.65us  27.53ms   97.98%       |       Latency    27.02ms   90.16ms   1.11s    96.39%
+    Req/Sec    41.99k     3.70k   44.12k    95.00%       |       Req/Sec    10.52k     1.14k   13.29k    92.50%
+  Latency Distribution                                   |     Latency Distribution
+     50%    2.91ms                                       |        50%   11.18ms
+     75%    3.00ms                                       |        75%   12.28ms
+     90%    3.16ms                                       |        90%   13.95ms
+     99%    5.81ms                                       |        99%  569.73ms
+  835519 requests in 10.01s, 122.71MB read               |     209428 requests in 10.01s, 47.53MB read
+  Socket errors: connect 0, read 230, write 0, timeout 0 |     Socket errors: connect 0, read 404, write 10, timeout 0
+Requests/sec:  83509.14                                  |   Requests/sec:  20918.06
+Transfer/sec:     12.26MB                                |   Transfer/sec:      4.75MB
+                                                         |
+  500 connections                                        |     500 connections
+Running 10s test @ http://localhost:3333/                |   Running 10s test @ http://localhost:3333/
+  2 threads and 500 connections                          |     2 threads and 500 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev      |     Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     6.11ms    1.22ms  39.15ms   97.72%       |       Latency    62.18ms  203.85ms   2.00s    95.26%
+    Req/Sec    41.18k     4.16k   43.00k    94.00%       |       Req/Sec    10.09k     1.29k   11.67k    93.00%
+  Latency Distribution                                   |     Latency Distribution
+     50%    5.93ms                                       |        50%   22.31ms
+     75%    6.12ms                                       |        75%   23.93ms
+     90%    6.29ms                                       |        90%   27.57ms
+     99%   11.56ms                                       |        99%    1.24s
+  819537 requests in 10.01s, 120.36MB read               |     200933 requests in 10.02s, 45.61MB read
+  Socket errors: connect 0, read 918, write 0, timeout 0 |     Socket errors: connect 0, read 4166, write 151, timeout 104
+Requests/sec:  81864.89                                  |   Requests/sec:  20047.84
+Transfer/sec:     12.02MB                                |   Transfer/sec:      4.55MB
+                                                         |
