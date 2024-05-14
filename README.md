@@ -33,8 +33,7 @@ Questions:
 ## Todo
 
 - open api spec generation
-- handle application/x-www-form-urlencoded
-  - handle diff charsets?
+- http client using fetch (browser) so we can test e2e in memory
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)
@@ -53,6 +52,9 @@ Questions:
     - example monorepo sharing a client across it
 - performance test
   - look at express's benchmarking
+  - write up comparison
+  - look at why we are getting ECONNRESET
+  - how to do rate limiting or backpressure on node accepting connections
 - security e.g. header obfuscation etc. (node should handle this?)
 - Server sent events
 - content-range
@@ -66,6 +68,7 @@ Questions:
   - ie if the input has no name then chrome sends just a final boundary and parsing will blow up
 - application/x-www-urlencoded forms // note chrome only sends this if either a) you specify accept-charset on your form
   or b) you send a response header of content-type "text/html; charset=utf-8"
+- you can only read a body once because it's a stream, so you need to hand it around if you want to re-use it
 
 ## Open questions
 

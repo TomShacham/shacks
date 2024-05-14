@@ -1,10 +1,9 @@
 import {httpServer} from "../../src/server";
-import {Body, h22p, HttpRequest, HttpResponse, URI} from "../../src";
+import {Body, h22p, HttpRequest, HttpResponse} from "../../src";
 
-async function applicationFormEncodedServer() {
+async function applicationXWwwUrlencodedServer() {
     const {server, close} = await httpServer({
         async handle(req: HttpRequest): Promise<HttpResponse> {
-            console.log(URI.of(req.path));
             if (req.method === 'POST') {
                 const body = await Body.form(req);
                 return h22p.ok({body, headers: {"content-type": "text/html; charset=utf-8"}})
@@ -31,4 +30,4 @@ function html() {
 `;
 }
 
-applicationFormEncodedServer();
+applicationXWwwUrlencodedServer();

@@ -264,6 +264,14 @@ describe('router', () => {
             await close();
         });
 
+        //TODO partial request?
+        // TODO can we infer response body instead of asking for it to be passed in
+        // TODO try passing in headers and queries as an object with de/serialisers
+        type x = {
+            req: { body: { foo: string }, headers: { h2: string } },
+            resp: string | { foo: string },
+        };
+
         it('write json body', async () => {
             const routing = {
                 jsonRoute: write<
