@@ -40,8 +40,10 @@ export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
 *   so that you don't accidentally use just a JsonValue and get no compiler help
 * */
 export type DictString = { [key: string]: string };
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-export type JsonBody = JsonValue[] | { [key: string]: JsonValue };
+export type JsonArray = JsonValue[];
+export type JsonObject = { [key: string]: JsonValue };
+export type JsonValue = string | number | boolean | null | JsonArray | JsonObject;
+export type JsonBody = JsonArray | JsonObject;
 export type BodyType<B extends HttpMessageBody> = B extends infer J extends JsonBody
     ? B
     : B extends infer J extends string
