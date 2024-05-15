@@ -308,6 +308,7 @@ export function contractFrom<
                 } as unknown as TypedHttpRequest<B, h22pStream<B>, Path, M, Hds>;
             }
     }
+    return ret;
 
     function insertPathValues(vars: UriParameters<Path>, route: Route<B, Path, M, HttpRequestHeaders>, path: string): string {
         const keys = 'path' in vars ? Object.keys(vars.path) : [];
@@ -327,7 +328,6 @@ export function contractFrom<
         }, path) as any;
     }
 
-    return ret;
 }
 
 // TODO infer the response body by writing a fn that takes a client and the typedHttpRequest and passes through the type of the response body

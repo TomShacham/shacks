@@ -182,7 +182,7 @@ export class h22p {
         return {method: 'GET', path: '/', headers: {}, body: undefined, ...req}
     }
 
-    static client(baseUrl: string): HttpClient {
+    static client(baseUrl: string = ''): HttpClient {
         return new HttpClient(baseUrl)
     }
 
