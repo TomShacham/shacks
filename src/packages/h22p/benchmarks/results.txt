@@ -15,6 +15,7 @@ Comparing h22p and express performance:
 - express is probably fine for you at 100 concurrent connections or less, potentially problematic at 250+
   (so it's probably fine for the vast majority of use-cases)
 - if you really care about http latency, then h22p is possibly the better choice
+  (but then equally, use Go or Rust!)
 
 
 h22p                                                     | express

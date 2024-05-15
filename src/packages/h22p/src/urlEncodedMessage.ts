@@ -1,6 +1,6 @@
 import {DictString} from "./interface";
 
-export class Query {
+export class UrlEncodedMessage {
     static parse(str: string | undefined): DictString {
         const params: Record<string, string> = {};
         if (str === undefined) return {};

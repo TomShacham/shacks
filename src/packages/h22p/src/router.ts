@@ -16,7 +16,7 @@ import {
 } from "./interface";
 import {h22pStream} from "./body";
 import {URI} from "./uri";
-import {Query} from "./query";
+import {UrlEncodedMessage} from "./urlEncodedMessage";
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<any, string, Method, HttpRequestHeaders>[]) {
@@ -47,7 +47,7 @@ export class Router implements HttpHandler {
         for (const route of this.routes) {
             if (route.method === method && route.path !== undefined) {
                 const uri = URI.of(path);
-                const query = Query.parse(uri.query);
+                const query = UrlEncodedMessage.parse(uri.query);
                 const noQuery = route.path.split("?")[0];
                 const noTrailingSlash = (noQuery !== '/' && noQuery.endsWith('/')) ? noQuery.slice(0, -1) : noQuery;
                 const exactMatch = noTrailingSlash === path;
@@ -329,3 +329,5 @@ export function contractFrom<
 
     return ret;
 }
+
+// TODO infer the response body by writing a fn that takes a client and the typedHttpRequest and passes through the type of the response body

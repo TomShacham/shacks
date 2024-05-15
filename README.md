@@ -1,10 +1,11 @@
 ## Simple Http Library
 
-Simple 99% use-case client/server that can do:
+Simple 99% use-case client/server:
 
     + type-safe routing
     + streaming
     + multipart/form-data
+    + fast
 
 Simple because:
 
@@ -22,17 +23,12 @@ Design choices:
     + http client responses 4xx or 5xx are not exceptions
       unlike a lot of clients out there, we do not throw an exception so you do not need to try/catch requests
     + type-safe routing to preserve type safety 
-    + 
 
-Questions:
-
-    - do we like the h22p static for exposing the api
-      - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
-    - can we generate open api spec from just types :S might need some other api around routing
 
 ## Todo
 
 - open api spec generation
+  - type-safe routing refactor
 - http client using fetch (browser) so we can test e2e in memory
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$
@@ -51,8 +47,6 @@ Questions:
   - pulumi? or some IaC to define our service
     - example monorepo sharing a client across it
 - performance test
-  - look at express's benchmarking
-  - write up comparison
   - look at why we are getting ECONNRESET
   - how to do rate limiting or backpressure on node accepting connections
 - security e.g. header obfuscation etc. (node should handle this?)
@@ -72,3 +66,6 @@ Questions:
 
 ## Open questions
 
+    - do we like the h22p static for exposing the api
+      - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
+    - can we generate open api spec from just types :S might need some other api around routing

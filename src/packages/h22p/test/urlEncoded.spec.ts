@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Query} from "../src/query";
+import {UrlEncodedMessage} from "../src/urlEncodedMessage";
 
 describe('query', () => {
     it('parse a simple query string with key-value pairs', () => {
@@ -9,7 +9,7 @@ describe('query', () => {
             age: "30",
             city: "New York"
         };
-        const parsedParams = Query.parse(queryString);
+        const parsedParams = UrlEncodedMessage.parse(queryString);
         expect(parsedParams).to.deep.equal(expectedParams);
     });
 
@@ -19,12 +19,12 @@ describe('query', () => {
             name: "John Doe",
             email: "john@example.com"
         };
-        const parsedParams = Query.parse(queryString);
+        const parsedParams = UrlEncodedMessage.parse(queryString);
         expect(parsedParams).to.deep.equal(expectedParams);
     });
 
     it('handle undefined', () => {
-        const parsedParams = Query.parse(undefined);
+        const parsedParams = UrlEncodedMessage.parse(undefined);
         expect(parsedParams).to.deep.equal({});
     });
 
@@ -34,7 +34,7 @@ describe('query', () => {
             name: "Jane",
             age: "30"
         };
-        const parsedParams = Query.parse(queryString);
+        const parsedParams = UrlEncodedMessage.parse(queryString);
         expect(parsedParams).to.deep.equal(expectedParams);
     });
 
@@ -45,7 +45,7 @@ describe('query', () => {
             city: "New York"
         };
         const expectedQueryString = "name=John&age=30&city=New%20York";
-        const queryString = Query.stringify(parsedParams);
+        const queryString = UrlEncodedMessage.stringify(parsedParams);
         expect(queryString).to.equal(expectedQueryString);
     });
 
@@ -55,7 +55,7 @@ describe('query', () => {
             email: "john@example.com"
         };
         const expectedQueryString = "name=John%20Doe&email=john%40example.com";
-        const queryString = Query.stringify(parsedParams);
+        const queryString = UrlEncodedMessage.stringify(parsedParams);
         expect(queryString).to.equal(expectedQueryString);
     });
 
@@ -65,8 +65,8 @@ describe('query', () => {
             foo: "ba r",
             baz: "q uux+"
         };
-        expect(Query.parse(queryString)).deep.eq(parsedParams);
-        const stringify = Query.stringify(parsedParams);
+        expect(UrlEncodedMessage.parse(queryString)).deep.eq(parsedParams);
+        const stringify = UrlEncodedMessage.stringify(parsedParams);
         expect(stringify).to.equal("foo=ba%20r&baz=q%20uux%2B");
     });
 
@@ -77,7 +77,7 @@ describe('query', () => {
             hobby: "Reading"
         };
         const expectedQueryString = "name=John&age=30&hobby=Reading";
-        const queryString = Query.stringify(parsedParams);
+        const queryString = UrlEncodedMessage.stringify(parsedParams);
         expect(queryString).to.equal(expectedQueryString);
     });
 });

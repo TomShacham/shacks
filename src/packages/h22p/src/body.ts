@@ -1,6 +1,6 @@
 import {BodyType, DictString, HttpMessageBody, HttpRequest, isSimpleBody, MessageBody} from "./interface";
 import * as stream from "stream";
-import {Query} from "./query";
+import {UrlEncodedMessage} from "./urlEncodedMessage";
 
 type MultipartFormPart<T = stream.Readable> = {
     headers: MultipartFormHeader[],
@@ -47,7 +47,7 @@ export class Body {
                 (msg.body! as stream.Readable).once('readable', () => resolve(null));
             })
             const str = await Body.text(msg.body);
-            return Query.parse(str)
+            return UrlEncodedMessage.parse(str)
         } else {
             throw new Error("Content type is not application/x-www-form-urlencoded so bailing on parsing form")
         }
