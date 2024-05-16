@@ -1,4 +1,3 @@
-// the problem so far is
 import {JsonBody, Method} from "../src";
 
 type Body = JsonBody | undefined;
@@ -22,8 +21,6 @@ type matcher<MBody extends Body> = {
     body?: MBody
 };
 
-
-// if req matches then handler responds else 404s
 type routes<ReqB extends Body, ResB extends Body> = {
     [key: string]: { req: matcher<ReqB>, handler: handler<ReqB, ResB> }
 }
@@ -66,23 +63,29 @@ function post<
     }
 }
 
+type backToPath<Part> = Part extends `{${infer Name}}` ? string : Part;
+type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
+    ? `${backToPath<PartA>}/${reversePathParameters<PartB>}`
+    : backToPath<Path>;
+
 
 describe('test', () => {
-    it('does a thing', async () => {
-        const example = {reqBody: {a: '123', b: [1, 2, 3]}};
 
-        const rs = {
-            fooRoute: get('/', async (req) => {
+    it('infer type', async () => {
+        const example = {reqBody: {a: '123', b: [1, 2, 3] as [number, number, number]}};
+
+        const routes = {
+            getResource: get('/', async (req) => {
                 const foo = req.body
                 return {body: {some: 'some'}, status: 200, headers: {}}
             }),
-            barRoute: post('/', example, async (req) => {
+            postResource: post('/', example, async (req) => {
                 req.body?.reqBody.a
                 return {body: {other: 'other'}, headers: {}, status: 200}
             })
         }
 
-        function contractfor<
+        function contract<
             T extends api<Routes, ReqB, ResB>,
             Routes extends routes<ReqB, ResB>,
             ReqB extends Body,
@@ -100,18 +103,34 @@ describe('test', () => {
             return ret;
         }
 
-        const c = contractfor(rs)
-        const res1 = await c.fooRoute({method: 'GET', uri: '/', headers: {}, body: undefined})
-        const res2 = await c.barRoute({
-            body: {reqBody: {a: '123', b: [1]}},
+        const c = contract(routes)
+        const getResponse = await c.getResource({method: 'GET', uri: '/', headers: {}, body: undefined})
+        const postResponse = await c.postResource({
+            body: {reqBody: {a: '123', b: [1, 2, 3]}},
             method: 'GET',
             uri: '/',
             headers: {}
         })
 
-        console.log(res1.body.some);
-        console.log(res2.body.other);
+        // response body is type-safe :)
+        console.log(getResponse.body.some);
+        console.log(postResponse.body.other);
 
+        const postResponseBadBody1 = await c.postResource({
+            // @ts-expect-error - other: property should not be there
+            body: {reqBody: {a: '123', b: [1], other: 'property'}},
+            method: 'GET',
+            uri: '/',
+            headers: {}
+        })
+
+        const postResponseBadBody2 = await c.postResource({
+            // @ts-expect-error - b needs to have length 3
+            body: {reqBody: {a: '123', b: [1]}},
+            method: 'GET',
+            uri: '/',
+            headers: {}
+        })
 
         // client (req, handler) => Promise<res>
         //   - just passes the req to the handler
