@@ -14,7 +14,7 @@ type Headers = { [key: string]: string };
 type req<ReqB extends Body> = {
     body: BodyType<ReqB>,
     headers: Headers,
-    uri: string,
+    string: string,
     method: Method
 }
 type res<ResB extends Body> = {
@@ -31,14 +31,10 @@ interface notFoundHandler extends handler<any, 'Not Found'> {
 }
 
 type matcher<MBody extends Body> = {
-    uri: string,
+    string: string,
     method: Method,
     body?: MBody
 };
-
-type routes<ReqB extends Body, ResB extends Body> = {
-    [key: string]: { matcher: matcher<ReqB>, handler: handler<ReqB, ResB> }
-}
 
 interface route<
     MatcherBody extends Body,
@@ -48,7 +44,15 @@ interface route<
     handler: handler<MatcherBody, ResB>
 }
 
-type api<Routes extends routes<ReqB, ResB>, ReqB extends Body, ResB extends Body> = {
+type routes<ReqB extends Body, ResB extends Body, > = {
+    [key: string]: route<ReqB, ResB>
+}
+
+type api<
+    Routes extends routes<ReqB, ResB>,
+    ReqB extends Body,
+    ResB extends Body,
+> = {
     [Key in keyof Routes]: Routes[Key] extends route<infer RqB extends Body, infer RsB extends Body>
         ? route<RqB, RsB>
         : never
@@ -59,25 +63,23 @@ type router<Routes extends routes<ReqB, ResB>, ReqB extends Body, ResB extends B
     | notFoundHandler;
 
 function get<
-    Uri extends string,
     ResB extends Body,
     MatcherBody extends undefined,
->(uri: Uri, handler: handler<MatcherBody, ResB>)
+>(string: string, handler: handler<MatcherBody, ResB>)
     : route<MatcherBody, ResB> {
     return {
-        matcher: {uri, method: 'GET', body: undefined},
+        matcher: {string, method: 'GET', body: undefined},
         handler
     }
 }
 
 function post<
-    Uri extends string,
     MatcherBody extends Body,
     ResB extends Body,
->(uri: Uri, body: MatcherBody, handler: handler<MatcherBody, ResB>)
+>(string: string, body: MatcherBody, handler: handler<MatcherBody, ResB>)
     : route<MatcherBody, ResB> {
     return {
-        matcher: {uri, body, method: 'POST'},
+        matcher: {string, body, method: 'POST'},
         handler
     }
 }
@@ -87,18 +89,25 @@ type reversePathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
     ? `${backToPath<PartA>}/${reversePathParameters<PartB>}`
     : backToPath<Path>;
 
-function handle<ReqB extends Body, ResB extends Body>(handler: (req: req<ReqB>) => Promise<res<ResB>>)
+function handle<
+    ReqB extends Body,
+    ResB extends Body,
+>(handler: (req: req<ReqB>) => Promise<res<ResB>>)
     : handler<ReqB, ResB> {
     return {handle: handler}
 }
 
-function router<Routes extends routes<ReqB, ResB>, ReqB extends Body, ResB extends Body>(
+function router<
+    Routes extends routes<ReqB, ResB>,
+    ReqB extends Body,
+    ResB extends Body,
+>(
     routes: Routes
 ): router<Routes, ReqB, ResB> {
     return handle(async (req: req<ReqB>) => {
         for (const route of Object.values(routes)) {
             const matcher = route.matcher;
-            if (matcher.uri === req.uri && matcher.method === req.method) {
+            if (matcher.string === req.string && matcher.method === req.method) {
                 return route.handler.handle(req)
             }
         }
@@ -146,17 +155,17 @@ describe('test', () => {
                     // @ts-expect-error
                     req.body.foo
                 } catch (e) {
-                    console.log('expecting this error')
+                    console.log(`expecting this error trying to call .foo on undefined`)
                 }
                 return {body: {some: 'json'}, status: 200, headers: {}}
             })),
             postResource: post('/', example, handle(async (req) => {
-                const a = req.body?.reqBody.a
+                const a = req.body?.reqBody?.a
                 try {
                     // @ts-expect-error
                     req.body?.reqBody.c
                 } catch (e) {
-                    console.log('expecting this error')
+                    console.log(`expecting this error ${typeof a} is not json expected`)
                 }
                 return {body: {other: 'thing'}, headers: {}, status: 200}
             })),
@@ -166,64 +175,70 @@ describe('test', () => {
                     // @ts-expect-error
                     req.body?.reqBody.c
                 } catch (e) {
-                    console.log('expecting this error')
+                    console.log(`expecting this error ${typeof a} is not a stream`)
                 }
-                return {body: {other: 'thing'}, headers: {}, status: 200}
+                return {body: {stream: 'body'}, headers: {}, status: 200}
             }))
         };
 
         const r = router(routes);
         const c = contract(routes, r);
-        const getResponse = await c.getResource.handler.handle({method: 'GET', uri: '/', headers: {}, body: undefined});
+        const getResponse = await c.getResource.handler.handle({
+            method: 'GET',
+            string: '/',
+            headers: {},
+            body: undefined
+        });
         const postResponse = await c.postResource.handler.handle({
             body: {reqBody: {a: '123', b: [1, 2, 3]}},
             method: 'POST',
-            uri: '/',
+            string: '/',
             headers: {}
         });
         const streamResponse = await c.streamResource.handler.handle({
             body: streamExample,
             method: 'POST',
-            uri: '/',
+            string: '/stream',
             headers: {}
         });
 
         // router can handle it but response body is not preserved...
         expect(
             (await c.getResource.handler.handle(
-                {method: 'GET', uri: '/', headers: {}, body: undefined}
+                {method: 'GET', string: '/', headers: {}, body: undefined}
             )).body.some).eq('json');
 
         // router not found
         expect(await r.handle(
-            {method: 'GET', uri: '/unmatching-route', headers: {}, body: undefined}
+            {method: 'GET', string: '/unmatching-route', headers: {}, body: undefined}
         )).deep.eq({"body": "Not found", "headers": {}, "status": 404});
 
 
         // response body is type-safe :)
         expect(getResponse.body.some).eq('json');
         expect(postResponse.body.other).eq('thing');
+        expect(streamResponse.body.stream).eq('body');
 
         const postResponseBadBody1 = await c.postResource.handler.handle({
             // @ts-expect-error - other: property should not be there
             body: {reqBody: {a: '123', b: [1], other: 'property'}},
-            method: 'GET',
-            uri: '/',
+            method: 'POST',
+            string: '/',
             headers: {}
         });
 
         const postResponseBadBody2 = await c.postResource.handler.handle({
             // @ts-expect-error - b needs to have length 3
             body: {reqBody: {a: '123', b: [1]}},
-            method: 'GET',
-            uri: '/',
+            method: 'POST',
+            string: '/',
             headers: {}
         });
         const streamResponse2 = await c.streamResource.handler.handle({
             // @ts-expect-error - must be a stream!
             body: 'string',
             method: 'POST',
-            uri: '/',
+            string: '/stream',
             headers: {}
         });
 
