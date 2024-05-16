@@ -1,12 +1,14 @@
 import {expect} from "chai";
 import {JsonBody, Method} from "../src";
+import stream from "stream";
 
-type Body = JsonBody | string | undefined;
+type Body = stream.Readable | JsonBody | string | undefined;
 type BodyType<B extends Body> = B extends infer J extends JsonBody
     ? J
     : B extends string
         ? string
-        : undefined;
+        : B extends stream.Readable
+            ? stream.Readable : undefined;
 
 type Headers = { [key: string]: string };
 type req<ReqB extends Body> = {
@@ -135,6 +137,7 @@ function contract<
 describe('test', () => {
     it('infer type', async () => {
         const example = {reqBody: {a: '123', b: [1, 2, 3] as [number, number, number]}};
+        const streamExample = stream.Readable.from('123')
 
         const routes = {
             getResource: get('/', handle(async (req) => {
@@ -156,6 +159,16 @@ describe('test', () => {
                     console.log('expecting this error')
                 }
                 return {body: {other: 'thing'}, headers: {}, status: 200}
+            })),
+            streamResource: post('/stream', streamExample, handle(async (req) => {
+                const a = req.body
+                try {
+                    // @ts-expect-error
+                    req.body?.reqBody.c
+                } catch (e) {
+                    console.log('expecting this error')
+                }
+                return {body: {other: 'thing'}, headers: {}, status: 200}
             }))
         };
 
@@ -164,6 +177,12 @@ describe('test', () => {
         const getResponse = await c.getResource.handler.handle({method: 'GET', uri: '/', headers: {}, body: undefined});
         const postResponse = await c.postResource.handler.handle({
             body: {reqBody: {a: '123', b: [1, 2, 3]}},
+            method: 'POST',
+            uri: '/',
+            headers: {}
+        });
+        const streamResponse = await c.streamResource.handler.handle({
+            body: streamExample,
             method: 'POST',
             uri: '/',
             headers: {}
@@ -200,5 +219,13 @@ describe('test', () => {
             uri: '/',
             headers: {}
         });
+        const streamResponse2 = await c.streamResource.handler.handle({
+            // @ts-expect-error - must be a stream!
+            body: 'string',
+            method: 'POST',
+            uri: '/',
+            headers: {}
+        });
+
     });
 })
