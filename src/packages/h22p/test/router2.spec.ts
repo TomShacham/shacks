@@ -1,136 +1,131 @@
 // the problem so far is
-import {JsonArray, JsonBody, JsonObject, Method} from "../src";
+import {JsonBody, Method} from "../src";
 
 type Body = JsonBody | undefined;
-type req<ReqB extends Body = Body> = {
+type BodyType<B extends Body> = B extends JsonBody ? JsonBody : undefined;
+type Headers = { [key: string]: string };
+type req<ReqB extends Body> = {
     body: ReqB,
-    headers: { [key: string]: string },
+    headers: Headers,
     uri: string,
     method: Method
 }
-type res<ResB extends Body = Body> = {
+type res<ResB extends Body> = {
     body: ResB,
-    headers: { [key: string]: string },
+    headers: Headers,
     status: number
 }
-type handler<ReqB extends Body = Body, ResB extends Body = Body> = (req: req<ReqB>) => Promise<res<ResB>>
+type handler<
+    MatcherBody extends Body,
+    ResB extends Body
+> = (req: req<MatcherBody>) => Promise<res<ResB>>
 type serde = (str: string) => string
 type matcher<MBody extends Body = Body> = {
-    path: string,
-    method: string,
-    query: { [k: string]: serde },
+    uri: string,
+    method: Method,
     headers: { [k: string]: serde },
     body?: MBody
 };
 
 
 // if req matches then handler responds else 404s
-type routes<ReqB extends Body = Body, ResB extends Body = Body> = {
+type routes<ReqB extends Body, ResB extends Body> = {
     [key: string]: { req: matcher, handler: handler<ReqB, ResB> }
 }
 
 interface route<
-    ReqB extends Body = Body,
-    ResB extends Body = Body,
-    MBody extends Body = Body
+    MatcherBody extends Body,
+    ResB extends Body
 > {
-    req: matcher<MBody>,
-    handler: handler<MBody, ResB>
+    req: matcher<MatcherBody>,
+    handler: handler<MatcherBody, ResB>
 }
 
 type routeHandler<
-    ReqB extends Body,
+    MatcherBody extends Body,
     ResB extends Body,
-    R extends route<ReqB, ResB> = route<ReqB, ResB>> = R extends {
-    req: matcher,
-    handler: handler<ReqB, ResB>
-} ? handler<ReqB, ResB> : never;
+    R extends route<MatcherBody, ResB> = route<MatcherBody, ResB>
+> = handler<MatcherBody, ResB>;
 
 type api<Routes extends routes<ReqB, ResB>, ReqB extends Body = Body, ResB extends Body = Body> = {
     [Key in keyof Routes]: Routes[Key] extends route<infer RqB extends Body, infer RsB extends Body>
         ? route<RqB, RsB>
-        : never
+        : route<ReqB, ResB>
 };
-
-type every<O extends { [K in keyof O]: any }> = Extract<O, false>
-
-type ObjectExtends<A extends JsonBody, B extends JsonBody> =
-    A extends JsonObject
-        ? B extends JsonObject
-            ? hasSameKeys<A, B>
-            : false
-        : A extends Array<infer T>
-            ? B extends Array<infer R>
-                ? A extends B
-                    ? A : 'arrays not extending'
-                : 'one array one not array'
-            : A extends B
-                ? A
-                : 'primitive different';
-
-type hasSameKeys<A extends JsonObject, B extends JsonObject> = {
-    [K in keyof B]: K extends keyof A
-        ? A[K] extends JsonObject
-            ? B[K] extends JsonObject
-                ? hasSameKeys<A[K], B[K]>
-                : B[K] extends undefined
-                    ? A
-                    : 'one object one not'
-            : A[K] extends B[K]
-                ? A
-                : 'primitive different'
-        : 'key in B not in A'; // if key not in B then A still extends it
-};
-type a = ObjectExtends<{ a: 1 }, {}>;
-type b<T extends JsonObject | JsonArray> = T extends JsonObject ? Extract<a[keyof a], object> : T;
-type c = b<a>
 
 /*
  TODO infer request body type with a body serde
-    path, query, headers, method -> easy just copy router
+    path, headers, method -> easy just copy router
     but hard: request body
 */
+
+function get<
+    Uri extends string,
+    ResB extends Body,
+    MatcherBody extends Body,
+>(uri: Uri, headers: Headers, handler: handler<BodyType<MatcherBody>, ResB>)
+    : route<BodyType<MatcherBody>, ResB> {
+    return {
+        req: {uri, headers: {}, method: 'GET', body: undefined},
+        handler
+    }
+}
+
+function post<
+    Uri extends string,
+    MatcherBody extends Body,
+    ResB extends Body,
+>(uri: Uri, headers: Headers, body: BodyType<MatcherBody>, handler: handler<BodyType<MatcherBody>, ResB>)
+    : route<BodyType<MatcherBody>, ResB> {
+    return {
+        req: {uri, headers: {}, body, method: 'POST'},
+        handler
+    }
+}
+
+
 describe('test', () => {
     it('does a thing', async () => {
         const example = {some: {a: '123', b: [1, 2, 3]}};
 
         const rs = {
-            fooRoute: {
-                req: {path: '/', query: {}, headers: {}, method: 'GET'},
-                handler: async (req: req) => {
+            fooRoute: get('/', {},
+                async (req) => {
+                    const body = req.body;
                     return {body: {some: 'some'}, headers: {}, status: 200}
-                }
-            },
-            barRoute: {
-                req: {path: '/', query: {}, headers: {}, method: 'POST', body: example},
-                handler: async (req: req) => {
+                }),
+            barRoute: post('/', {}, example,
+                async (req) => {
+                    const body = req.body;
                     return {body: {other: 'other'}, headers: {}, status: 200}
-                }
-            }
+                })
         }
 
-        function contractfor<
+        function contract<
             T extends api<Routes, ReqB, ResB>,
             Routes extends routes<ReqB, ResB>,
             ReqB extends Body,
             ResB extends Body,
         >(api: T): {
-            [K in keyof T]: T[K] extends route<infer RqB extends Body, infer RsB extends Body, infer MB extends Body>
-                ? routeHandler<MB, RsB>
+            [K in keyof T]: T[K] extends route<
+                    infer MatcherBody extends Body,
+                    infer RsB extends Body
+                >
+                ? routeHandler<MatcherBody, RsB>
                 : never
         } {
             let ret = {} as any;
             for (let f in api) {
                 const r = api[f].handler;
-                ret[f] = (req: req) => r(req)
+                ret[f] = (req: req<ReqB>) => r(req)
             }
             return ret;
         }
 
-        const c = contractfor(rs)
+        const c = contract(rs)
         const res1 = await c.fooRoute({body: {}, method: 'GET', uri: '/', headers: {}})
         const res2 = await c.barRoute({
-            body: {some: {a: '123', b: [1]}, extra: 'stuff'},
+            body: {bar: {a: '123', b: []}},
             method: 'GET',
             uri: '/',
             headers: {}
