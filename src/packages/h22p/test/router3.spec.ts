@@ -8,15 +8,19 @@ type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
         ? `${Q1}=${string}`
         : Qs;
 
-type pathParameterToString<Part> = Part extends `{${infer Name}}` ? string : Part;
+type expandPathParameterOrWildcard<Part> = Part extends `{${infer Name}}`
+    ? string
+    : Part extends `*`
+        ? string
+        : Part;
 type backToPath<Path> = Path extends `${infer PartA}/${infer PartB}`
-    ? `${pathParameterToString<PartA>}/${backToPath<PartB>}`
-    : pathParameterToString<Path>;
+    ? `${expandPathParameterOrWildcard<PartA>}/${backToPath<PartB>}`
+    : expandPathParameterOrWildcard<Path>;
+type withoutTrailingSlash<Path> = Path extends `${infer Part}/` ? Part : Path;
 
 type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
     ? `${backToPath<Path>}?${toQueryString<Query>}`
     : backToPath<Part>;
-
 
 type Headers = { [key: string]: string };
 type MessageBody = stream.Readable | JsonBody | string | undefined;
@@ -97,9 +101,15 @@ const routes = {
     postStreamResource: get('/resource/{id}', stream.Readable.from(''), handle(async (req) => {
         const u = req.uri
         return {status: 200, body: stream.Readable.from('123'), headers: {}}
-    }))
+    })),
+    wildcard: get('*/resource/{id}/sub/{subId}/*', '', handle(async (req) => {
+        const u = req.uri
+        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+    })),
 };
 
+// todo get doesnt have a req body
+//   other methods like post
 // Todo routing based off routes
 //  open api docs based off routes
 //  stitch back into main
@@ -209,6 +219,31 @@ describe('test', () => {
         response.body.read
         // @ts-expect-error -- foo does not exist on type body
         response.body.foo
+    });
+
+    it('wildcard match', async () => {
+        await routes.wildcard.handler.handle({
+            method: 'GET',
+            uri: 'stuff/before/resource/123/sub/456/stuff/after',
+            body: 'string',
+            headers: {},
+        });
+
+        await routes.wildcard.handler.handle({
+            method: 'GET',
+            // doesn't need to have stuff before and after to match
+            uri: '/resource/123/sub/456/',
+            body: '',
+            headers: {},
+        });
+
+        await routes.wildcard.handler.handle({
+            method: 'GET',
+            // @ts-expect-error - but does need to fulfil the basic contract
+            uri: '/resource/123/sub',
+            body: '',
+            headers: {},
+        });
     });
 
 })
