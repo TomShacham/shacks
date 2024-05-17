@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {JsonBody, Method} from "../src";
+import stream from "stream";
 
 type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
     ? `${Q1}=${string}&${toQueryString<Q2>}`
@@ -18,18 +19,25 @@ type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
 
 
 type Headers = { [key: string]: string };
+type MessageBody = stream.Readable | JsonBody | string | undefined;
+type BodyType<M extends MessageBody> = M extends infer J extends JsonBody
+    ? J
+    : M extends stream.Readable
+        ? stream.Readable
+        : M extends string
+            ? string : undefined;
 type req<
     Mtd extends Method,
     Uri extends string,
-    TBody extends JsonBody,
+    TBody extends MessageBody,
     Hds extends Headers
 > = {
     method: Mtd,
     uri: Uri,
-    body: TBody,
+    body: BodyType<TBody>,
     headers: Hds,
 }
-type res<TBody extends JsonBody, Hds extends Headers> = {
+type res<TBody extends MessageBody, Hds extends Headers> = {
     body: TBody;
     status: number,
     headers: Hds
@@ -38,8 +46,8 @@ type res<TBody extends JsonBody, Hds extends Headers> = {
 type handler<
     Mtd extends Method,
     Uri extends string,
-    ReqB extends JsonBody,
-    ResB extends JsonBody,
+    ReqB extends MessageBody,
+    ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
 > = {
@@ -49,8 +57,8 @@ type handler<
 function handle<
     Mtd extends Method,
     Uri extends string,
-    ReqB extends JsonBody,
-    ResB extends JsonBody,
+    ReqB extends MessageBody,
+    ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
 >(fn: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds>>): handler<Mtd, Uri, ReqB, ResB, ReqHds, ResHds> {
@@ -59,13 +67,13 @@ function handle<
 
 function get<
     Uri extends string,
-    ReqB extends JsonBody,
-    ResB extends JsonBody,
+    ReqB extends MessageBody,
+    ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
 >(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>, headers?: ReqHds): {
     handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>,
-    req: (mtd: 'GET', uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
+    req: (mtd: 'GET', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
 } {
     return {
         handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
@@ -78,13 +86,23 @@ const routes = {
         const u = req.uri
         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
     }), {"content-type": "text/csv"} as const),
-    postResource: get('/resource/{id}', {foo: {baz: 'json'}}, handle(async (req) => {
+    postJsonResource: get('/resource/{id}', {foo: {baz: 'json'}}, handle(async (req) => {
         const u = req.uri
         return {status: 200, body: {quux: 'json'}, headers: {}}
+    })),
+    postStringResource: get('/resource/{id}', '', handle(async (req) => {
+        const u = req.uri
+        return {status: 200, body: 'some response string', headers: {}}
+    })),
+    postStreamResource: get('/resource/{id}', stream.Readable.from(''), handle(async (req) => {
+        const u = req.uri
+        return {status: 200, body: stream.Readable.from('123'), headers: {}}
     }))
 };
 
-// Todo
+// Todo routing based off routes
+//  open api docs based off routes
+//  stitch back into main
 
 describe('test', () => {
     it('handle an in-memory type-safe request and response', async () => {
@@ -153,7 +171,46 @@ describe('test', () => {
             // @ts-expect-error
             {"content-type": "text/html"}
         );
-    })
+    });
+
+    it('handle string body', async () => {
+        await routes.postStringResource.handler.handle({
+            method: 'GET',
+            uri: '/resource/123/sub/456?q1=v1&q2=v2',
+            // @ts-expect-error -- not a string body
+            body: {foo: {bar: 'json'}},
+            headers: {"content-type": "text/csv"},
+        });
+        const response = await routes.postStringResource.handler.handle({
+            method: 'GET',
+            uri: '/resource/123/sub/456?q1=v1&q2=v2',
+            body: 'any thing',
+            headers: {"content-type": "text/csv"},
+        });
+        response.body.slice
+        // @ts-expect-error -- foo does not exist on type body
+        response.body.foo
+    });
+
+    it('handle stream body', async () => {
+        await routes.postStreamResource.handler.handle({
+            method: 'GET',
+            uri: '/resource/123/sub/456?q1=v1&q2=v2',
+            // @ts-expect-error -- not a stream body
+            body: 'string',
+            headers: {"content-type": "text/csv"},
+        });
+        const response = await routes.postStreamResource.handler.handle({
+            method: 'GET',
+            uri: '/resource/123/sub/456?q1=v1&q2=v2',
+            body: stream.Readable.from('any thing'),
+            headers: {"content-type": "text/csv"},
+        });
+        response.body.read
+        // @ts-expect-error -- foo does not exist on type body
+        response.body.foo
+    });
+
 })
 
 
