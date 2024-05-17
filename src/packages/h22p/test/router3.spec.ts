@@ -29,9 +29,10 @@ type req<
     body: TBody,
     headers: Hds,
 }
-type res<TBody extends JsonBody> = {
+type res<TBody extends JsonBody, Hds extends Headers> = {
     body: TBody;
-    status: number
+    status: number,
+    headers: Hds
 }
 
 type handler<
@@ -39,9 +40,10 @@ type handler<
     Uri extends string,
     ReqB extends JsonBody,
     ResB extends JsonBody,
-    Hds extends Headers,
+    ReqHds extends Headers,
+    ResHds extends Headers,
 > = {
-    handle: (req: req<Mtd, Uri, ReqB, Hds>) => Promise<res<ResB>>
+    handle: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds>>
 }
 
 function handle<
@@ -49,8 +51,9 @@ function handle<
     Uri extends string,
     ReqB extends JsonBody,
     ResB extends JsonBody,
-    Hds extends Headers,
->(fn: (req: req<Mtd, Uri, ReqB, Hds>) => Promise<res<ResB>>): handler<Mtd, Uri, ReqB, ResB, Hds> {
+    ReqHds extends Headers,
+    ResHds extends Headers,
+>(fn: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds>>): handler<Mtd, Uri, ReqB, ResB, ReqHds, ResHds> {
     return {handle: fn}
 }
 
@@ -58,13 +61,14 @@ function get<
     Uri extends string,
     ReqB extends JsonBody,
     ResB extends JsonBody,
-    Hds extends Headers,
->(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, Hds>, headers?: Hds): {
-    handler: handler<'GET', fullPath<Uri>, ReqB, ResB, Hds>,
-    req: (mtd: 'GET', uri: fullPath<Uri>, body: ReqB, headers: Hds) => req<'GET', fullPath<Uri>, ReqB, Hds>
+    ReqHds extends Headers,
+    ResHds extends Headers,
+>(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>, headers?: ReqHds): {
+    handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>,
+    req: (mtd: 'GET', uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
 } {
     return {
-        handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, Hds>) => handler.handle(req)},
+        handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
         req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers ?? {}})
     }
 }
@@ -72,13 +76,15 @@ function get<
 const routes = {
     getResource: get('/resource/{id}/sub/{subId}?q1&q2', {foo: {bar: 'json'}}, handle(async (req) => {
         const u = req.uri
-        return {status: 200, body: {bar: 'json'}}
+        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
     }), {"content-type": "text/csv"} as const),
     postResource: get('/resource/{id}', {foo: {baz: 'json'}}, handle(async (req) => {
         const u = req.uri
-        return {status: 200, body: {quux: 'json'}}
+        return {status: 200, body: {quux: 'json'}, headers: {}}
     }))
 };
+
+// Todo
 
 describe('test', () => {
     it('handle an in-memory type-safe request and response', async () => {
@@ -91,6 +97,10 @@ describe('test', () => {
         response.body.bar
         // @ts-expect-error -- foo does not exist on type body
         response.body.foo
+
+        response.headers.foo
+        // @ts-expect-error -- foo does not exist on type body
+        response.headers.bar
     })
 
     it('build a type-safe request', async () => {
