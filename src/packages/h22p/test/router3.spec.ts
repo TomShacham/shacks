@@ -17,14 +17,17 @@ type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
     : backToPath<Part>;
 
 
+type Headers = { [key: string]: string };
 type req<
     Mtd extends Method,
     Uri extends string,
-    TBody extends JsonBody
+    TBody extends JsonBody,
+    Hds extends Headers
 > = {
     method: Mtd,
     uri: Uri,
-    body: TBody
+    body: TBody,
+    headers: Hds,
 }
 type res<TBody extends JsonBody> = {
     body: TBody;
@@ -36,8 +39,9 @@ type handler<
     Uri extends string,
     ReqB extends JsonBody,
     ResB extends JsonBody,
+    Hds extends Headers,
 > = {
-    handle: (req: req<Mtd, Uri, ReqB>) => Promise<res<ResB>>
+    handle: (req: req<Mtd, Uri, ReqB, Hds>) => Promise<res<ResB>>
 }
 
 function handle<
@@ -45,7 +49,8 @@ function handle<
     Uri extends string,
     ReqB extends JsonBody,
     ResB extends JsonBody,
->(fn: (req: req<Mtd, Uri, ReqB>) => Promise<res<ResB>>): handler<Mtd, Uri, ReqB, ResB> {
+    Hds extends Headers,
+>(fn: (req: req<Mtd, Uri, ReqB, Hds>) => Promise<res<ResB>>): handler<Mtd, Uri, ReqB, ResB, Hds> {
     return {handle: fn}
 }
 
@@ -53,13 +58,14 @@ function get<
     Uri extends string,
     ReqB extends JsonBody,
     ResB extends JsonBody,
->(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB>): {
-    handler: handler<'GET', fullPath<Uri>, ReqB, ResB>,
-    req: (mtd: 'GET', uri: fullPath<Uri>, body: ReqB) => req<'GET', fullPath<Uri>, ReqB>
+    Hds extends Headers,
+>(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, Hds>, headers?: Hds): {
+    handler: handler<'GET', fullPath<Uri>, ReqB, ResB, Hds>,
+    req: (mtd: 'GET', uri: fullPath<Uri>, body: ReqB, headers: Hds) => req<'GET', fullPath<Uri>, ReqB, Hds>
 } {
     return {
-        handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB>) => handler.handle(req)},
-        req: (mtd, uri, body) => ({method: mtd, uri, body})
+        handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, Hds>) => handler.handle(req)},
+        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers ?? {}})
     }
 }
 
@@ -67,7 +73,7 @@ const routes = {
     getResource: get('/resource/{id}/sub/{subId}?q1&q2', {foo: {bar: 'json'}}, handle(async (req) => {
         const u = req.uri
         return {status: 200, body: {bar: 'json'}}
-    })),
+    }), {"content-type": "text/csv"} as const),
     postResource: get('/resource/{id}', {foo: {baz: 'json'}}, handle(async (req) => {
         const u = req.uri
         return {status: 200, body: {quux: 'json'}}
@@ -79,7 +85,8 @@ describe('test', () => {
         const response = await routes.getResource.handler.handle({
             method: 'GET',
             uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            body: {foo: {bar: 'json'}}
+            body: {foo: {bar: 'json'}},
+            headers: {"content-type": "text/csv"},
         });
         response.body.bar
         // @ts-expect-error -- foo does not exist on type body
@@ -90,32 +97,51 @@ describe('test', () => {
         const typeSafeRequest = routes.getResource.req(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
-            {foo: {bar: 'json'}}
+            {foo: {bar: 'json'}},
+            {"content-type": "text/csv"}
         );
         expect(typeSafeRequest).deep.eq({uri: '/resource/123/sub/456', body: {foo: {bar: 'json'}}})
         const noQueryProvided = routes.getResource.req(
             'GET',
             // @ts-expect-error
             '/resource/123/sub/456',
-            {foo: {bar: 'json'}}
+            {foo: {bar: 'json'}},
+            {}
         );
         const wrongMethod = routes.getResource.req(
             // @ts-expect-error
             'POST',
             '/resource/123/sub?q1=v1&q2=v2',
-            {foo: {bar: 'json'}}
+            {foo: {bar: 'json'}},
+            {}
         );
         const wrongUri = routes.getResource.req(
             'GET',
             // @ts-expect-error
             '/resource/123/sub?q1=v1&q2=v2',
-            {foo: {bar: 'json'}}
+            {foo: {bar: 'json'}},
+            {}
         );
         const wrongBody = routes.getResource.req(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
             // @ts-expect-error
-            {foo: {bar: 123}}
+            {foo: {bar: 123}},
+            {}
+        );
+        const emptyHeaders = routes.getResource.req(
+            'GET',
+            '/resource/123/sub/456?q1=v1&q2=v2',
+            {foo: {bar: '123'}},
+            // @ts-expect-error
+            {}
+        );
+        const wrongHeaders = routes.getResource.req(
+            'GET',
+            '/resource/123/sub/456?q1=v1&q2=v2',
+            {foo: {bar: '123'}},
+            // @ts-expect-error
+            {"content-type": "text/html"}
         );
     })
 })
