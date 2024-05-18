@@ -1,16 +1,116 @@
-import {h22p, HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "./interface";
+import {h22p, HttpHandler, HttpMessageBody, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "./interface";
 import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
-import {Route} from "../test/router3.spec";
+
+export type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
+    ? `${Q1}=${string}&${toQueryString<Q2>}`
+    : Qs extends `${infer Q1}`
+        ? `${Q1}=${string}`
+        : Qs;
+export type pathPart<Part> = Part extends `${infer Start}?${infer Query}` ? Start : '';
+export type queryPart<Part> = Part extends `${infer Start}?${infer Query}` ? Query : '';
+export type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
+export type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
+    ? isPathParameter<PartA> | pathParameters<PartB>
+    : isPathParameter<Path>;
+export type emptyToString<S extends string> = S extends '' ? string : S;
+
+type x = pathParameters<pathPart<'/resource/{id}/sub/{subId}?q1&q2'>>
+
+export type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
+export type queryParameters<Path extends string> = Path extends ''
+    ? { [key: string]: string }
+    : toObj<queriesFromString<withoutFragment<Path>>>
+export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
+export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
+
+export type toObj<union extends string> = {
+    [Key in union]: string;
+};
+export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
+
+export type expandPathParameterOrWildcard<Part> = Part extends `{${infer Name}}`
+    ? string
+    : Part extends `*`
+        ? string
+        : Part;
+type backToPath<Path> = Path extends `${infer PartA}/${infer PartB}`
+    ? `${expandPathParameterOrWildcard<PartA>}/${backToPath<PartB>}`
+    : expandPathParameterOrWildcard<Path>;
+export type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
+    ? `${backToPath<Path>}?${toQueryString<Query>}`
+    : backToPath<Part>;
+
+export type handler<
+    Mtd extends Method,
+    Uri extends string,
+    ReqB extends HttpMessageBody,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse
+> = {
+    handle: (req: RoutedHttpRequest<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
+}
+export type Route<
+    Mtd extends Method,
+    Uri extends string,
+    ReqB extends HttpMessageBody,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse
+> = {
+    handler: handler<Mtd, Uri, ReqB, ReqHds, Res>,
+    request: (mtd: Mtd, uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<Mtd, fullPath<Uri>, ReqB, ReqHds>
+    _req: HttpRequest<Mtd, Uri, ReqB, ReqHds>
+};
+
+export interface RoutedHttpRequest<
+    Mtd extends Method = Method,
+    Uri extends string = string,
+    ReqB extends HttpMessageBody = any,
+    ReqHds extends HttpRequestHeaders = HttpRequestHeaders
+> extends HttpRequest<Mtd, fullPath<Uri>, ReqB, ReqHds> {
+    vars?: {
+        path: toObj<pathParameters<pathPart<Uri>>>
+        query: queryParameters<queryPart<Uri>>
+        fragment: string | undefined
+        wildcards: string[]
+    }
+}
+
+export function get<
+    Uri extends string,
+    ReqB extends undefined,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse
+>(uri: Uri, body: ReqB, handler: handler<'GET', Uri, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'GET', Uri, ReqB, ReqHds, Res> {
+    return {
+        handler: {handle: (req: RoutedHttpRequest<'GET', Uri, ReqB, ReqHds>) => handler.handle(req)},
+        request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
+        _req: ({method: 'GET', uri, body, headers: headers ?? {} as ReqHds})
+    }
+}
+
+export function post<
+    Uri extends string,
+    ReqB extends HttpMessageBody,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse,
+>(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'POST', Uri, ReqB, ReqHds, Res> {
+    return {
+        handler: {handle: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => handler.handle(req)},
+        request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
+        _req: ({method: 'POST', uri, body, headers: headers ?? {} as ReqHds})
+    }
+}
 
 export class Router implements HttpHandler {
     constructor(public routes: Route<Method, string, any, HttpRequestHeaders, any>[]) {
     }
 
-    handle(req: HttpRequest): Promise<HttpResponse> {
+    handle(req: RoutedHttpRequest): Promise<HttpResponse> {
         const notFoundHandler = this.notFound();
         const matchingHandler = this.matches(req.uri, req.method);
         if (matchingHandler.route) {
+            Object.defineProperty(req, 'vars', {value: matchingHandler.vars})
             return matchingHandler.route.handler.handle(req);
         } else {
             return notFoundHandler.handle(req);

@@ -3,6 +3,7 @@ import {h22p, HttpMessageBody, HttpRequest, HttpResponse} from "../src/interface
 import {URI} from "../src/uri";
 import {Body} from "../src/body";
 import * as stream from "stream";
+import {UrlEncodedMessage} from "../src/urlEncodedMessage";
 
 describe('http client', function () {
     this.timeout(500);
@@ -45,15 +46,16 @@ describe('http client', function () {
     it('HEAD request doesnt send body in response and sets default headers if not set in handler', async () => {
         const {port, close} = await h22p.server({
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const query = URI.query(URI.parse(req.uri).query);
-                if (query.hardCodeResponseHeaders)
+                const queryString = URI.parse(req.uri).query;
+                const query = UrlEncodedMessage.parse(queryString ?? '');
+                if ('hardCodeResponseHeaders' in query)
                     return {
                         status: 200,
                         body: 'THIS DOESNT GET SENT',
                         headers: {"content-length": "999", "content-type": "text/foo"}
                     }
 
-                return {status: 200, body: 'THIS DOESNT GET SENT', headers: {}}
+                return {status: 200, body: 'THIS DOES GET SENT', headers: {}}
             }
         });
 
@@ -62,10 +64,10 @@ describe('http client', function () {
             h22p.head(`http://localhost:${port}/`)
         )
         expect(repsonse.status).eq(200);
-        expect(await Body.text(repsonse.body!)).not.eq('THIS DOESNT GET SENT');
+        expect(await Body.text(repsonse.body!)).not.eq('THIS DOES GET SENT');
         expect(await Body.text(repsonse.body!)).eq('');
         expect(repsonse.headers["content-type"]).eq('text/plain');
-        expect(repsonse.headers?.["content-length"]).eq('20');
+        expect(repsonse.headers?.["content-length"]).eq('18');
 
 
         /*
@@ -111,9 +113,9 @@ describe('http client', function () {
         await testMethod(deleteResponseString, 'DELETE', bodyString);
 
         const postResponseJson = await client.handle(h22p.post(`/`, bodyJson, {}))
-        const putResponseJson = await client.handle(h22p.put(`/`, {}, bodyJson))
-        const patchResponseJson = await client.handle(h22p.patch(`/`, {}, bodyJson))
-        const deleteResponseJson = await client.handle(h22p.delete(`/`, {}, bodyJson))
+        const putResponseJson = await client.handle(h22p.put(`/`, bodyJson, {}))
+        const patchResponseJson = await client.handle(h22p.patch(`/`, bodyJson, {}))
+        const deleteResponseJson = await client.handle(h22p.delete(`/`, bodyJson, {}))
 
         await testMethod(postResponseJson, 'POST', JSON.stringify(bodyJson));
         await testMethod(putResponseJson, 'PUT', JSON.stringify(bodyJson));

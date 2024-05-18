@@ -1,29 +1,29 @@
-import {DictString} from "./interface";
+import {getQueryKey, queriesFromString, queryObject} from "./router";
 
 export class UrlEncodedMessage {
-    static parse(str: string | undefined): DictString {
-        const params: Record<string, string> = {};
-        if (str === undefined) return {};
+    static parse<S extends string>(str: S | undefined): queryObject<S> {
+        const params: queryObject<S> = {} as queryObject<S>;
+        if (typeof str !== 'string') return {} as queryObject<S>;
 
-        str = str.startsWith('?') ? str.slice(1) : str;
-        str = str.replaceAll("+", " ");
+        str = (str.startsWith('?') ? str.slice(1) : str) as S;
+        str = (str.replaceAll("+", " ")) as S;
         const keyValuePairs = str.split('&');
         for (const pair of keyValuePairs) {
             const [key, value] = pair.split('=');
-            params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+            params[decodeURIComponent(key) as getQueryKey<queriesFromString<S>>] = decodeURIComponent(value || '');
         }
 
-        return params;
+        return params as queryObject<S>;
     }
 
-    static stringify(params: NodeJS.Dict<string>): string {
+    static stringify<S extends string>(params: queryObject<S>): S {
         const queryStringParts: string[] = [];
 
         for (const key in params) {
-            const value = params[key] as string;
+            const value = params[key as getQueryKey<queriesFromString<S>>];
             queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
         }
 
-        return queryStringParts.join('&');
+        return queryStringParts.join('&') as S;
     }
 }

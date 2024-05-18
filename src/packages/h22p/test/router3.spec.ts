@@ -1,279 +1,274 @@
 import {expect} from "chai";
-import {HttpMessageBody, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "../src";
+import {Body, get, h22p, post, router} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
 
-type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
-    ? `${Q1}=${string}&${toQueryString<Q2>}`
-    : Qs extends `${infer Q1}`
-        ? `${Q1}=${string}`
-        : Qs;
-
-type expandPathParameterOrWildcard<Part> = Part extends `{${infer Name}}`
-    ? string
-    : Part extends `*`
-        ? string
-        : Part;
-type backToPath<Path> = Path extends `${infer PartA}/${infer PartB}`
-    ? `${expandPathParameterOrWildcard<PartA>}/${backToPath<PartB>}`
-    : expandPathParameterOrWildcard<Path>;
-
-type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
-    ? `${backToPath<Path>}?${toQueryString<Query>}`
-    : backToPath<Part>;
-
-type handler<
-    Mtd extends Method,
-    Uri extends string,
-    ReqB extends HttpMessageBody,
-    ReqHds extends HttpRequestHeaders,
-    Res extends HttpResponse
-> = {
-    handle: (req: HttpRequest<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
-}
-
-export type Route<
-    Mtd extends Method,
-    Uri extends string,
-    ReqB extends undefined,
-    ReqHds extends HttpRequestHeaders,
-    Res extends HttpResponse
-> = {
-    request: (mtd: Mtd, uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<Mtd, fullPath<Uri>, ReqB, ReqHds>
-    handler: handler<Mtd, fullPath<Uri>, ReqB, ReqHds, Res>,
-    _req: HttpRequest<Mtd, Uri, undefined, ReqHds>
-};
-
-export function get<
-    Uri extends string,
-    ReqB extends undefined,
-    ReqHds extends HttpRequestHeaders,
-    Res extends HttpResponse
->(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'GET', Uri, ReqB, ReqHds, Res> {
-    return {
-        handler: {handle: (req: HttpRequest<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
-        request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
-        _req: ({method: 'GET', uri, body, headers: headers ?? {} as ReqHds})
-    }
-}
-
-function post<
-    Uri extends string,
-    ReqB extends HttpMessageBody,
-    ReqHds extends HttpRequestHeaders,
-    Res extends HttpResponse,
->(uri: Uri, body: ReqB, handler: handler<'POST', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): {
-    handler: handler<'POST', fullPath<Uri>, ReqB, ReqHds, Res>,
-    req: (mtd: 'POST', uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<'POST', fullPath<Uri>, ReqB, ReqHds>
-} {
-    return {
-        handler: {handle: (req: HttpRequest<'POST', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
-        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers})
-    }
-}
-
-const routes = {
-    getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
-        handle: async (req) => {
-            const u = req.uri
-            return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-        }
-    }, {"content-type": "text/csv"} as const),
-    postJsonResource: post('/resource/{id}', {foo: {baz: 'json'}}, {
-        handle: async (req) => {
-            const u = req.uri
-            return {status: 200, body: {quux: 'json'}, headers: {}}
-        }
-    }),
-    postStringResource: post('/resource/{id}', '', {
-        handle: async (req) => {
-            const u = req.uri
-            return {status: 200, body: 'some response string', headers: {}}
-        }
-    }),
-    postStreamResource: post('/resource/{id}', stream.Readable.from(''), {
-        handle: async (req) => {
-            const u = req.uri
-            return {status: 200, body: stream.Readable.from('123'), headers: {}}
-        }
-    }),
-    wildcard: get('*/resource/{id}/sub/{subId}/*', undefined, {
-        handle: async (req) => {
-            const u = req.uri
-            return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-        }
-    }),
-};
-
 // todo put, patch etc
-// Todo routing based off routes
 //  open api docs based off routes
 //    - how do we do responses :S
-//  stitch back into main
 
 describe('test', () => {
-    it('handle an in-memory type-safe request and response', async () => {
-        const response = await routes.getResource.handler.handle({
-            method: 'GET',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            body: undefined,
-            headers: {"content-type": "text/csv"},
+    describe('type-safe routing', () => {
+
+        const routes = {
+            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+                handle: async (req) => {
+                    const u = req.uri
+                    return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                }
+            }, {"content-type": "text/csv"} as const),
+            postJsonResource: post('/resource/{id}', {foo: {baz: 'json'}}, {
+                handle: async (req) => {
+                    const u = req.uri
+                    return {status: 200, body: {quux: 'json'}, headers: {}}
+                }
+            }),
+            postStringResource: post('/resource/{id}', '', {
+                handle: async (req) => {
+                    const u = req.uri
+                    return {status: 200, body: 'some response string', headers: {}}
+                }
+            }),
+            postStreamResource: post('/resource/{id}', stream.Readable.from(''), {
+                handle: async (req) => {
+                    const u = req.uri
+                    return {status: 200, body: stream.Readable.from('123'), headers: {}}
+                }
+            }),
+        };
+
+        it('handle an in-memory type-safe request and response', async () => {
+            const response = await routes.getResource.handler.handle({
+                method: 'GET',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                body: undefined,
+                headers: {"content-type": "text/csv"},
+            });
+            response.body.bar
+            // @ts-expect-error -- foo does not exist on type body
+            response.body.foo
+
+            // status comes through exactly typed i.e. 200
+            // typeChecks(true as (typeof response.status extends 200 ? true : false));
+            doesNotTypeCheck(false as (typeof response.status extends 201 ? true : false));
+
+            response.headers.foo
+            // @ts-expect-error -- foo does not exist on type body
+            response.headers.bar
+        })
+
+        it('build a type-safe request', async () => {
+            const typeSafeRequest = routes.getResource.request(
+                'GET',
+                '/resource/123/sub/456?q1=v1&q2=v2',
+                undefined,
+                {"content-type": "text/csv"}
+            );
+            expect(typeSafeRequest).deep.eq({
+                "body": undefined,
+                "headers": {
+                    "content-type": "text/csv",
+                },
+                "method": "GET",
+                "uri": "/resource/123/sub/456?q1=v1&q2=v2"
+            })
+
+            /*
+                --- expect errors in the below to prove we are type-safe ---
+             */
+
+            const wrongPathProvided = routes.getResource.request(
+                'GET',
+                // @ts-expect-error
+                '/resource/123/sub?q1=v1&q2=v2',
+                undefined,
+                {"content-type": "text/csv"}
+            );
+            const noQueryProvided = routes.getResource.request(
+                'GET',
+                // @ts-expect-error
+                '/resource/123/sub/456',
+                undefined,
+                {"content-type": "text/csv"}
+            );
+            const wrongMethod = routes.getResource.request(
+                // @ts-expect-error
+                'POST',
+                '/resource/123/sub?q1=v1&q2=v2',
+                undefined,
+                {"content-type": "text/csv"}
+            );
+            const wrongUri = routes.getResource.request(
+                'GET',
+                // @ts-expect-error
+                '/resource/123/sub?q1=v1&q2=v2',
+                undefined,
+                {"content-type": "text/csv"}
+            );
+            const wrongBody = routes.getResource.request(
+                'GET',
+                '/resource/123/sub/456?q1=v1&q2=v2',
+                // we should be @ts-expect-error 'ing for a body when we want undefined
+                // but for some reason TS think it's an unused @ts-expect-error ....
+                // @ts-ignore
+                {foo: {bar: 123}},
+                {"content-type": "text/csv"}
+            );
+            const emptyHeaders = routes.getResource.request(
+                'GET',
+                '/resource/123/sub/456?q1=v1&q2=v2',
+                undefined,
+                // @ts-expect-error
+                {}
+            );
+            const wrongHeaders = routes.getResource.request(
+                'GET',
+                '/resource/123/sub/456?q1=v1&q2=v2',
+                undefined,
+                // @ts-expect-error
+                {"content-type": "text/html"}
+            );
         });
-        response.body.bar
-        // @ts-expect-error -- foo does not exist on type body
-        response.body.foo
 
-        // status comes through exactly typed i.e. 200
-        // typeChecks(true as (typeof response.status extends 200 ? true : false));
-        doesNotTypeCheck(false as (typeof response.status extends 201 ? true : false));
+        it('handle json body', async () => {
+            await routes.postJsonResource.handler.handle({
+                method: 'POST',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                // @ts-expect-error -- not a string body
+                body: {foo: {bar: 'json'}},
+                headers: {"content-type": "text/csv"},
+            });
+            const response = await routes.postJsonResource.handler.handle({
+                method: 'POST',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                body: {foo: {baz: 'json'}},
+                headers: {"content-type": "text/csv"},
+            });
+            response.body.quux
+            // @ts-expect-error -- foo does not exist on type body
+            response.body.foo
+        });
 
-        response.headers.foo
-        // @ts-expect-error -- foo does not exist on type body
-        response.headers.bar
+        it('handle string body', async () => {
+            await routes.postStringResource.handler.handle({
+                method: 'POST',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                // @ts-expect-error -- not a string body
+                body: {foo: {bar: 'json'}},
+                headers: {"content-type": "text/csv"},
+            });
+            const response = await routes.postStringResource.handler.handle({
+                method: 'POST',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                // @ts-expect-error -- not a string body
+                body: 'any thing',
+                headers: {"content-type": "text/csv"},
+            });
+            response.body.slice
+            // @ts-expect-error -- foo does not exist on type body
+            response.body.foo
+        });
+
+        it('handle stream body', async () => {
+            await routes.postStreamResource.handler.handle({
+                method: 'POST',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                // @ts-expect-error -- not a stream body
+                body: 'string',
+                headers: {"content-type": "text/csv"},
+            });
+            const response = await routes.postStreamResource.handler.handle({
+                method: 'POST',
+                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                body: stream.Readable.from('any thing'),
+                headers: {"content-type": "text/csv"},
+            });
+            response.body.read
+            // @ts-expect-error -- foo does not exist on type body
+            response.body.foo
+        });
+
+        it('wildcard match', async () => {
+            const routes = {
+                wildcard: get('*/resource/{id}/sub/{subId}/*', undefined, {
+                    handle: async (req) => {
+                        const u = req.uri
+                        const wildcards = req.vars?.wildcards;
+                        return {status: 200, body: `wildcards: ${wildcards?.join(' ')}`, headers: {"foo": "bar"}}
+                    }
+                })
+            }
+            const r = router(routes);
+
+            const resp = await r.handle({
+                method: 'GET',
+                uri: 'stuff/before/resource/123/sub/456/stuff/after',
+                body: undefined,
+                headers: {},
+            });
+
+            expect(resp.body).eq('wildcards: stuff/before stuff/after')
+
+            await routes.wildcard.handler.handle({
+                method: 'GET',
+                // doesn't need to have stuff before and after to match
+                uri: '/resource/123/sub/456/',
+                body: undefined,
+                headers: {},
+            });
+
+            await routes.wildcard.handler.handle({
+                method: 'GET',
+                // @ts-expect-error - but does need to fulfil the basic contract
+                uri: '/resource/123/sub',
+                body: undefined,
+                headers: {},
+            });
+        })
     })
 
-    it('build a type-safe request', async () => {
-        const typeSafeRequest = routes.getResource.request(
-            'GET',
-            '/resource/123/sub/456?q1=v1&q2=v2',
-            undefined,
-            {"content-type": "text/csv"}
-        );
-        expect(typeSafeRequest).deep.eq({
-            "body": undefined,
-            "headers": {
-                "content-type": "text/csv",
-            },
-            "method": "GET",
-            "uri": "/resource/123/sub/456?q1=v1&q2=v2"
+    describe('routing logic of router', () => {
+        it('not found default', async () => {
+            const r = router({
+                getResource: get('/resource', undefined, {
+                    handle: async (req) => {
+                        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                    }
+                }, {"content-type": "text/csv"} as const)
+            });
+            const res = await r.handle(h22p.request({method: 'GET', uri: '/not/found'}))
+            expect(res.status).eq(404);
+            expect(await Body.text(res.body)).eq('Not found');
         })
-        const noQueryProvided = routes.getResource.request(
-            'GET',
-            // @ts-expect-error
-            '/resource/123/sub/456',
-            undefined,
-            {"content-type": "text/csv"}
-        );
-        const wrongMethod = routes.getResource.request(
-            // @ts-expect-error
-            'POST',
-            '/resource/123/sub?q1=v1&q2=v2',
-            undefined,
-            {"content-type": "text/csv"}
-        );
-        const wrongUri = routes.getResource.request(
-            'GET',
-            // @ts-expect-error
-            '/resource/123/sub?q1=v1&q2=v2',
-            undefined,
-            {"content-type": "text/csv"}
-        );
-        const wrongBody = routes.getResource.request(
-            'GET',
-            '/resource/123/sub/456?q1=v1&q2=v2',
-            // we should be @ts-expect-error 'ing for a body when we want undefined
-            // but for some reason TS think it's an unused @ts-expect-error ....
-            {foo: {bar: 123}},
-            {"content-type": "text/csv"}
-        );
-        const emptyHeaders = routes.getResource.request(
-            'GET',
-            '/resource/123/sub/456?q1=v1&q2=v2',
-            undefined,
-            // @ts-expect-error
-            {}
-        );
-        const wrongHeaders = routes.getResource.request(
-            'GET',
-            '/resource/123/sub/456?q1=v1&q2=v2',
-            undefined,
-            // @ts-expect-error
-            {"content-type": "text/html"}
-        );
-    });
 
-    it('handle json body', async () => {
-        await routes.postJsonResource.handler.handle({
-            method: 'POST',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            // @ts-expect-error -- not a string body
-            body: {foo: {bar: 'json'}},
-            headers: {"content-type": "text/csv"},
-        });
-        const response = await routes.postJsonResource.handler.handle({
-            method: 'POST',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            body: {foo: {baz: 'json'}},
-            headers: {"content-type": "text/csv"},
-        });
-        response.body.quux
-        // @ts-expect-error -- foo does not exist on type body
-        response.body.foo
-    });
+        it('simple route', async () => {
+            const r = router({
+                getResource: get('/', undefined, {
+                    handle: async (req) => {
+                        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                    }
+                }, {"content-type": "text/csv"} as const)
+            });
+            const res = await r.handle(h22p.request({method: 'GET', uri: '/'}))
+            expect(res.status).eq(200);
+            expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
+        })
 
-    it('handle string body', async () => {
-        await routes.postStringResource.handler.handle({
-            method: 'POST',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            // @ts-expect-error -- not a string body
-            body: {foo: {bar: 'json'}},
-            headers: {"content-type": "text/csv"},
-        });
-        const response = await routes.postStringResource.handler.handle({
-            method: 'POST',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            // @ts-expect-error -- not a string body
-            body: 'any thing',
-            headers: {"content-type": "text/csv"},
-        });
-        response.body.slice
-        // @ts-expect-error -- foo does not exist on type body
-        response.body.foo
-    });
-
-    it('handle stream body', async () => {
-        await routes.postStreamResource.handler.handle({
-            method: 'POST',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            // @ts-expect-error -- not a stream body
-            body: 'string',
-            headers: {"content-type": "text/csv"},
-        });
-        const response = await routes.postStreamResource.handler.handle({
-            method: 'POST',
-            uri: '/resource/123/sub/456?q1=v1&q2=v2',
-            body: stream.Readable.from('any thing'),
-            headers: {"content-type": "text/csv"},
-        });
-        response.body.read
-        // @ts-expect-error -- foo does not exist on type body
-        response.body.foo
-    });
-
-    it('wildcard match', async () => {
-        await routes.wildcard.handler.handle({
-            method: 'GET',
-            uri: 'stuff/before/resource/123/sub/456/stuff/after',
-            body: undefined,
-            headers: {},
-        });
-
-        await routes.wildcard.handler.handle({
-            method: 'GET',
-            // doesn't need to have stuff before and after to match
-            uri: '/resource/123/sub/456/',
-            body: undefined,
-            headers: {},
-        });
-
-        await routes.wildcard.handler.handle({
-            method: 'GET',
-            // @ts-expect-error - but does need to fulfil the basic contract
-            uri: '/resource/123/sub',
-            body: undefined,
-            headers: {},
-        });
-    });
+        it('path param', async () => {
+            const rs = {
+                getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+                    handle: async (req) => {
+                        const path = req.vars?.path;
+                        return {status: 200, body: `Hello ${path?.id} ${path?.subId}`, headers: {"foo": "bar"}}
+                    }
+                }, {"content-type": "text/csv"} as const)
+            };
+            const r = router(rs);
+            const res = await r.handle(h22p.get('/resource/123/sub/456'))
+            expect(res.status).eq(200);
+            expect(await Body.text(res.body)).eq('Hello 123 456');
+        })
+    })
 
     it('produces openAPI spec', async () => {
         const routes = {

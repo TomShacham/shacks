@@ -24,7 +24,7 @@ describe('query', () => {
     });
 
     it('handle undefined', () => {
-        const parsedParams = UrlEncodedMessage.parse(undefined);
+        const parsedParams = UrlEncodedMessage.parse(undefined!);
         expect(parsedParams).to.deep.equal({});
     });
 

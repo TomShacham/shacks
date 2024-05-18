@@ -1,86 +1,9 @@
-import {expect} from "chai";
-import {Body, h22p, router, URI} from "../src";
-import {get} from "./router3.spec";
+import {router} from "../src";
 
 describe('router', () => {
-    it('not found default', async () => {
-        const r = router({
-            getResource: get('/resource', undefined, {
-                handle: async (req) => {
-                    return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-                }
-            }, {"content-type": "text/csv"} as const)
-        });
-        const res = await r.handle(h22p.request({method: 'GET', uri: '/not/found'}))
-        expect(res.status).eq(404);
-        expect(await Body.text(res.body)).eq('Not found');
-    })
 
-    it('simple route', async () => {
-        const r = router({
-            getResource: get('/', undefined, {
-                handle: async (req) => {
-                    return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-                }
-            }, {"content-type": "text/csv"} as const)
-        });
-        const res = await r.handle(h22p.request({method: 'GET', uri: '/'}))
-        expect(res.status).eq(200);
-        expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
-    })
 
-    it('path param', async () => {
-        const r = router({
-            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
-                handle: async (req) => {
-                    const u = URI.parse(req.uri);
-                    return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-                }
-            }, {"content-type": "text/csv"} as const)
-        });
-        const res = await r.handle(h22p.get('/resource/123/sub/456'))
-        expect(res.status).eq(200);
-        expect(await Body.text(res.body)).eq('Hello 123 456');
-    })
 
-    // it('wildcard in path', async () => {
-    //     const router = new Router([
-    //         read()('GET', "*/resource/*", async (req) => {
-    //             const params = req.vars.path;
-    //             return h22p.response({status: 200, body: `Hello ${req.vars.wildcards.join(' ')}`})
-    //         })
-    //     ]);
-    //     const res = await router.handle(h22p.get('bingo/bongo/resource/hanky/panky'))
-    //     expect(res.status).eq(200);
-    //     expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky');
-    // })
-    //
-    // it('wildcard in middle of path', async () => {
-    //     const router = new Router([
-    //         read()('GET', "*/resource/*/more", async (req) => {
-    //             const params = req.vars.path;
-    //             return h22p.response({status: 200, body: `Hello ${req.vars.wildcards.join(' ')} more`})
-    //         })
-    //     ]);
-    //     const res = await router.handle(h22p.get('bingo/bongo/resource/hanky/panky/tinky/tanky/more'))
-    //     expect(res.status).eq(200);
-    //     expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky/tinky/tanky more');
-    // })
-    //
-    // it('wildcard with path params', async () => {
-    //     const router = new Router([
-    //         read()('GET', "*/resource/{id}/sub/{subId}/*", async (req) => {
-    //             const params = req.vars.path;
-    //             return h22p.response({
-    //                 status: 200,
-    //                 body: `Hello ${req.vars.wildcards.join(' ')} ${params.id} ${params.subId}`
-    //             })
-    //         })
-    //     ]);
-    //     const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky'))
-    //     expect(res.status).eq(200);
-    //     expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456');
-    // })
     //
     // it('wildcard with path params and query params', async () => {
     //     const router = new Router([
