@@ -29,6 +29,8 @@ Design choices:
 
 - open api spec generation
   - type-safe routing refactor
+  - make Uri.parse and Query.parse type safe (i.e. if string coming in is /foo/?q1=${string} then it guarantees it's
+    there ??
 - http client using fetch (browser) so we can test e2e in memory
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$

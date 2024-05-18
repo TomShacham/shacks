@@ -19,7 +19,7 @@ describe('body', () => {
     describe('Body.form', () => {
         it('throws if header is not present', async () => {
             try {
-                const form = await Body.form(h22p.post('/', {}, 'name=tom&pic=plom'))
+                const form = await Body.form(h22p.post('/', 'name=tom&pic=plom', {}))
             } catch (e) {
                 expect((e as Error).message).eq('Content type is not application/x-www-form-urlencoded so bailing on parsing form')
             }
@@ -27,7 +27,7 @@ describe('body', () => {
 
         it('parses application/x-www-form-urlencoded', async () => {
             const form = await Body.form(
-                h22p.post('/', {"content-type": "application/x-www-form-urlencoded"}, 'name=tom&pic=plom')
+                h22p.post('/', 'name=tom&pic=plom', {"content-type": "application/x-www-form-urlencoded"})
             )
             expect(form).deep.eq({"name": "tom", "pic": "plom"})
         });
@@ -36,9 +36,7 @@ describe('body', () => {
             const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60%2B';
 
             const form = await Body.form(
-                h22p.post('/',
-                    {"content-type": "application/x-www-form-urlencoded"},
-                    `name=tom&pic=${specialChars}`)
+                h22p.post('/', `name=tom&pic=${specialChars}`, {"content-type": "application/x-www-form-urlencoded"})
             )
 
             expect(form).deep.eq({
@@ -49,9 +47,7 @@ describe('body', () => {
 
         it('handles plus - turns into a space', async () => {
             const form = await Body.form(
-                h22p.post('/',
-                    {"content-type": "application/x-www-form-urlencoded"},
-                    `name=t+o%2Bm`)
+                h22p.post('/', `name=t+o%2Bm`, {"content-type": "application/x-www-form-urlencoded"})
             )
 
             expect(form).deep.eq({
@@ -65,9 +61,7 @@ describe('body', () => {
             //   or b) you send a response header of content-type "text/html; charset=utf-8"
 
             const form = await Body.form(
-                h22p.post('/',
-                    {"content-type": "application/x-www-form-urlencoded"},
-                    stringWithUnicodeChar)
+                h22p.post('/', stringWithUnicodeChar, {"content-type": "application/x-www-form-urlencoded"})
             )
 
             expect(form).deep.eq({

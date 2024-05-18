@@ -1,24 +1,14 @@
-import {
-    h22p,
-    HttpHandler,
-    HttpRequest,
-    HttpRequestHeaders,
-    HttpResponse,
-    isReadMethod,
-    MessageBody,
-    Method
-} from "./interface";
+import {h22p, HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, isReadMethod} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
-import {TypedHttpRequest} from "./router";
 import stream from "node:stream";
 
 export class HttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
     }
 
-    handle(req: HttpRequest | TypedHttpRequest<any, MessageBody<any>, string, Method, HttpRequestHeaders>): Promise<HttpResponse> {
-        const parsedUri = URI.of(this.baseUrl + req.path)
+    handle(req: HttpRequest): Promise<HttpResponse> {
+        const parsedUri = URI.parse(this.baseUrl + req.uri)
         return new Promise(async resolve => {
             const options = {
                 hostname: parsedUri.hostname,

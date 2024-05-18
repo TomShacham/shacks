@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {JsonBody, Method} from "../src";
+import {HttpMessageBody, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
 
@@ -22,57 +22,36 @@ type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
     ? `${backToPath<Path>}?${toQueryString<Query>}`
     : backToPath<Part>;
 
-type Headers = { [key: string]: string | undefined };
-type MessageBody = stream.Readable | JsonBody | string | undefined;
-type BodyType<M extends MessageBody> = M extends infer J extends JsonBody
-    ? J
-    : M extends stream.Readable
-        ? stream.Readable
-        : M extends string
-            ? string : undefined;
-type req<
-    Mtd extends Method,
-    Uri extends string,
-    TBody extends MessageBody,
-    Hds extends Headers
-> = {
-    method: Mtd,
-    uri: Uri,
-    body: BodyType<TBody>,
-    headers: Hds,
-}
-type res<
-    TBody extends MessageBody,
-    Hds extends Headers,
-    Status extends number,
-> = {
-    body: TBody;
-    status: number,
-    headers: Headers
-}
-
 type handler<
     Mtd extends Method,
     Uri extends string,
-    ReqB extends MessageBody,
-    ReqHds extends Headers,
-    Res extends res<MessageBody, Headers, number>
+    ReqB extends HttpMessageBody,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse
 > = {
-    handle: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
+    handle: (req: HttpRequest<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
 }
 
-function get<
+export type Route<
+    Mtd extends Method,
     Uri extends string,
     ReqB extends undefined,
-    ReqHds extends Headers,
-    Res extends res<MessageBody, Headers, number>
->(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): {
-    handler: handler<'GET', fullPath<Uri>, ReqB, ReqHds, Res>,
-    request: (mtd: 'GET', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
-    _req: req<'GET', Uri, undefined, ReqHds>
-} {
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse
+> = {
+    request: (mtd: Mtd, uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<Mtd, fullPath<Uri>, ReqB, ReqHds>
+    handler: handler<Mtd, fullPath<Uri>, ReqB, ReqHds, Res>,
+    _req: HttpRequest<Mtd, Uri, undefined, ReqHds>
+};
+
+export function get<
+    Uri extends string,
+    ReqB extends undefined,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse
+>(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'GET', Uri, ReqB, ReqHds, Res> {
     return {
-        handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
+        handler: {handle: (req: HttpRequest<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         _req: ({method: 'GET', uri, body, headers: headers ?? {} as ReqHds})
     }
@@ -80,15 +59,15 @@ function get<
 
 function post<
     Uri extends string,
-    ReqB extends MessageBody,
-    ReqHds extends Headers,
-    Res extends res<MessageBody, Headers, number>
+    ReqB extends HttpMessageBody,
+    ReqHds extends HttpRequestHeaders,
+    Res extends HttpResponse,
 >(uri: Uri, body: ReqB, handler: handler<'POST', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): {
     handler: handler<'POST', fullPath<Uri>, ReqB, ReqHds, Res>,
-    req: (mtd: 'POST', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'POST', fullPath<Uri>, ReqB, ReqHds>
+    req: (mtd: 'POST', uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<'POST', fullPath<Uri>, ReqB, ReqHds>
 } {
     return {
-        handler: {handle: (req: req<'POST', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
+        handler: {handle: (req: HttpRequest<'POST', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
         req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers})
     }
 }
@@ -173,39 +152,42 @@ describe('test', () => {
             // @ts-expect-error
             '/resource/123/sub/456',
             undefined,
-            {}
+            {"content-type": "text/csv"}
         );
         const wrongMethod = routes.getResource.request(
             // @ts-expect-error
             'POST',
             '/resource/123/sub?q1=v1&q2=v2',
             undefined,
-            {}
+            {"content-type": "text/csv"}
         );
         const wrongUri = routes.getResource.request(
             'GET',
             // @ts-expect-error
             '/resource/123/sub?q1=v1&q2=v2',
             undefined,
-            {}
+            {"content-type": "text/csv"}
         );
         const wrongBody = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
-            // for some reason, @ts-expect-error blows up here even though there is an error that we are expecting!
+            // we should be @ts-expect-error 'ing for a body when we want undefined
+            // but for some reason TS think it's an unused @ts-expect-error ....
             {foo: {bar: 123}},
-            {}
+            {"content-type": "text/csv"}
         );
         const emptyHeaders = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
             undefined,
+            // @ts-expect-error
             {}
         );
         const wrongHeaders = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
             undefined,
+            // @ts-expect-error
             {"content-type": "text/html"}
         );
     });
@@ -240,6 +222,7 @@ describe('test', () => {
         const response = await routes.postStringResource.handler.handle({
             method: 'POST',
             uri: '/resource/123/sub/456?q1=v1&q2=v2',
+            // @ts-expect-error -- not a string body
             body: 'any thing',
             headers: {"content-type": "text/csv"},
         });
@@ -313,6 +296,10 @@ describe('test', () => {
             headers: {"content-type": 'text/csv'}
         })
 
+        if (foo.status === 200) {
+            // Todo make this not compile ;(
+            foo.body.baz
+        }
 
         expect(openApiSchema(routes)).deep.eq(output)
 

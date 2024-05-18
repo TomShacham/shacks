@@ -18,7 +18,7 @@ describe('client / server', function () {
         try {
             const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `/`,
+                uri: `/`,
                 headers: {},
                 body: 'blah'
             });
@@ -26,7 +26,7 @@ describe('client / server', function () {
             expect(response.statusText).to.eq("Created");
             expect(response.headers["host"]).to.eq(`localhost:${port}`)
             let body = '';
-            for await (const chunk of response.body) {
+            for await (const chunk of (response.body as stream.Readable)) {
                 body += chunk
             }
             expect(body).to.eq(`blah`);
@@ -57,7 +57,7 @@ describe('client / server', function () {
             const fileStream = fs.createReadStream(filePath)
             const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `/`,
+                uri: `/`,
                 headers: {},
                 body: fileStream
             });
@@ -79,7 +79,7 @@ describe('client / server', function () {
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 const responseFromProxy = await h22p.client(`http://localhost:${proxyPort}`).handle({
                     method: "POST",
-                    path: `/`,
+                    uri: `/`,
                     body: req.body, // file read stream
                     headers: {}
                 })
@@ -113,13 +113,13 @@ describe('client / server', function () {
             const fileStream = fs.createReadStream(filePath)
             const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `/`,
+                uri: `/`,
                 headers: {},
                 body: fileStream
             });
             expect(response.status).to.eq(200)
             let text = ''
-            for await (const chunk of response.body ?? []) {
+            for await (const chunk of (response.body as stream.Readable) ?? []) {
                 text += chunk.toString()
             }
             // compressed
@@ -162,7 +162,7 @@ Upload test file
 `
             const response = await h22p.client(`http://localhost:${port}`).handle({
                 method: 'POST',
-                path: `/`,
+                uri: `/`,
                 headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
                 body: payload
             });

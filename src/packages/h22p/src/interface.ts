@@ -2,23 +2,11 @@ import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
 import * as stream from "stream";
 import {HttpClient} from "./client";
 import {httpServer, HttpServer} from "./server";
-import {TypedHttpRequest} from "./router";
 import {h22pStream} from "./body";
 import {Status} from "./status";
 
 export interface HttpHandler<Req extends HttpRequest = HttpRequest, Res extends HttpResponse = HttpResponse> {
     handle(req: Req): Promise<Res>
-}
-
-export interface TypedHttpHandler<
-    B extends HttpMessageBody,
-    Msg extends MessageBody<B>,
-    Path extends string = string,
-    M extends Method = Method,
-    Hds extends HttpRequestHeaders = HttpRequestHeaders,
-    Res extends HttpMessageBody = any,
-> {
-    handle(req: TypedHttpRequest<B, Msg, Path, M, Hds>): Promise<HttpResponse<Res>>
 }
 
 // non json
@@ -70,25 +58,27 @@ export type HttpResponseHeaders = OutgoingHttpHeaders
 export type HttpHeaders = HttpRequestHeaders | HttpResponseHeaders;
 
 export interface HttpRequest<
-    B extends HttpMessageBody = any,
-    Msg extends MessageBody<B> = MessageBody<B>,
-    P extends string = string,
-    M extends Method = Method
+    Mtd extends Method = Method,
+    Uri extends string = string,
+    ReqB extends HttpMessageBody = any,
+    ReqHds extends HttpRequestHeaders = HttpRequestHeaders
 > {
-    method: M
-    headers: HttpRequestHeaders
-    path: P
+    method: Mtd
+    headers: ReqHds
+    uri: Uri
     version?: string
-    body: Msg
+    body: ReqB
     trailers?: NodeJS.Dict<string>
 }
 
 export interface HttpResponse<
-    B extends HttpMessageBody = any,
+    B extends HttpMessageBody = HttpMessageBody,
+    Status extends number = number,
+    ResHds extends HttpResponseHeaders = HttpResponseHeaders
 > {
-    headers: HttpResponseHeaders
-    status: number
-    body: B
+    headers: ResHds
+    status: Status
+    body: MessageBody<B>
     statusText?: string
     trailers?: NodeJS.Dict<string>
 }
@@ -181,7 +171,7 @@ export class h22p {
     }
 
     static request(req?: Partial<HttpRequest>): HttpRequest {
-        return {method: 'GET', path: '/', headers: {}, body: undefined, ...req}
+        return {method: 'GET', uri: '/', headers: {}, body: undefined, ...req}
     }
 
     static client(baseUrl: string = ''): HttpClient {
@@ -193,40 +183,56 @@ export class h22p {
     }
 
     static get(path: string = '/', headers: HttpRequestHeaders = {}): HttpRequest {
-        return {method: 'GET', body: undefined, path, headers}
+        return {method: 'GET', body: undefined, uri: path, headers}
     }
 
-    static post<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
-        return {method: 'POST', body: body, path, headers}
+    static post<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path = '/' as Uri, body: B, headers: ReqHds = {} as ReqHds): HttpRequest<"POST", Uri, B, ReqHds> {
+        return {method: 'POST', body: body, uri: path, headers}
     }
 
-    static put<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
-        return {method: 'PUT', body: body, path, headers}
+    static put<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path = '/' as Uri, body: B, headers: ReqHds = {} as ReqHds): HttpRequest<"PUT", Uri, B, ReqHds> {
+        return {method: 'PUT', body: body, uri: path, headers}
     }
 
-    static patch<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
-        return {method: 'PATCH', body: body, path, headers}
+    static patch<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path = '/' as Uri, body: B, headers: ReqHds = {} as ReqHds): HttpRequest<"PATCH", Uri, B, ReqHds> {
+        return {method: 'PATCH', body: body, uri: path, headers}
     }
 
-    static delete<B extends HttpMessageBody>(path = '/', headers: HttpRequestHeaders = {}, body: B): HttpRequest<B> {
+    static delete<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path = '/' as Uri, body: B, headers: ReqHds = {} as ReqHds): HttpRequest<"DELETE", Uri, B, ReqHds> {
         /*
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...
          */
         if (isSimpleBody(body)) {
             const contentLength = body.length.toString();
-            return {method: 'DELETE', body: body, path, headers: {...headers, "content-length": contentLength}}
+            return {method: 'DELETE', body: body, uri: path, headers: {...headers, "content-length": contentLength}}
         } else {
-            return {method: 'DELETE', body: body, path, headers: {...headers, "transfer-encoding": "chunked"}}
+            return {method: 'DELETE', body: body, uri: path, headers: {...headers, "transfer-encoding": "chunked"}}
         }
     }
 
     static options(path = '/', headers: HttpRequestHeaders = {}): HttpRequest {
-        return {method: 'OPTIONS', path, headers, body: undefined}
+        return {method: 'OPTIONS', uri: path, headers, body: undefined}
     }
 
     static head(path = '/', headers: HttpRequestHeaders = {}): HttpRequest {
-        return {method: 'HEAD', path, headers, body: undefined}
+        return {method: 'HEAD', uri: path, headers, body: undefined}
     }
 
     static Status = Status;

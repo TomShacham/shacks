@@ -10,7 +10,7 @@ export interface Uri {
 }
 
 export class URI {
-    static of(from: string): Uri {
+    static parse(from: string): Uri {
         const uriRegex = /^(?:(?<protocol>https?:)\/\/)?(?:(?<username>[^:@]+)(?::(?<password>[^@]+))?@)?(?<hostname>[^\/:]+)?(?::(?<port>\d+))?(?<path>\/[^?#]*)?(?<query>\?[^#]*)?(?<fragment>#.*)?$/;
 
         const match = uriRegex.exec(from);

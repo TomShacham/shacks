@@ -30,7 +30,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
             body: nodeReq,
             headers,
             method: method as Method,
-            path: url
+            uri: url
         }));
         if (method?.toLowerCase() === 'head') setDefaultContentLengthAndType(res);
         nodeResponse.writeHead(res.status, res.headers)

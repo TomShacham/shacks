@@ -3,7 +3,7 @@ import {URI} from "../src";
 
 describe('uri', () => {
     it('doesnt blow up if not a URI', () => {
-        const match = URI.of('');
+        const match = URI.parse('');
 
         expect(match).deep.eq({
             "fragment": undefined,
@@ -19,7 +19,7 @@ describe('uri', () => {
 
     it('should parse path by itself', () => {
         const uriString = '/path/to/resource?query1=value1&query2=value2#fragment';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.ok(match);
         assert.strictEqual(match.protocol, undefined);
@@ -32,7 +32,7 @@ describe('uri', () => {
 
     it('should parse URI with protocol, hostname, and path', () => {
         const uriString = 'http://example.com/path/to/resource';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.ok(match);
         assert.strictEqual(match.protocol, 'http:');
@@ -45,7 +45,7 @@ describe('uri', () => {
 
     it('should parse URI with protocol, hostname, port, and path', () => {
         const uriString = 'https://example.com:8080/path/to/resource';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.ok(match);
         assert.strictEqual(match.protocol, 'https:');
@@ -58,7 +58,7 @@ describe('uri', () => {
 
     it('should parse URI with query string', () => {
         const uriString = 'http://example.com/path/to/resource?param1=value1&param2=value2';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.ok(match);
         assert.strictEqual(match.protocol, 'http:');
@@ -71,7 +71,7 @@ describe('uri', () => {
 
     it('should parse URI with fragment', () => {
         const uriString = 'http://example.com/path/to/resource#section';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.ok(match);
         assert.strictEqual(match.protocol, 'http:');
@@ -85,7 +85,7 @@ describe('uri', () => {
 
     it('should parse URI with authority', () => {
         const uriString = 'http://user:pass@example.com/path/to/resource#section';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.ok(match);
         assert.strictEqual(match.protocol, 'http:');
@@ -100,7 +100,7 @@ describe('uri', () => {
 
     it('should parse URI with all components', () => {
         const uriString = 'http://user:password@example.com:8080/path/to/resource?param1=value1&param2=value2#section';
-        const match = URI.of(uriString);
+        const match = URI.parse(uriString);
 
         assert.strictEqual(match.protocol, 'http:');
         assert.strictEqual(match.username, 'user');
@@ -115,32 +115,32 @@ describe('uri', () => {
 
     it('should be reversible without authority', () => {
         const string = 'http://example.com:8080/path/to/resource?param1=value1&param2=value2#section';
-        assert.strictEqual(URI.toString(URI.of(string)), string);
+        assert.strictEqual(URI.toString(URI.parse(string)), string);
     })
 
     it('should be reversible without path', () => {
         const string = 'http://user:password@example.com:8080?param1=value1&param2=value2#section';
-        assert.strictEqual(URI.toString(URI.of(string)), string);
+        assert.strictEqual(URI.toString(URI.parse(string)), string);
     })
 
     it('should be reversible without query', () => {
         const string = 'http://example.com:8080/path/to/resource#section';
-        assert.strictEqual(URI.toString(URI.of(string)), string);
+        assert.strictEqual(URI.toString(URI.parse(string)), string);
     })
 
     it('should be reversible without fragment', () => {
         const string = 'http://example.com:8080/path/to/resource?param1=value1&param2=value2';
-        assert.strictEqual(URI.toString(URI.of(string)), string);
+        assert.strictEqual(URI.toString(URI.parse(string)), string);
     })
 
     it('should be reversible with trailing slash', () => {
         const string = 'http://example.com:8080/path/to/resource/?param1=value1&param2=value2';
-        assert.strictEqual(URI.toString(URI.of(string)), string);
+        assert.strictEqual(URI.toString(URI.parse(string)), string);
     })
 
     it('should be reversible', () => {
         const string = 'http://user:password@example.com:8080/path/to/resource?param1=value1&param2=value2#section';
-        assert.strictEqual(URI.toString(URI.of(string)), string);
+        assert.strictEqual(URI.toString(URI.parse(string)), string);
     })
 
     it('foo', () => {
