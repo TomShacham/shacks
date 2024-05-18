@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {JsonBody, Method} from "../src";
 import stream from "stream";
+import {doesNotTypeCheck, typeChecks} from "./helpers";
 
 type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
     ? `${Q1}=${string}&${toQueryString<Q2>}`
@@ -16,7 +17,6 @@ type expandPathParameterOrWildcard<Part> = Part extends `{${infer Name}}`
 type backToPath<Path> = Path extends `${infer PartA}/${infer PartB}`
     ? `${expandPathParameterOrWildcard<PartA>}/${backToPath<PartB>}`
     : expandPathParameterOrWildcard<Path>;
-type withoutTrailingSlash<Path> = Path extends `${infer Part}/` ? Part : Path;
 
 type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
     ? `${backToPath<Path>}?${toQueryString<Query>}`
@@ -41,9 +41,13 @@ type req<
     body: BodyType<TBody>,
     headers: Hds,
 }
-type res<TBody extends MessageBody, Hds extends Headers> = {
+type res<
+    TBody extends MessageBody,
+    Hds extends Headers,
+    Status extends number,
+> = {
     body: TBody;
-    status: number,
+    status: Status,
     headers: Hds
 }
 
@@ -54,8 +58,10 @@ type handler<
     ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
+    Status extends number,
+
 > = {
-    handle: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds>>
+    handle: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds, Status>>
 }
 
 function handle<
@@ -65,7 +71,8 @@ function handle<
     ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
->(fn: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds>>): handler<Mtd, Uri, ReqB, ResB, ReqHds, ResHds> {
+    Status extends number,
+>(fn: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds, Status>>): handler<Mtd, Uri, ReqB, ResB, ReqHds, ResHds, Status> {
     return {handle: fn}
 }
 
@@ -75,13 +82,14 @@ function get<
     ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
->(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>, headers?: ReqHds): {
-    handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>,
+    Status extends number,
+>(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>, headers?: ReqHds): {
+    handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>,
     req: (mtd: 'GET', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
 } {
     return {
         handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
-        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers ?? {}})
+        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers})
     }
 }
 
@@ -91,13 +99,14 @@ function post<
     ResB extends MessageBody,
     ReqHds extends Headers,
     ResHds extends Headers,
->(uri: Uri, body: ReqB, handler: handler<'POST', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>, headers?: ReqHds): {
-    handler: handler<'POST', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds>,
+    Status extends number,
+>(uri: Uri, body: ReqB, handler: handler<'POST', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>, headers?: ReqHds): {
+    handler: handler<'POST', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>,
     req: (mtd: 'POST', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'POST', fullPath<Uri>, ReqB, ReqHds>
 } {
     return {
         handler: {handle: (req: req<'POST', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
-        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers ?? {}})
+        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers})
     }
 }
 
@@ -124,10 +133,10 @@ const routes = {
     })),
 };
 
-// todo get doesnt have a req body
-//   other methods like post
+// todo put, patch etc
 // Todo routing based off routes
 //  open api docs based off routes
+//    - how do we do responses :S
 //  stitch back into main
 
 describe('test', () => {
@@ -141,6 +150,10 @@ describe('test', () => {
         response.body.bar
         // @ts-expect-error -- foo does not exist on type body
         response.body.foo
+
+        // status comes through exactly typed i.e. 200
+        typeChecks(true as (typeof response.status extends 200 ? true : false));
+        doesNotTypeCheck(false as (typeof response.status extends 201 ? true : false));
 
         response.headers.foo
         // @ts-expect-error -- foo does not exist on type body
@@ -179,7 +192,7 @@ describe('test', () => {
         const wrongBody = routes.getResource.req(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
-            // @ts-expect-error - should be undefined
+            // @ts-expect-error
             {foo: {bar: 123}},
             {}
         );
@@ -280,6 +293,124 @@ describe('test', () => {
             headers: {},
         });
     });
+
+    it('produces openAPI spec', async () => {
+        const routes = {
+            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, handle(async (req) => {
+                const u = req.uri
+                return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+            }), {"content-type": "text/csv"} as const),
+        }
+
+        expect(openApiSchema(routes)).deep.eq(output)
+
+        function openApiSchema(rs: typeof routes) {
+            const paths = Object.values(rs);
+            console.log(paths);
+            return {
+                "paths": paths
+            }
+        }
+
+        function output() {
+            return {
+                "openapi": "3.0.3",
+                "info": {
+                    "title": "Example API",
+                    "description": "This is a sample API to demonstrate OpenAPI documentation.",
+                    "version": "1.0.0"
+                },
+                "servers": [
+                    {
+                        "url": "https://api.example.com/v1",
+                        "description": "Production server"
+                    }
+                ],
+                "paths": {
+                    "/users/{userId}": {
+                        "get": {
+                            "summary": "Get a user by ID",
+                            "operationId": "getUserById",
+                            "tags": ["Users"],
+                            "parameters": [
+                                {
+                                    "name": "userId",
+                                    "in": "path",
+                                    "required": true,
+                                    "description": "ID of the user to retrieve",
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "description": "A user object",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "$ref": "#/components/schemas/User"
+                                            }
+                                        }
+                                    }
+                                },
+                                "404": {
+                                    "description": "User not found"
+                                }
+                            }
+                        },
+                        "delete": {
+                            "summary": "Delete a user by ID",
+                            "operationId": "deleteUser",
+                            "tags": ["Users"],
+                            "parameters": [
+                                {
+                                    "name": "userId",
+                                    "in": "path",
+                                    "required": true,
+                                    "description": "ID of the user to delete",
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "204": {
+                                    "description": "User deleted successfully"
+                                },
+                                "404": {
+                                    "description": "User not found"
+                                }
+                            }
+                        }
+                    }
+                },
+                "components": {
+                    "schemas": {
+                        "User": {
+                            "type": "object",
+                            "required": ["id", "name", "email"],
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "example": "12345"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "John Doe"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "format": "email",
+                                    "example": "john.doe@example.com"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
 
 })
 
