@@ -18,11 +18,11 @@
     "noEmitOnError": true
   },
   "include": [
-    "src/packages/**/*"
+    "src/packages/**/*",
+    "src/**/*.spec.ts"
   ],
   "exclude": [
     "node_modules",
-    "src/app-example",
-    "src/**/test"
+    "src/app-example"
   ]
 }

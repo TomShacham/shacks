@@ -42,7 +42,7 @@ export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
 export type DictString = { [key: string]: string };
 export type JsonArray = JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
-export type JsonValue = string | number | boolean | null | JsonArray | JsonObject;
+export type JsonValue = string | number | boolean | null | undefined | JsonArray | JsonObject;
 export type JsonBody = JsonArray | JsonObject;
 export type BodyType<B extends HttpMessageBody> = B extends infer J extends JsonBody
     ? B

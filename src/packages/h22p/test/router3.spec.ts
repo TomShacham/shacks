@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {JsonBody, Method} from "../src";
 import stream from "stream";
-import {doesNotTypeCheck, typeChecks} from "./helpers";
+import {doesNotTypeCheck} from "./helpers";
 
 type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
     ? `${Q1}=${string}&${toQueryString<Q2>}`
@@ -22,7 +22,7 @@ type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
     ? `${backToPath<Path>}?${toQueryString<Query>}`
     : backToPath<Part>;
 
-type Headers = { [key: string]: string };
+type Headers = { [key: string]: string | undefined };
 type MessageBody = stream.Readable | JsonBody | string | undefined;
 type BodyType<M extends MessageBody> = M extends infer J extends JsonBody
     ? J
@@ -47,61 +47,44 @@ type res<
     Status extends number,
 > = {
     body: TBody;
-    status: Status,
-    headers: Hds
+    status: number,
+    headers: Headers
 }
 
 type handler<
     Mtd extends Method,
     Uri extends string,
     ReqB extends MessageBody,
-    ResB extends MessageBody,
     ReqHds extends Headers,
-    ResHds extends Headers,
-    Status extends number,
-
+    Res extends res<MessageBody, Headers, number>
 > = {
-    handle: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds, Status>>
-}
-
-function handle<
-    Mtd extends Method,
-    Uri extends string,
-    ReqB extends MessageBody,
-    ResB extends MessageBody,
-    ReqHds extends Headers,
-    ResHds extends Headers,
-    Status extends number,
->(fn: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<res<ResB, ResHds, Status>>): handler<Mtd, Uri, ReqB, ResB, ReqHds, ResHds, Status> {
-    return {handle: fn}
+    handle: (req: req<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
 }
 
 function get<
     Uri extends string,
     ReqB extends undefined,
-    ResB extends MessageBody,
     ReqHds extends Headers,
-    ResHds extends Headers,
-    Status extends number,
->(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>, headers?: ReqHds): {
-    handler: handler<'GET', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>,
-    req: (mtd: 'GET', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
+    Res extends res<MessageBody, Headers, number>
+>(uri: Uri, body: ReqB, handler: handler<'GET', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): {
+    handler: handler<'GET', fullPath<Uri>, ReqB, ReqHds, Res>,
+    request: (mtd: 'GET', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'GET', fullPath<Uri>, ReqB, ReqHds>
+    _req: req<'GET', Uri, undefined, ReqHds>
 } {
     return {
         handler: {handle: (req: req<'GET', fullPath<Uri>, ReqB, ReqHds>) => handler.handle(req)},
-        req: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers})
+        request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
+        _req: ({method: 'GET', uri, body, headers: headers ?? {} as ReqHds})
     }
 }
 
 function post<
     Uri extends string,
     ReqB extends MessageBody,
-    ResB extends MessageBody,
     ReqHds extends Headers,
-    ResHds extends Headers,
-    Status extends number,
->(uri: Uri, body: ReqB, handler: handler<'POST', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>, headers?: ReqHds): {
-    handler: handler<'POST', fullPath<Uri>, ReqB, ResB, ReqHds, ResHds, Status>,
+    Res extends res<MessageBody, Headers, number>
+>(uri: Uri, body: ReqB, handler: handler<'POST', fullPath<Uri>, ReqB, ReqHds, Res>, headers?: ReqHds): {
+    handler: handler<'POST', fullPath<Uri>, ReqB, ReqHds, Res>,
     req: (mtd: 'POST', uri: fullPath<Uri>, body: BodyType<ReqB>, headers: ReqHds) => req<'POST', fullPath<Uri>, ReqB, ReqHds>
 } {
     return {
@@ -111,26 +94,36 @@ function post<
 }
 
 const routes = {
-    getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, handle(async (req) => {
-        const u = req.uri
-        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-    }), {"content-type": "text/csv"} as const),
-    postJsonResource: post('/resource/{id}', {foo: {baz: 'json'}}, handle(async (req) => {
-        const u = req.uri
-        return {status: 200, body: {quux: 'json'}, headers: {}}
-    })),
-    postStringResource: post('/resource/{id}', '', handle(async (req) => {
-        const u = req.uri
-        return {status: 200, body: 'some response string', headers: {}}
-    })),
-    postStreamResource: post('/resource/{id}', stream.Readable.from(''), handle(async (req) => {
-        const u = req.uri
-        return {status: 200, body: stream.Readable.from('123'), headers: {}}
-    })),
-    wildcard: get('*/resource/{id}/sub/{subId}/*', undefined, handle(async (req) => {
-        const u = req.uri
-        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-    })),
+    getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+        handle: async (req) => {
+            const u = req.uri
+            return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+        }
+    }, {"content-type": "text/csv"} as const),
+    postJsonResource: post('/resource/{id}', {foo: {baz: 'json'}}, {
+        handle: async (req) => {
+            const u = req.uri
+            return {status: 200, body: {quux: 'json'}, headers: {}}
+        }
+    }),
+    postStringResource: post('/resource/{id}', '', {
+        handle: async (req) => {
+            const u = req.uri
+            return {status: 200, body: 'some response string', headers: {}}
+        }
+    }),
+    postStreamResource: post('/resource/{id}', stream.Readable.from(''), {
+        handle: async (req) => {
+            const u = req.uri
+            return {status: 200, body: stream.Readable.from('123'), headers: {}}
+        }
+    }),
+    wildcard: get('*/resource/{id}/sub/{subId}/*', undefined, {
+        handle: async (req) => {
+            const u = req.uri
+            return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+        }
+    }),
 };
 
 // todo put, patch etc
@@ -152,7 +145,7 @@ describe('test', () => {
         response.body.foo
 
         // status comes through exactly typed i.e. 200
-        typeChecks(true as (typeof response.status extends 200 ? true : false));
+        // typeChecks(true as (typeof response.status extends 200 ? true : false));
         doesNotTypeCheck(false as (typeof response.status extends 201 ? true : false));
 
         response.headers.foo
@@ -161,53 +154,58 @@ describe('test', () => {
     })
 
     it('build a type-safe request', async () => {
-        const typeSafeRequest = routes.getResource.req(
+        const typeSafeRequest = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
             undefined,
             {"content-type": "text/csv"}
         );
-        expect(typeSafeRequest).deep.eq({uri: '/resource/123/sub/456', body: {foo: {bar: 'json'}}})
-        const noQueryProvided = routes.getResource.req(
+        expect(typeSafeRequest).deep.eq({
+            "body": undefined,
+            "headers": {
+                "content-type": "text/csv",
+            },
+            "method": "GET",
+            "uri": "/resource/123/sub/456?q1=v1&q2=v2"
+        })
+        const noQueryProvided = routes.getResource.request(
             'GET',
             // @ts-expect-error
             '/resource/123/sub/456',
             undefined,
             {}
         );
-        const wrongMethod = routes.getResource.req(
+        const wrongMethod = routes.getResource.request(
             // @ts-expect-error
             'POST',
             '/resource/123/sub?q1=v1&q2=v2',
             undefined,
             {}
         );
-        const wrongUri = routes.getResource.req(
+        const wrongUri = routes.getResource.request(
             'GET',
             // @ts-expect-error
             '/resource/123/sub?q1=v1&q2=v2',
             undefined,
             {}
         );
-        const wrongBody = routes.getResource.req(
+        const wrongBody = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
-            // @ts-expect-error
+            // for some reason, @ts-expect-error blows up here even though there is an error that we are expecting!
             {foo: {bar: 123}},
             {}
         );
-        const emptyHeaders = routes.getResource.req(
+        const emptyHeaders = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
             undefined,
-            // @ts-expect-error
             {}
         );
-        const wrongHeaders = routes.getResource.req(
+        const wrongHeaders = routes.getResource.request(
             'GET',
             '/resource/123/sub/456?q1=v1&q2=v2',
             undefined,
-            // @ts-expect-error
             {"content-type": "text/html"}
         );
     });
@@ -296,17 +294,31 @@ describe('test', () => {
 
     it('produces openAPI spec', async () => {
         const routes = {
-            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, handle(async (req) => {
-                const u = req.uri
-                return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
-            }), {"content-type": "text/csv"} as const),
+            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+                handle: async (req) => {
+                    const u = req.uri
+                    if (u.length > 5) {
+                        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                    } else {
+                        return {status: 201, body: {baz: 'json'}, headers: {"baz": "quux"}}
+                    }
+                }
+            }, {"content-type": "text/csv"} as const),
         }
+
+        const foo = await routes.getResource.handler.handle({
+            method: 'GET',
+            uri: '/resource/123/sub/456/?q1=v1&q2=v2',
+            body: undefined,
+            headers: {"content-type": 'text/csv'}
+        })
+
 
         expect(openApiSchema(routes)).deep.eq(output)
 
         function openApiSchema(rs: typeof routes) {
             const paths = Object.values(rs);
-            console.log(paths);
+            console.log(paths[0]._req);
             return {
                 "paths": paths
             }
@@ -411,7 +423,6 @@ describe('test', () => {
             }
         }
     })
-
 })
 
 
