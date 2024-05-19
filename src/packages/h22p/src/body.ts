@@ -417,8 +417,10 @@ export function createReadable() {
 
 
 export class h22pStream<B extends HttpMessageBody> extends stream.Readable {
-    static of<B extends HttpMessageBody>(arg: B): B | stream.Readable {
-        if (isSimpleBody(arg)) {
+    static of<B extends HttpMessageBody>(arg: B): h22pStream<B> {
+        if (arg instanceof h22pStream) {
+            return arg
+        } else if (isSimpleBody(arg)) {
             return stream.Readable.from(arg)
         } else if (arg instanceof stream.Readable) {
             return arg

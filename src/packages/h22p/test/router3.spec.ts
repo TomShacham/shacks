@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Body, get, h22p, post, router} from "../src";
+import {Body, get, h22p, h22pStream, post, router} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
 
@@ -11,27 +11,51 @@ describe('test', () => {
     describe('type-safe routing', () => {
 
         const routes = {
-            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+            getResource: get('/resource/{id}/sub/{subId}?q1&q2', {
                 handle: async (req) => {
                     const u = req.uri
+                    try {
+                        const s = await Body.json(req.body);
+                        // @ts-expect-error - there is no .foo on undefined body
+                        s.foo
+                    } catch (e) {
+                        // SyntaxError: Unexpected end of JSON input
+                    }
                     return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                 }
             }, {"content-type": "text/csv"} as const),
             postJsonResource: post('/resource/{id}', {foo: {baz: 'json'}}, {
                 handle: async (req) => {
                     const u = req.uri
+                    const s = await Body.json(req.body);
+                    s.foo.baz
                     return {status: 200, body: {quux: 'json'}, headers: {}}
                 }
             }),
             postStringResource: post('/resource/{id}', '', {
                 handle: async (req) => {
                     const u = req.uri
+                    const s = await Body.text(req.body);
+                    s.slice
                     return {status: 200, body: 'some response string', headers: {}}
                 }
             }),
             postStreamResource: post('/resource/{id}', stream.Readable.from(''), {
                 handle: async (req) => {
                     const u = req.uri
+                    const s = await Body.json(req.body);
+                    // @ts-expect-error - I can't preserve a stream type and an h22pStream type cos theyre both stream.Readable ;(
+                    s.read
+
+                    return {status: 200, body: stream.Readable.from('123'), headers: {}}
+                }
+            }),
+            postH22pStreamResource: post('/resource/{id}', h22pStream.of({"a": 123}), {
+                handle: async (req) => {
+                    const u = req.uri
+                    const s = await Body.json(req.body);
+                    s.a
+
                     return {status: 200, body: stream.Readable.from('123'), headers: {}}
                 }
             }),
@@ -174,13 +198,13 @@ describe('test', () => {
                 method: 'POST',
                 uri: '/resource/123/sub/456?q1=v1&q2=v2',
                 // @ts-expect-error -- not a stream body
-                body: 'string',
+                body: '{"a": 123}',
                 headers: {"content-type": "text/csv"},
             });
             const response = await routes.postStreamResource.handler.handle({
                 method: 'POST',
                 uri: '/resource/123/sub/456?q1=v1&q2=v2',
-                body: stream.Readable.from('any thing'),
+                body: stream.Readable.from('{"a": 123}'),
                 headers: {"content-type": "text/csv"},
             });
             response.body.read
@@ -190,7 +214,7 @@ describe('test', () => {
 
         it('wildcard match', async () => {
             const routes = {
-                wildcard: get('*/resource/{id}/sub/{subId}/*', undefined, {
+                wildcard: get('*/resource/{id}/sub/{subId}/*', {
                     handle: async (req) => {
                         const u = req.uri
                         const wildcards = req.vars?.wildcards;
@@ -230,7 +254,7 @@ describe('test', () => {
     describe('routing logic of router', () => {
         it('not found default', async () => {
             const r = router({
-                getResource: get('/resource', undefined, {
+                getResource: get('/resource', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                     }
@@ -243,7 +267,7 @@ describe('test', () => {
 
         it('simple route', async () => {
             const r = router({
-                getResource: get('/', undefined, {
+                getResource: get('/', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                     }
@@ -256,7 +280,7 @@ describe('test', () => {
 
         it('path param', async () => {
             const rs = {
-                getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+                getResource: get('/resource/{id}/sub/{subId}?q1&q2', {
                     handle: async (req) => {
                         const path = req.vars?.path;
                         return {status: 200, body: `Hello ${path?.id} ${path?.subId}`, headers: {"foo": "bar"}}
@@ -272,7 +296,7 @@ describe('test', () => {
 
     it('produces openAPI spec', async () => {
         const routes = {
-            getResource: get('/resource/{id}/sub/{subId}?q1&q2', undefined, {
+            getResource: get('/resource/{id}/sub/{subId}?q1&q2', {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {
@@ -406,5 +430,3 @@ describe('test', () => {
         }
     })
 })
-
-

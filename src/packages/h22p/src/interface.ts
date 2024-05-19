@@ -5,7 +5,10 @@ import {httpServer, HttpServer} from "./server";
 import {h22pStream} from "./body";
 import {Status} from "./status";
 
-export interface HttpHandler<Req extends HttpRequest = HttpRequest, Res extends HttpResponse = HttpResponse> {
+export interface HttpHandler<
+    Req extends HttpRequest = HttpRequest,
+    Res extends HttpResponse = HttpResponse
+> {
     handle(req: Req): Promise<Res>
 }
 
@@ -15,7 +18,7 @@ export type SimpleBody =
     | string
     | Buffer;
 export type HttpMessageBody = JsonBody | SimpleBody | undefined;
-export type MessageBody<B extends HttpMessageBody> = h22pStream<B> | HttpMessageBody;
+export type MessageBody<B extends HttpMessageBody = HttpMessageBody> = h22pStream<B> | B;
 export type MessageType<Msg extends MessageBody<B> = MessageBody<any>, B extends HttpMessageBody = any> = Msg extends h22pStream<infer T> ? T : Msg;
 
 export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
@@ -32,18 +35,17 @@ export type JsonArray = JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonValue = string | number | boolean | null | undefined | JsonArray | JsonObject;
 export type JsonBody = JsonArray | JsonObject;
-export type BodyType<B extends HttpMessageBody> = B extends infer J extends JsonBody
-    ? B
-    : B extends infer J extends string
-        ? string :
-        B extends infer J extends Buffer
-            ? Buffer
-            : B extends infer J extends h22pStream<infer X>
-                ? X
-                : B extends infer J extends stream.Readable
-                    ? stream.Readable
-                    : typeof undefined
-
+export type BodyType<B extends HttpMessageBody> = B extends h22pStream<infer X>
+    ? X
+    : B extends stream.Readable
+        ? stream.Readable
+        : B extends infer J extends JsonBody
+            ? J
+            : B extends infer J extends string
+                ? string :
+                B extends infer J extends Buffer
+                    ? Buffer
+                    : typeof undefined;
 
 export type ReadMethods = 'GET' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 export type WriteMethods = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -60,14 +62,14 @@ export type HttpHeaders = HttpRequestHeaders | HttpResponseHeaders;
 export interface HttpRequest<
     Mtd extends Method = Method,
     Uri extends string = string,
-    ReqB extends HttpMessageBody = any,
+    ReqB extends HttpMessageBody = HttpMessageBody,
     ReqHds extends HttpRequestHeaders = HttpRequestHeaders
 > {
     method: Mtd
     headers: ReqHds
     uri: Uri
     version?: string
-    body: ReqB
+    body: MessageBody<ReqB>
     trailers?: NodeJS.Dict<string>
 }
 
@@ -170,8 +172,13 @@ export class h22p {
         return {status: 504, statusText: 'Gateway Timeout', headers: {}, body: undefined as B, ...res};
     }
 
-    static request(req?: Partial<HttpRequest>): HttpRequest {
-        return {method: 'GET', uri: '/', headers: {}, body: undefined, ...req}
+    static request<
+        M extends Method,
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(req?: Partial<HttpRequest<M, Uri, B, ReqHds>>): HttpRequest<M, Uri, B, ReqHds> {
+        return {method: 'GET' as M, uri: '/' as Uri, body: undefined as B, headers: {} as ReqHds, ...req}
     }
 
     static client(baseUrl: string = ''): HttpClient {
@@ -182,8 +189,12 @@ export class h22p {
         return httpServer(handler, port, host);
     }
 
-    static get(path: string = '/', headers: HttpRequestHeaders = {}): HttpRequest {
-        return {method: 'GET', body: undefined, uri: path, headers}
+    static get<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path: string = '/', headers: HttpRequestHeaders = {}): HttpRequest<'GET', Uri, undefined, ReqHds> {
+        return {method: 'GET', body: undefined, uri: path as Uri, headers: headers as ReqHds}
     }
 
     static post<
@@ -227,12 +238,20 @@ export class h22p {
         }
     }
 
-    static options(path = '/', headers: HttpRequestHeaders = {}): HttpRequest {
-        return {method: 'OPTIONS', uri: path, headers, body: undefined}
+    static options<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path = '/', headers: HttpRequestHeaders = {}): HttpRequest<'OPTIONS', Uri, undefined, ReqHds> {
+        return {method: 'OPTIONS', uri: path as Uri, body: undefined, headers: headers as ReqHds}
     }
 
-    static head(path = '/', headers: HttpRequestHeaders = {}): HttpRequest {
-        return {method: 'HEAD', uri: path, headers, body: undefined}
+    static head<
+        B extends HttpMessageBody,
+        Uri extends string,
+        ReqHds extends HttpRequestHeaders,
+    >(path = '/', headers: HttpRequestHeaders = {}): HttpRequest<'HEAD', Uri, undefined, ReqHds> {
+        return {method: 'HEAD', uri: path as Uri, body: undefined, headers: headers as ReqHds}
     }
 
     static Status = Status;

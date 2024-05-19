@@ -1,6 +1,7 @@
 import {h22p, HttpHandler, HttpMessageBody, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "./interface";
 import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
+import {h22pStream} from "./body";
 
 export type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
     ? `${Q1}=${string}&${toQueryString<Q2>}`
@@ -78,14 +79,18 @@ export interface RoutedHttpRequest<
 
 export function get<
     Uri extends string,
-    ReqB extends undefined,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse
->(uri: Uri, body: ReqB, handler: handler<'GET', Uri, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'GET', Uri, ReqB, ReqHds, Res> {
+>(uri: Uri, handler: handler<"GET", Uri, undefined, ReqHds, Res>, headers?: ReqHds): Route<"GET", Uri, undefined, ReqHds, Res> {
     return {
-        handler: {handle: (req: RoutedHttpRequest<'GET', Uri, ReqB, ReqHds>) => handler.handle(req)},
+        handler: {
+            handle: (req: RoutedHttpRequest<'GET', Uri, undefined, ReqHds>) => {
+                Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
+                return handler.handle(req);
+            }
+        },
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
-        _req: ({method: 'GET', uri, body, headers: headers ?? {} as ReqHds})
+        _req: ({method: 'GET', uri, body: undefined, headers: headers ?? {} as ReqHds})
     }
 }
 
@@ -96,7 +101,12 @@ export function post<
     Res extends HttpResponse,
 >(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'POST', Uri, ReqB, ReqHds, Res> {
     return {
-        handler: {handle: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => handler.handle(req)},
+        handler: {
+            handle: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => {
+                Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
+                return handler.handle(req);
+            }
+        },
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         _req: ({method: 'POST', uri, body, headers: headers ?? {} as ReqHds})
     }
