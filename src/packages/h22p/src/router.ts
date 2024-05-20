@@ -60,7 +60,8 @@ export type Route<
 > = {
     handler: handler<Mtd, Uri, ReqB, ReqHds, Res>,
     request: (mtd: Mtd, uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<Mtd, fullPath<Uri>, ReqB, ReqHds>
-    _req: HttpRequest<Mtd, Uri, ReqB, ReqHds>
+    matcher: HttpRequest<Mtd, Uri, ReqB, ReqHds>
+    responses: Res[]
 };
 
 export interface RoutedHttpRequest<
@@ -77,11 +78,17 @@ export interface RoutedHttpRequest<
     }
 }
 
+export class route {
+    static get = get;
+    static post = post;
+}
+
 export function get<
     Uri extends string,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse
->(uri: Uri, handler: handler<"GET", Uri, undefined, ReqHds, Res>, headers?: ReqHds): Route<"GET", Uri, undefined, ReqHds, Res> {
+>(uri: Uri, handler: handler<"GET", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+    : Route<"GET", Uri, undefined, ReqHds, Res> {
     return {
         handler: {
             handle: (req: RoutedHttpRequest<'GET', Uri, undefined, ReqHds>) => {
@@ -90,7 +97,8 @@ export function get<
             }
         },
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
-        _req: ({method: 'GET', uri, body: undefined, headers: headers ?? {} as ReqHds})
+        matcher: ({method: 'GET', uri, body: undefined, headers: headers ?? {} as ReqHds}),
+        responses: responses ?? []
     }
 }
 
@@ -99,7 +107,8 @@ export function post<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse,
->(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds): Route<'POST', Uri, ReqB, ReqHds, Res> {
+>(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+    : Route<'POST', Uri, ReqB, ReqHds, Res> {
     return {
         handler: {
             handle: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => {
@@ -108,7 +117,8 @@ export function post<
             }
         },
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
-        _req: ({method: 'POST', uri, body, headers: headers ?? {} as ReqHds})
+        matcher: ({method: 'POST', uri, body, headers: headers ?? {} as ReqHds}),
+        responses: responses ?? [],
     }
 }
 
@@ -137,7 +147,7 @@ export class Router implements HttpHandler {
         }
     } {
         for (const route of this.routes) {
-            const matcher = route._req;
+            const matcher = route.matcher;
             if (matcher.method === method && matcher.uri !== undefined) {
                 const uri = URI.parse(path);
                 const query = UrlEncodedMessage.parse(uri.query);

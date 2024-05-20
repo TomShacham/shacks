@@ -4,6 +4,7 @@ import {HttpClient} from "./client";
 import {httpServer, HttpServer} from "./server";
 import {h22pStream} from "./body";
 import {Status} from "./status";
+import {route} from "./router";
 
 export interface HttpHandler<
     Req extends HttpRequest = HttpRequest,
@@ -255,6 +256,8 @@ export class h22p {
     }
 
     static Status = Status;
+
+    static route = route;
 }
 
 /*
