@@ -32,6 +32,7 @@ export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
 *   so that you don't accidentally use just a JsonValue and get no compiler help
 * */
 export type DictString = { [key: string]: string };
+export type DictStringOfAnyDepth = { [key: string]: string | DictString }
 export type JsonArray = JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonValue = string | number | boolean | null | undefined | JsonArray | JsonObject;

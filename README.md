@@ -31,6 +31,7 @@ Design choices:
   - type-safe routing refactor
   - support full openapi spec (really cba right now ;) https://swagger.io/docs/specification/paths-and-operations/
 - http client using fetch (browser) so we can test e2e in memory
+  - generate a client from open api spec? :D
 - figure out what things to not export and hide
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)

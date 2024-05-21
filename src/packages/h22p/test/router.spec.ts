@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Body, get, h22p, h22pStream, HttpMessageBody, post, router} from "../src";
+import {Body, get, h22p, h22pStream, HttpMessageBody, JsonObject, post, router, URI} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
 
@@ -321,7 +321,10 @@ describe('test', () => {
                 }, {"content-type": "text/plain"} as const,
                 // TODO why does it care about the Body type but not the Headers or Status ??
                 [
-                    h22p.ok({body: 'string', headers: {"content-type": "text/plain"}}),
+                    h22p.created({
+                        body: {hello: {hello: 'world'}, goodbye: 'cruel world'},
+                        headers: {"content-type": "text/plain"}
+                    }),
                     h22p.notFound({body: 'string', headers: {"content-type": "text/plain"}}),
                 ]),
         }
@@ -340,85 +343,48 @@ describe('test', () => {
             foo.body
         }
 
-        expect(openApiSchema(routes)).deep.eq(output())
+        const schema = openApiSchema(routes, {
+            description: "This is a sample API to demonstrate OpenAPI documentation.",
+            title: "Example API",
+            apiVersion: "1.0.0",
+            server: {url: "http://localhost:3000", description: "Local"},
+        });
 
-        type SchemaType = {
-            "type": "string" | "integer" | "object" | "array" | "boolean" | "binary"
-        };
-        type OpenapiParameter = {
-            "name": string // "userId",
-            "in": "path" | "query" | "header" | "cookie", // "path"
-            "required": boolean, // path parameters are always required
-            "description": string // "ID of the user to retrieve",
-            "schema": SchemaType
-        };
+        expect(schema).deep.eq(output())
 
-        type OpenapiResponses = {
-            [statusCode: string]: {
-                "description": string, // "A user object",
-                "content": {
-                    [contentType: string]: { // "application/json"
-                        "schema": {
-                            "$ref"?: string // "#/components/schemas/User"
-                            type?: SchemaType['type']; // string
-                            format?: "binary" | "int32" | "int64" | "date" | string // binary
-                        }
-                    }
-                }
-            }
-        };
-        type Resource = {
-            summary: string; // "Get a user by ID",
-            operationId: string; // "getUserById",
-            "tags": string[],  // ["Users"],
-            "parameters": OpenapiParameter[],
-            "responses": OpenapiResponses
 
-        };
-        type OpenApiSchema = {
-            "openapi": "3.0.3",
-            "info": {
-                "title": string, // "Example API"
-                "description": string, // "This is a sample API to demonstrate OpenAPI documentation."
-                "version": string, // "1.0.0"
-            },
-            "servers": [
-                {
-                    "url": string, // "https://api.example.com/v1",
-                    "description": string, // "Production server"
-                }
-            ],
-            paths: {
-                [path: string]: {
-                    [mtd: string]: Resource
-                }
-            }
-        };
-
-        function openApiSchema(rs: typeof routes): OpenApiSchema {
-            const routes = Object.values(rs);
+        function openApiSchema(rs: typeof routes, config: {
+            server: { description: string; url: string };
+            description: string;
+            title: string;
+            apiVersion: string
+        }): OpenApiSchema {
             const metadata = {
                 "openapi": "3.0.3",
                 "info": {
-                    "description": "This is a sample API to demonstrate OpenAPI documentation.",
-                    "title": "Example API",
-                    "version": '1.0.0', // "1.0.0"
+                    "description": config.description,
+                    "title": config.title,
+                    "version": config.apiVersion,
                 },
                 "servers": [
                     {
-                        "url": 'http://localhost:3000', // "https://api.example.com/v1",
-                        "description": 'local server', // "Production server"
+                        "url": config.server.url, // "https://api.example.com/v1",
+                        "description": config.server.description, // "Production server"
                     }
                 ], paths: {}
             };
-            return routes.reduce((acc, next) => {
-                const uri: string = next.matcher.uri.split("?")[0];
+            const routes = Object.entries(rs);
+            return routes.reduce((acc, [routeName, route]) => {
+                const uri: string = route.matcher.uri.split("?")[0];
                 const paths = acc.paths;
-                const method = next.matcher.method;
-                const responses = next.responses;
+                const method = route.matcher.method;
+
+                console.log(URI.parse(route.matcher.uri));
+
+                const responses = route.responses;
                 const definition = {
                     summary: 'summary',
-                    operationId: 'operationId',
+                    operationId: routeName,
                     "tags": [],
                     "parameters": [
                         {
@@ -431,13 +397,32 @@ describe('test', () => {
                     ] as OpenapiParameter[],
                     "responses": responses.reduce((acc, r) => {
                         const header = r.headers['content-type'] as string | undefined;
-                        acc
-                            [r.status.toString()] = {
+                        const type = typeFromBody(r.body);
+
+                        function describeTypes(body: JsonObject, keys: string[] = []) {
+                            return Object.keys(body).reduce((acc, next) => {
+                                const isJson = typeof next === 'object';
+                                if (isJson) {
+                                    // @ts-ignore
+                                    acc[next] = describeTypes(next, [...keys, next]);
+                                } else {
+                                    const bodyElement = [...keys, next].reduce((acc, key) => body[key as string] as any, []);
+                                    // @ts-ignore
+                                    acc[next] = {type: typeof next, example: bodyElement};
+                                }
+                                return acc;
+                            }, {});
+                        }
+
+                        const properties = type === 'object' ? {properties: describeTypes(r.body as any)} : {}
+
+                        acc[r.status.toString()] = {
                             description: r.statusText ?? '',
                             content: {
                                 [header ?? contentTypeHeaderFromBody(r.body)]: {
                                     schema: {
-                                        type: contentTypeFromBody(r.body)
+                                        type: type,
+                                        ...properties
                                     }
                                 }
                             }
@@ -445,30 +430,41 @@ describe('test', () => {
                         }
 
                         return acc;
-                    }, {} as OpenapiResponses)
+                    }, {} as any)
                 };
+                const mtd = method.toLowerCase();
                 if (paths[uri] === undefined) {
                     paths[uri] = {
-                        [method]: definition
+                        [mtd]: definition as any
                     }
                 } else {
-                    paths[uri][method] = definition
+                    paths[uri][mtd] = definition as any
                 }
                 return acc;
             }, metadata as OpenApiSchema)
         }
 
-        function contentTypeFromBody(body: HttpMessageBody): SchemaType['type'] {
+        function typeFromBody(body: HttpMessageBody): SchemaType['type'] {
             return typeof body === 'string'
-                ? 'string' : typeof body === 'object'
-                    ? 'object' : 'binary'
+                ? 'string'
+                : body instanceof Buffer
+                    ? 'binary'
+                    : typeof body === 'object'
+                        ? 'object'
+                        : 'binary'
         }
 
 
         function contentTypeHeaderFromBody(body: HttpMessageBody): string {
             return typeof body === 'string'
-                ? 'text/plain' : typeof body === 'object'
-                    ? 'application/json' : 'application/octet-stream'
+                ? 'text/plain'
+                : body instanceof Buffer
+                    ? 'application/octet-stream'
+                    : body instanceof stream.Readable
+                        ? 'application/octet-stream'
+                        : typeof body === 'object'
+                            ? 'application/json'
+                            : 'application/octet-stream'
         }
 
         function output() {
@@ -481,8 +477,8 @@ describe('test', () => {
                 },
                 "servers": [
                     {
-                        "url": "https://api.example.com/v1",
-                        "description": "Production server"
+                        "description": "Local",
+                        "url": "http://localhost:3000"
                     }
                 ],
                 "paths": {
@@ -508,8 +504,6 @@ describe('test', () => {
                                     "content": {
                                         "text/plain": {
                                             "schema": {
-                                                "$ref": "$ref",
-                                                "format": "string",
                                                 "type": "string"
                                             }
                                         }
@@ -543,7 +537,20 @@ describe('test', () => {
                                 }
                             ],
                             "responses": {
-                                "204": {
+                                "201": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "hello": {
+                                                        "type": "string",
+                                                        "example": "world"
+                                                    },
+                                                }
+                                            }
+                                        }
+                                    },
                                     "description": "User deleted successfully"
                                 },
                                 "404": {
@@ -564,3 +571,57 @@ describe('test', () => {
         }
     })
 })
+
+
+type SchemaType = {
+    "type": "string" | "integer" | "object" | "array" | "boolean" | "binary"
+};
+type OpenapiParameter = {
+    "name": string // "userId",
+    "in": "path" | "query" | "header" | "cookie", // "path"
+    "required": boolean, // path parameters are always required
+    "description": string // "ID of the user to retrieve",
+    "schema": SchemaType
+};
+
+type OpenapiResponses = {
+    [statusCode: string]: {
+        "description": string, // "A user object",
+        "content": {
+            [contentType: string]: { // "application/json"
+                "schema": {
+                    "$ref"?: string // "#/components/schemas/User"
+                    type?: SchemaType['type']; // string
+                    format?: "binary" | "int32" | "int64" | "date" | string // binary
+                }
+            }
+        }
+    }
+};
+type Resource = {
+    summary: string; // "Get a user by ID",
+    operationId: string; // "getUserById",
+    "tags": string[],  // ["Users"],
+    "parameters": OpenapiParameter[],
+    "responses": OpenapiResponses
+
+};
+type OpenApiSchema = {
+    "openapi": "3.0.3",
+    "info": {
+        "title": string, // "Example API"
+        "description": string, // "This is a sample API to demonstrate OpenAPI documentation."
+        "version": string, // "1.0.0"
+    },
+    "servers": [
+        {
+            "url": string, // "https://api.example.com/v1",
+            "description": string, // "Production server"
+        }
+    ],
+    paths: {
+        [path: string]: {
+            [mtd: string]: Resource
+        }
+    }
+};
