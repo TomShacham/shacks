@@ -1,5 +1,16 @@
 import {expect} from "chai";
-import {Body, get, h22p, h22pStream, HttpMessageBody, JsonObject, post, router, URI} from "../src";
+import {
+    Body,
+    get,
+    h22p,
+    h22pStream,
+    HttpMessageBody,
+    HttpResponse,
+    JsonObject,
+    OpenapiResponse,
+    post,
+    router
+} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
 
@@ -294,11 +305,11 @@ describe('test', () => {
 
     it('produces openAPI spec', async () => {
         const routes = {
-            getResource: get('/users/{userId}?q1&q2', {
+            getResource: get('/users/{userId}', {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
-                            return h22p.ok({body: 'hello'})
+                            return h22p.ok({body: 'hello, world'})
                         } else {
                             return h22p.notFound();
                         }
@@ -306,26 +317,32 @@ describe('test', () => {
                 }, {"content-type": "text/plain"} as const,
                 // TODO why does it care about the Body type but not the Headers or Status ??
                 [
-                    h22p.ok({body: 'string', headers: {"content-type": "text/plain"}}),
-                    h22p.notFound({body: 'string', headers: {"content-type": "text/plain"}}),
+                    {
+                        ...h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
+                        description: "Get user"
+                    },
+                    h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
             postResource: post('/users/{userId}?q1&q2', {example: 'payload'}, {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
-                            return h22p.ok({body: 'hello'})
+                            return h22p.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                         } else {
                             return h22p.notFound();
                         }
                     }
-                }, {"content-type": "text/plain"} as const,
+                }, {"content-type": "application/json"} as const,
                 // TODO why does it care about the Body type but not the Headers or Status ??
                 [
-                    h22p.created({
-                        body: {hello: {hello: 'world'}, goodbye: 'cruel world'},
-                        headers: {"content-type": "text/plain"}
-                    }),
-                    h22p.notFound({body: 'string', headers: {"content-type": "text/plain"}}),
+                    {
+                        ...h22p.created({
+                            body: {user: {name: 'tom', worksAt: 'Evil Corp'}},
+                            headers: {"content-type": "application/json"},
+                        }),
+                        description: "create user"
+                    },
+                    h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
         }
 
@@ -379,11 +396,10 @@ describe('test', () => {
                 const paths = acc.paths;
                 const method = route.matcher.method;
 
-                console.log(URI.parse(route.matcher.uri));
+                // console.log(URI.parse(route.matcher.uri));
 
                 const responses = route.responses;
                 const definition = {
-                    summary: 'summary',
                     operationId: routeName,
                     "tags": [],
                     "parameters": [
@@ -391,45 +407,59 @@ describe('test', () => {
                             "name": "userId",
                             "in": "path", //  | "query" | "header" | "cookie", // "path"
                             "required": true, // path parameters are always required
-                            "description": "ID of the user to retrieve", // "ID of the user to retrieve",
                             "schema": {type: "string"}
                         }
                     ] as OpenapiParameter[],
-                    "responses": responses.reduce((acc, r) => {
+                    "responses": responses.reduce((schema, r) => {
                         const header = r.headers['content-type'] as string | undefined;
                         const type = typeFromBody(r.body);
-
-                        function describeTypes(body: JsonObject, keys: string[] = []) {
-                            return Object.keys(body).reduce((acc, next) => {
-                                const isJson = typeof next === 'object';
-                                if (isJson) {
-                                    // @ts-ignore
-                                    acc[next] = describeTypes(next, [...keys, next]);
-                                } else {
-                                    const bodyElement = [...keys, next].reduce((acc, key) => body[key as string] as any, []);
-                                    // @ts-ignore
-                                    acc[next] = {type: typeof next, example: bodyElement};
-                                }
-                                return acc;
-                            }, {});
-                        }
-
-                        const properties = type === 'object' ? {properties: describeTypes(r.body as any)} : {}
-
-                        acc[r.status.toString()] = {
-                            description: r.statusText ?? '',
+                        schema[r.status.toString()] = {
+                            ...(r.description ? {description: r.description} : {}),
                             content: {
                                 [header ?? contentTypeHeaderFromBody(r.body)]: {
-                                    schema: {
-                                        type: type,
-                                        ...properties
-                                    }
+                                    schema: bodyTypes(r)
                                 }
                             }
+                        }
+                        return schema;
 
+                        function objectTypes(body: JsonObject): properties {
+                            return Object.keys(body).reduce((obj, key) => {
+                                if (typeof body[key] === "string") {
+                                    // @ts-ignore
+                                    obj[key] = {type: "string", example: body[key]}
+                                } else if (typeof body[key] === "number") {
+                                    // @ts-ignore
+                                    obj[key] = {type: "integer"}
+                                } else if (Array.isArray(body)) {
+                                    // TODO how to reference components ;D
+                                    // @ts-ignore
+                                    obj[key] = {type: "array", items: {"$ref": "#/components/schemas/pet"}}
+                                } else {
+                                    // @ts-ignore
+                                    obj[key] = {type: "object", properties: objectTypes(body[key])}
+                                }
+                                return obj
+                            }, {} as properties)
                         }
 
-                        return acc;
+                        function bodyTypes(res: OpenapiResponse<HttpResponse>): properties {
+                            const body = res.body;
+                            if (typeof body === "string") {
+                                return {type: "string", example: body}
+                            } else if (body instanceof stream.Readable || body instanceof Buffer) {
+                                return {type: "string", example: 'stream'}
+                            } else if (body === undefined) {
+                                return {type: "string", example: res.statusText ?? '[empty string]'}
+                            } else if (Array.isArray(body)) {
+                                // TODO how to reference components ;D
+                                return {type: "array", items: {"$ref": "#/components/schemas/pet"}}
+                            } else {
+                                // @ts-ignore
+                                return {type: "object", properties: objectTypes(body)};
+                            }
+                        }
+
                     }, {} as any)
                 };
                 const mtd = method.toLowerCase();
@@ -444,14 +474,24 @@ describe('test', () => {
             }, metadata as OpenApiSchema)
         }
 
+        type properties = leaf | inner;
+        type inner =
+            | { type: "object", properties: inner | { [prop: string]: inner | leaf } }
+        type leaf =
+            | { type: "string", example: string }
+            | { type: "integer" }
+            | { type: "array", items: { "$ref": `#/components/${string}` } }
+
         function typeFromBody(body: HttpMessageBody): SchemaType['type'] {
             return typeof body === 'string'
                 ? 'string'
                 : body instanceof Buffer
-                    ? 'binary'
-                    : typeof body === 'object'
-                        ? 'object'
-                        : 'binary'
+                    ? 'string'
+                    : body instanceof stream.Readable
+                        ? 'string'
+                        : typeof body === 'object'
+                            ? 'object'
+                            : 'binary'
         }
 
 
@@ -484,7 +524,6 @@ describe('test', () => {
                 "paths": {
                     "/users/{userId}": {
                         "get": {
-                            "summary": "Summary",
                             "operationId": "getResource",
                             "tags": [],
                             "parameters": [
@@ -492,7 +531,6 @@ describe('test', () => {
                                     "name": "userId",
                                     "in": "path",
                                     "required": true,
-                                    "description": "ID of the user to retrieve",
                                     "schema": {
                                         "type": "string"
                                     }
@@ -500,11 +538,12 @@ describe('test', () => {
                             ],
                             "responses": {
                                 "200": {
-                                    "description": "A user object",
+                                    "description": "Get user",
                                     "content": {
                                         "text/plain": {
                                             "schema": {
-                                                "type": "string"
+                                                "type": "string",
+                                                "example": "hello, world"
                                             }
                                         }
                                     }
@@ -513,16 +552,15 @@ describe('test', () => {
                                     "content": {
                                         "text/plain": {
                                             "schema": {
-                                                "type": "string"
+                                                "type": "string",
+                                                "example": "Not Found"
                                             }
                                         }
                                     },
-                                    "description": "User not found"
                                 }
                             }
                         },
                         "post": {
-                            "summary": "Summary",
                             "operationId": "postResource",
                             "tags": [],
                             "parameters": [
@@ -530,7 +568,6 @@ describe('test', () => {
                                     "name": "userId",
                                     "in": "path",
                                     "required": true,
-                                    "description": "ID of the user to delete",
                                     "schema": {
                                         "type": "string"
                                     }
@@ -543,25 +580,34 @@ describe('test', () => {
                                             "schema": {
                                                 "type": "object",
                                                 "properties": {
-                                                    "hello": {
-                                                        "type": "string",
-                                                        "example": "world"
+                                                    "user": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "name": {
+                                                                "type": "string",
+                                                                "example": "tom"
+                                                            },
+                                                            "worksAt": {
+                                                                "type": "string",
+                                                                "example": "Evil Corp"
+                                                            },
+                                                        }
                                                     },
                                                 }
                                             }
                                         }
                                     },
-                                    "description": "User deleted successfully"
+                                    "description": "create user"
                                 },
                                 "404": {
                                     "content": {
                                         "text/plain": {
                                             "schema": {
-                                                "type": "string"
+                                                "type": "string",
+                                                "example": "Not Found"
                                             }
                                         }
-                                    },
-                                    "description": "User not found"
+                                    }
                                 }
                             }
                         }
@@ -599,7 +645,6 @@ type OpenapiResponses = {
     }
 };
 type Resource = {
-    summary: string; // "Get a user by ID",
     operationId: string; // "getUserById",
     "tags": string[],  // ["Users"],
     "parameters": OpenapiParameter[],

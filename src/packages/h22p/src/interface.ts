@@ -14,11 +14,8 @@ export interface HttpHandler<
 }
 
 // non json
-export type SimpleBody =
-    | stream.Readable
-    | string
-    | Buffer;
-export type HttpMessageBody = JsonBody | SimpleBody | undefined;
+export type SimpleBody = string | Buffer;
+export type HttpMessageBody = JsonBody | SimpleBody | stream.Readable | undefined;
 export type MessageBody<B extends HttpMessageBody = HttpMessageBody> = h22pStream<B> | B;
 export type MessageType<Msg extends MessageBody<B> = MessageBody<any>, B extends HttpMessageBody = any> = Msg extends h22pStream<infer T> ? T : Msg;
 
@@ -32,7 +29,6 @@ export type HttpRequestBody<B extends HttpMessageBody, M extends Method> =
 *   so that you don't accidentally use just a JsonValue and get no compiler help
 * */
 export type DictString = { [key: string]: string };
-export type DictStringOfAnyDepth = { [key: string]: string | DictString }
 export type JsonArray = JsonValue[];
 export type JsonObject = { [key: string]: JsonValue };
 export type JsonValue = string | number | boolean | null | undefined | JsonArray | JsonObject;
@@ -92,6 +88,9 @@ export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
 }
 
 export class h22p {
+
+    // TODO set content-type header if not set and body type can be inferred as object / string / stream etc
+
     static response<B extends HttpMessageBody>(res?: Partial<HttpResponse<B>>): HttpResponse<B> {
         return {status: 200, headers: {}, body: undefined as B, ...res}
     }

@@ -15,21 +15,16 @@ export type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
     ? isPathParameter<PartA> | pathParameters<PartB>
     : isPathParameter<Path>;
 export type emptyToString<S extends string> = S extends '' ? string : S;
-
-type x = pathParameters<pathPart<'/resource/{id}/sub/{subId}?q1&q2'>>
-
 export type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
 export type queryParameters<Path extends string> = Path extends ''
     ? { [key: string]: string }
     : toObj<queriesFromString<withoutFragment<Path>>>
 export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
 export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
-
 export type toObj<union extends string> = {
     [Key in union]: string;
 };
 export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
-
 export type expandPathParameterOrWildcard<Part> = Part extends `{${infer Name}}`
     ? string
     : Part extends `*`
@@ -41,6 +36,8 @@ type backToPath<Path> = Path extends `${infer PartA}/${infer PartB}`
 export type fullPath<Part> = Part extends `${infer Path}?${infer Query}`
     ? `${backToPath<Path>}?${toQueryString<Query>}`
     : backToPath<Part>;
+
+export type OpenapiResponse<Res extends HttpResponse> = { description?: string } & Res;
 
 export type handler<
     Mtd extends Method,
@@ -61,7 +58,7 @@ export type Route<
     handler: handler<Mtd, Uri, ReqB, ReqHds, Res>,
     request: (mtd: Mtd, uri: fullPath<Uri>, body: ReqB, headers: ReqHds) => HttpRequest<Mtd, fullPath<Uri>, ReqB, ReqHds>
     matcher: HttpRequest<Mtd, Uri, ReqB, ReqHds>
-    responses: Res[]
+    responses: OpenapiResponse<Res>[]
 };
 
 export interface RoutedHttpRequest<
@@ -87,7 +84,7 @@ export function get<
     Uri extends string,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse
->(uri: Uri, handler: handler<"GET", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+>(uri: Uri, handler: handler<"GET", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: OpenapiResponse<Res>[])
     : Route<"GET", Uri, undefined, ReqHds, Res> {
     return {
         handler: {
@@ -107,7 +104,7 @@ export function post<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse,
->(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+>(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: OpenapiResponse<Res>[])
     : Route<'POST', Uri, ReqB, ReqHds, Res> {
     return {
         handler: {
