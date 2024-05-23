@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {Body, get, h22p, h22pStream, HttpMessageBody, HttpResponse, JsonObject, post, router, URI} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
+import {UrlEncodedMessage} from "../src/urlEncodedMessage";
 
 // todo put, patch etc
 //  - some good name for them? put them in h22p.static ?
@@ -294,7 +295,7 @@ describe('test', () => {
 
     it('produces openAPI spec', async () => {
         const routes = {
-            getUser: get('/users/{userId}', {
+            getUser: get('/users/{userId}?name', {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
@@ -304,15 +305,11 @@ describe('test', () => {
                         }
                     }
                 }, {"content-type": "text/plain"} as const,
-                // TODO why does it care about the Body type but not the Headers or Status ??
                 [
-                    {
-                        ...h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
-                        description: "Get user"
-                    },
+                    h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                     h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
-            postUser: post('/users/{userId}?q1&q2', {example: 'payload'}, {
+            postUser: post('/users/{userId}', {example: 'payload'}, {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
@@ -322,7 +319,6 @@ describe('test', () => {
                         }
                     }
                 }, {"content-type": "application/json"} as const,
-                // TODO why does it care about the Body type but not the Headers or Status ??
                 [
                     h22p.created({
                         body: {user: {name: 'tom', worksAt: 'Evil Corp'}},
@@ -330,7 +326,7 @@ describe('test', () => {
                     }),
                     h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
-            getUserAccount: get('/users/{userId}/account/{accountId}', {
+            getUserAccount: get('/users/{userId}/account/{accountId}?name&accountType', {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
@@ -341,6 +337,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/plain"} as const,
                 // TODO why does it care about the Body type but not the Headers or Status ??
+                //   it doesnt seem to care about Body type either now ;D
                 [
                     h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                     h22p.notFound({headers: {"content-type": "text/plain"}}),
@@ -353,7 +350,7 @@ describe('test', () => {
 
         const foo = await routes.getUser.handler.handle({
             method: 'GET',
-            uri: '/users/123/account/456?q1=v1&q2=v2',
+            uri: '/users/123/?name=tom',
             body: undefined,
             headers: {"content-type": 'text/plain'}
         })
@@ -395,34 +392,53 @@ describe('test', () => {
             };
             const routes = Object.entries(rs);
             return routes.reduce((acc, [routeName, route]) => {
-                const uri: string = route.matcher.uri.split("?")[0];
+                const path: string = route.matcher.uri.split("?")[0];
                 const paths = acc.paths;
                 const method = route.matcher.method;
-
-                const pathParameterNames = (URI.parse(route.matcher.uri).path ?? '')
-                    .match(new RegExp('\\{([^}]+)}', 'g'))
-                    ?.map(it => it.replace('{', '').replace('}', ''));
-
+                const uri = URI.parse(route.matcher.uri);
+                const pathParameterNames = (uri.path ?? '')
+                        .match(new RegExp('\\{([^}]+)}', 'g'))
+                        ?.map(it => it.replace('{', '').replace('}', ''))
+                    ?? [];
+                const requestHeaders = route.matcher.headers;
                 const responses = route.responses;
+                const parameters = [
+                    ...pathParameterNames.map(name => ({
+                        name,
+                        "in": "path", //  | "query" | "header" | "cookie", // "path"
+                        "required": true, // path parameters are always required
+                        "schema": {type: "string"}
+                    } as OpenapiParameter)),
+                    ...Object.keys(requestHeaders).map((name: string) => ({
+                        name: name,
+                        "in": "header", //  | "query" | "header" | "cookie", // "path"
+                        "required": true, // path parameters are always required
+                        "schema": {type: "string"},
+                        "example": requestHeaders[name as keyof typeof requestHeaders]
+                    })),
+                    ...Object.keys(UrlEncodedMessage.parse(uri.query))
+                        .map(name => ({
+                            name,
+                            "in": "query",
+                            "required": true,
+                            "schema": {type: "string"}
+
+                        }))
+                ];
                 const definition = {
                     operationId: routeName,
-                    ...(pathParameterNames === undefined ? {} : {
-                        "parameters": pathParameterNames.map(name => ({
-                            name,
-                            "in": "path", //  | "query" | "header" | "cookie", // "path"
-                            "required": true, // path parameters are always required
-                            "schema": {type: "string"}
-                        } as OpenapiParameter))
+                    ...(parameters.length === 0 ? {} : {
+                        "parameters": parameters
                     }),
                     "responses": responsesSchema(responses)
                 };
                 const mtd = method.toLowerCase();
-                if (paths[uri] === undefined) {
-                    paths[uri] = {
+                if (paths[path] === undefined) {
+                    paths[path] = {
                         [mtd]: definition as Resource
                     }
                 } else {
-                    paths[uri][mtd] = definition as Resource
+                    paths[path][mtd] = definition as Resource
                 }
                 return acc;
             }, metadata as OpenApiSchema)
@@ -479,19 +495,6 @@ describe('test', () => {
             }
         }
 
-        function typeFromBody(body: HttpMessageBody): SchemaType['type'] {
-            return typeof body === 'string'
-                ? 'string'
-                : body instanceof Buffer
-                    ? 'string'
-                    : body instanceof stream.Readable
-                        ? 'string'
-                        : typeof body === 'object'
-                            ? 'object'
-                            : 'binary'
-        }
-
-
         function contentTypeHeaderFromBody(body: HttpMessageBody): string {
             return typeof body === 'string'
                 ? 'text/plain'
@@ -531,6 +534,23 @@ describe('test', () => {
                                     "schema": {
                                         "type": "string"
                                     }
+                                },
+                                {
+                                    "example": "text/plain",
+                                    "in": "header",
+                                    "name": "content-type",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "in": "query",
+                                    "name": "name",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
                                 }
                             ],
                             "responses": {
@@ -562,6 +582,15 @@ describe('test', () => {
                                 {
                                     "name": "userId",
                                     "in": "path",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "example": "application/json",
+                                    "in": "header",
+                                    "name": "content-type",
                                     "required": true,
                                     "schema": {
                                         "type": "string"
@@ -621,6 +650,31 @@ describe('test', () => {
                                 {
                                     "in": "path",
                                     "name": "accountId",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "example": "text/plain",
+                                    "in": "header",
+                                    "name": "content-type",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "in": "query",
+                                    "name": "name",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "in": "query",
+                                    "name": "accountType",
                                     "required": true,
                                     "schema": {
                                         "type": "string"
