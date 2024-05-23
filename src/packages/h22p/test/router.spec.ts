@@ -431,7 +431,6 @@ describe('test', () => {
         function responsesSchema(responses: HttpResponse[]) {
             return responses.reduce((acc, r) => {
                 const header = r.headers['content-type'] as string | undefined;
-                const type = typeFromBody(r.body);
                 acc[r.status.toString()] = {
                     content: {
                         [header ?? contentTypeHeaderFromBody(r.body)]: {
@@ -523,7 +522,7 @@ describe('test', () => {
                 "paths": {
                     "/users/{userId}": {
                         "get": {
-                            "operationId": "getResource",
+                            "operationId": "getUser",
                             "parameters": [
                                 {
                                     "name": "userId",
@@ -558,7 +557,7 @@ describe('test', () => {
                             }
                         },
                         "post": {
-                            "operationId": "postResource",
+                            "operationId": "postUser",
                             "parameters": [
                                 {
                                     "name": "userId",
@@ -605,8 +604,54 @@ describe('test', () => {
                                     }
                                 }
                             }
+                        },
+                    },
+                    "/users/{userId}/account/{accountId}": {
+                        "get": {
+                            "operationId": "getUserAccount",
+                            "parameters": [
+                                {
+                                    "in": "path",
+                                    "name": "userId",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "in": "path",
+                                    "name": "accountId",
+                                    "required": true,
+                                    "schema": {
+                                        "type": "string"
+                                    }
+                                }
+                            ],
+                            "responses": {
+                                "200": {
+                                    "content": {
+                                        "text/plain": {
+                                            "schema": {
+                                                "example": "hello, world",
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "404": {
+                                    "content": {
+                                        "text/plain": {
+                                            "schema": {
+                                                "example": "Not Found",
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
+
                 },
             }
         }
