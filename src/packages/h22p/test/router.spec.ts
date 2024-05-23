@@ -1,16 +1,5 @@
 import {expect} from "chai";
-import {
-    Body,
-    get,
-    h22p,
-    h22pStream,
-    HttpMessageBody,
-    HttpResponse,
-    JsonObject,
-    OpenapiResponse,
-    post,
-    router
-} from "../src";
+import {Body, get, h22p, h22pStream, HttpMessageBody, HttpResponse, JsonObject, post, router, URI} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
 
@@ -305,7 +294,7 @@ describe('test', () => {
 
     it('produces openAPI spec', async () => {
         const routes = {
-            getResource: get('/users/{userId}', {
+            getUser: get('/users/{userId}', {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
@@ -323,7 +312,7 @@ describe('test', () => {
                     },
                     h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
-            postResource: post('/users/{userId}?q1&q2', {example: 'payload'}, {
+            postUser: post('/users/{userId}?q1&q2', {example: 'payload'}, {
                     handle: async (req) => {
                         const u = req.uri
                         if (u.length > 5) {
@@ -335,22 +324,36 @@ describe('test', () => {
                 }, {"content-type": "application/json"} as const,
                 // TODO why does it care about the Body type but not the Headers or Status ??
                 [
-                    {
-                        ...h22p.created({
-                            body: {user: {name: 'tom', worksAt: 'Evil Corp'}},
-                            headers: {"content-type": "application/json"},
-                        }),
-                        description: "create user"
-                    },
+                    h22p.created({
+                        body: {user: {name: 'tom', worksAt: 'Evil Corp'}},
+                        headers: {"content-type": "application/json"},
+                    }),
+                    h22p.notFound({headers: {"content-type": "text/plain"}}),
+                ]),
+            getUserAccount: get('/users/{userId}/account/{accountId}', {
+                    handle: async (req) => {
+                        const u = req.uri
+                        if (u.length > 5) {
+                            return h22p.ok({body: 'hello, world'})
+                        } else {
+                            return h22p.notFound();
+                        }
+                    }
+                }, {"content-type": "text/plain"} as const,
+                // TODO why does it care about the Body type but not the Headers or Status ??
+                [
+                    h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                     h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
         }
 
         // TODO make this blow up even if query string provided (it's being interpreted as path parameter!)
+        //   at the moment query params look like a path param when the path param is omitted
+        //   ALSO - adding further parts to the path seems like a path param i.e. /user/123/account/456 fulfils /user/{id}
 
-        const foo = await routes.getResource.handler.handle({
+        const foo = await routes.getUser.handler.handle({
             method: 'GET',
-            uri: '/users/123?q1=v1&q2=v2',
+            uri: '/users/123/account/456?q1=v1&q2=v2',
             body: undefined,
             headers: {"content-type": 'text/plain'}
         })
@@ -396,91 +399,86 @@ describe('test', () => {
                 const paths = acc.paths;
                 const method = route.matcher.method;
 
-                // console.log(URI.parse(route.matcher.uri));
+                const pathParameterNames = (URI.parse(route.matcher.uri).path ?? '')
+                    .match(new RegExp('\\{([^}]+)}', 'g'))
+                    ?.map(it => it.replace('{', '').replace('}', ''));
 
                 const responses = route.responses;
                 const definition = {
                     operationId: routeName,
-                    "tags": [],
-                    "parameters": [
-                        {
-                            "name": "userId",
+                    ...(pathParameterNames === undefined ? {} : {
+                        "parameters": pathParameterNames.map(name => ({
+                            name,
                             "in": "path", //  | "query" | "header" | "cookie", // "path"
                             "required": true, // path parameters are always required
                             "schema": {type: "string"}
-                        }
-                    ] as OpenapiParameter[],
-                    "responses": responses.reduce((schema, r) => {
-                        const header = r.headers['content-type'] as string | undefined;
-                        const type = typeFromBody(r.body);
-                        schema[r.status.toString()] = {
-                            ...(r.description ? {description: r.description} : {}),
-                            content: {
-                                [header ?? contentTypeHeaderFromBody(r.body)]: {
-                                    schema: bodyTypes(r)
-                                }
-                            }
-                        }
-                        return schema;
-
-                        function objectTypes(body: JsonObject): properties {
-                            return Object.keys(body).reduce((obj, key) => {
-                                if (typeof body[key] === "string") {
-                                    // @ts-ignore
-                                    obj[key] = {type: "string", example: body[key]}
-                                } else if (typeof body[key] === "number") {
-                                    // @ts-ignore
-                                    obj[key] = {type: "integer"}
-                                } else if (Array.isArray(body)) {
-                                    // TODO how to reference components ;D
-                                    // @ts-ignore
-                                    obj[key] = {type: "array", items: {"$ref": "#/components/schemas/pet"}}
-                                } else {
-                                    // @ts-ignore
-                                    obj[key] = {type: "object", properties: objectTypes(body[key])}
-                                }
-                                return obj
-                            }, {} as properties)
-                        }
-
-                        function bodyTypes(res: OpenapiResponse<HttpResponse>): properties {
-                            const body = res.body;
-                            if (typeof body === "string") {
-                                return {type: "string", example: body}
-                            } else if (body instanceof stream.Readable || body instanceof Buffer) {
-                                return {type: "string", example: 'stream'}
-                            } else if (body === undefined) {
-                                return {type: "string", example: res.statusText ?? '[empty string]'}
-                            } else if (Array.isArray(body)) {
-                                // TODO how to reference components ;D
-                                return {type: "array", items: {"$ref": "#/components/schemas/pet"}}
-                            } else {
-                                // @ts-ignore
-                                return {type: "object", properties: objectTypes(body)};
-                            }
-                        }
-
-                    }, {} as any)
+                        } as OpenapiParameter))
+                    }),
+                    "responses": responsesSchema(responses)
                 };
                 const mtd = method.toLowerCase();
                 if (paths[uri] === undefined) {
                     paths[uri] = {
-                        [mtd]: definition as any
+                        [mtd]: definition as Resource
                     }
                 } else {
-                    paths[uri][mtd] = definition as any
+                    paths[uri][mtd] = definition as Resource
                 }
                 return acc;
             }, metadata as OpenApiSchema)
         }
 
-        type properties = leaf | inner;
-        type inner =
-            | { type: "object", properties: inner | { [prop: string]: inner | leaf } }
-        type leaf =
-            | { type: "string", example: string }
-            | { type: "integer" }
-            | { type: "array", items: { "$ref": `#/components/${string}` } }
+        function responsesSchema(responses: HttpResponse[]) {
+            return responses.reduce((acc, r) => {
+                const header = r.headers['content-type'] as string | undefined;
+                const type = typeFromBody(r.body);
+                acc[r.status.toString()] = {
+                    content: {
+                        [header ?? contentTypeHeaderFromBody(r.body)]: {
+                            schema: bodyTypes(r)
+                        }
+                    }
+                }
+                return acc;
+            }, {} as OpenapiResponses);
+        }
+
+        function objectTypes(body: JsonObject): responseSchema {
+            return Object.keys(body).reduce((obj, key) => {
+                if (typeof body[key] === "string") {
+                    // @ts-ignore
+                    obj[key] = {type: "string", example: body[key]}
+                } else if (typeof body[key] === "number") {
+                    // @ts-ignore
+                    obj[key] = {type: "integer"}
+                } else if (Array.isArray(body)) {
+                    // TODO how to reference components ;D
+                    // @ts-ignore
+                    obj[key] = {type: "array", items: {"$ref": "#/components/schemas/pet"}}
+                } else {
+                    // @ts-ignore
+                    obj[key] = {type: "object", properties: objectTypes(body[key])}
+                }
+                return obj
+            }, {} as responseSchema)
+        }
+
+        function bodyTypes(res: HttpResponse): responseSchema {
+            const body = res.body;
+            if (typeof body === "string") {
+                return {type: "string", example: body}
+            } else if (body instanceof stream.Readable || body instanceof Buffer) {
+                return {type: "string", example: 'stream'}
+            } else if (body === undefined) {
+                return {type: "string", example: res.statusText ?? '[empty string]'}
+            } else if (Array.isArray(body)) {
+                // TODO how to reference components ;D
+                return {type: "array", items: {"$ref": "#/components/schemas/pet"}}
+            } else {
+                // @ts-ignore
+                return {type: "object", properties: objectTypes(body)};
+            }
+        }
 
         function typeFromBody(body: HttpMessageBody): SchemaType['type'] {
             return typeof body === 'string'
@@ -507,6 +505,7 @@ describe('test', () => {
                             : 'application/octet-stream'
         }
 
+        // test content-type header
         function output() {
             return {
                 "openapi": "3.0.3",
@@ -525,7 +524,6 @@ describe('test', () => {
                     "/users/{userId}": {
                         "get": {
                             "operationId": "getResource",
-                            "tags": [],
                             "parameters": [
                                 {
                                     "name": "userId",
@@ -538,7 +536,6 @@ describe('test', () => {
                             ],
                             "responses": {
                                 "200": {
-                                    "description": "Get user",
                                     "content": {
                                         "text/plain": {
                                             "schema": {
@@ -562,7 +559,6 @@ describe('test', () => {
                         },
                         "post": {
                             "operationId": "postResource",
-                            "tags": [],
                             "parameters": [
                                 {
                                     "name": "userId",
@@ -597,7 +593,6 @@ describe('test', () => {
                                             }
                                         }
                                     },
-                                    "description": "create user"
                                 },
                                 "404": {
                                     "content": {
@@ -632,25 +627,33 @@ type OpenapiParameter = {
 
 type OpenapiResponses = {
     [statusCode: string]: {
-        "description": string, // "A user object",
         "content": {
             [contentType: string]: { // "application/json"
-                "schema": {
-                    "$ref"?: string // "#/components/schemas/User"
-                    type?: SchemaType['type']; // string
-                    format?: "binary" | "int32" | "int64" | "date" | string // binary
-                }
+                "schema": responseSchema
             }
         }
     }
 };
+type responseSchema = responseValueType | responseObjectType;
+type responseObjectType =
+    | { type: "object", properties: responseObjectType | { [prop: string]: responseObjectType | responseValueType } }
+type responseValueType =
+    | { type: "string", example: string }
+    | { type: "integer" }
+    | { type: "array", items: { "$ref": `#/components/${string}` } }
+
 type Resource = {
     operationId: string; // "getUserById",
-    "tags": string[],  // ["Users"],
     "parameters": OpenapiParameter[],
     "responses": OpenapiResponses
 
 };
+type Paths = {
+    [path: string]: {
+        [mtd: string]: Resource
+    }
+};
+
 type OpenApiSchema = {
     "openapi": "3.0.3",
     "info": {
@@ -664,9 +667,5 @@ type OpenApiSchema = {
             "description": string, // "Production server"
         }
     ],
-    paths: {
-        [path: string]: {
-            [mtd: string]: Resource
-        }
-    }
+    paths: Paths
 };
