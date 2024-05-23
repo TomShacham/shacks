@@ -59,6 +59,15 @@ export type Route<
     responses: Res[]
 };
 
+export type Routes<
+    Mtd extends Method = Method,
+    Uri extends string = string,
+    ReqB extends HttpMessageBody = HttpMessageBody,
+    ReqHds extends HttpRequestHeaders = HttpRequestHeaders,
+    Res extends HttpResponse = HttpResponse> = {
+    [name: string]: Route<Mtd, Uri, ReqB, ReqHds, Res>
+}
+
 export interface RoutedHttpRequest<
     Mtd extends Method = Method,
     Uri extends string = string,
