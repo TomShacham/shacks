@@ -63,7 +63,7 @@ export type OpenApiSchema = {
     paths: Paths
 };
 
-export function openApiSchema(rs: Routes, config: OpenapiMetadata): OpenApiSchema {
+export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSchema {
     return Object.entries(rs).reduce((acc, [routeName, route]) => {
         const path: string = route.matcher.uri.split("?")[0];
         const paths = acc.paths;
@@ -111,11 +111,11 @@ export function openApiSchema(rs: Routes, config: OpenapiMetadata): OpenApiSchem
         const uri = URI.parse(route.matcher.uri);
         const pathParameterNames = (uri.path ?? '')
                 .match(new RegExp('\\{([^}]+)}', 'g'))
-                ?.map(it => it.replace('{', '').replace('}', ''))
+                ?.map((it: string) => it.replace('{', '').replace('}', ''))
             ?? [];
         const requestHeaders = route.matcher.headers;
         return [
-            ...pathParameterNames.map(name => ({
+            ...pathParameterNames.map((name: string) => ({
                 name,
                 "in": "path", //  | "query" | "header" | "cookie", // "path"
                 "required": true, // path parameters are always required

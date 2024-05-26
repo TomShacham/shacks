@@ -3,53 +3,6 @@ import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
 import {h22pStream} from "./body";
 
-export type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
-    ? `${Q1}=${string}&${toQueryString<Q2>}`
-    : Qs extends `${infer Q1}`
-        ? `${Q1}=${string}`
-        : Qs;
-export type pathPart<Part> = Part extends `${infer Start}?${infer Query}` ? Start : Part;
-export type queryPart<Part> = Part extends `${infer Start}?${infer Query}` ? Query : '';
-export type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
-export type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
-    ? isPathParameter<PartA> | pathParameters<PartB>
-    : isPathParameter<Path>;
-export type emptyToString<S extends string> = S extends '' ? string : S;
-export type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
-export type queryParameters<Path extends string> = Path extends ''
-    ? { [key: string]: string }
-    : toObj<queriesFromString<withoutFragment<Path>>>
-export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
-export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
-export type toObj<union extends string> = {
-    [Key in union]: string;
-};
-export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
-export type expandPathParameterOrWildcard<Part extends string> = Part extends `{${infer Name}}`
-    ? `${string}/`
-    : Part extends `*`
-        ? string
-        : `${Part}/`;
-type backToPath<Path extends string> = Path extends `${infer PartA}/${infer PartB}`
-    ? `${expandPathParameterOrWildcard<PartA>}${backToPath<PartB>}`
-    : expandPathParameterOrWildcard<Path>;
-export type fullPath<Part extends string> = Part extends `${infer Path}?${infer Query}`
-    ? `${backToPath<Path>}?${toQueryString<Query>}`
-    : backToPath<Part>;
-
-type NonEmptyUriString = `${UriChar}${string}`;
-type UriChar =
-    | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M'
-    | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z'
-    | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm'
-    | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
-    | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
-    | '-' | '.' | '_' | '~' | '%';
-
-type nonForwardSlashes<T extends NonEmptyUriString = NonEmptyUriString> = T extends `/${infer Rest}`
-    ? never : T extends `${infer Start}/`
-        ? never : T extends `${infer Start}/${infer End}` ? never : T
-
 export type handler<
     Mtd extends Method,
     Uri extends string,
@@ -232,3 +185,37 @@ export class Router implements HttpHandler {
 export function router(routes: { [key: string]: Route<any, any, any, any, any> }) {
     return new Router(Object.values(routes))
 }
+
+export type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
+    ? `${Q1}=${string}&${toQueryString<Q2>}`
+    : Qs extends `${infer Q1}`
+        ? `${Q1}=${string}`
+        : Qs;
+export type pathPart<Part> = Part extends `${infer Start}?${infer Query}` ? Start : Part;
+export type queryPart<Part> = Part extends `${infer Start}?${infer Query}` ? Query : '';
+export type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
+export type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
+    ? isPathParameter<PartA> | pathParameters<PartB>
+    : isPathParameter<Path>;
+export type emptyToString<S extends string> = S extends '' ? string : S;
+export type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
+export type queryParameters<Path extends string> = Path extends ''
+    ? { [key: string]: string }
+    : toObj<queriesFromString<withoutFragment<Path>>>
+export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
+export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
+export type toObj<union extends string> = {
+    [Key in union]: string;
+};
+export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
+export type expandPathParameterOrWildcard<Part extends string> = Part extends `{${infer Name}}`
+    ? `${string}/`
+    : Part extends `*`
+        ? string
+        : `${Part}/`;
+type backToPath<Path extends string> = Path extends `${infer PartA}/${infer PartB}`
+    ? `${expandPathParameterOrWildcard<PartA>}${backToPath<PartB>}`
+    : expandPathParameterOrWildcard<Path>;
+export type fullPath<Part extends string> = Part extends `${infer Path}?${infer Query}`
+    ? `${backToPath<Path>}?${toQueryString<Query>}`
+    : backToPath<Part>;

@@ -1,5 +1,5 @@
 import {get, h22p, post} from "../src";
-import {openApiSchema} from "../src/openapi";
+import {openApiSpecFrom} from "../src/openapi";
 import {expect} from "chai";
 
 describe('openapi', () => {
@@ -54,10 +54,6 @@ describe('openapi', () => {
                 ]),
         }
 
-        // TODO make this blow up even if query string provided (it's being interpreted as path parameter!)
-        //   at the moment query params look like a path param when the path param is omitted
-        //   ALSO - adding further parts to the path seems like a path param i.e. /user/123/account/456 fulfils /user/{id}
-
         const foo = await routes.getUser.handler.handle({
             method: 'GET',
             uri: '/users/123/?name=tom',
@@ -68,7 +64,7 @@ describe('openapi', () => {
             // Todo make this not compile ;(
             foo.body
         }
-        const schema = openApiSchema(routes as any, {
+        const schema = openApiSpecFrom(routes as any, {
             description: "This is a sample API to demonstrate OpenAPI documentation.",
             title: "Example API",
             apiVersion: "1.0.0",

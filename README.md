@@ -28,8 +28,11 @@ Design choices:
 ## Todo
 
 - open api spec generation
-  - type-safe routing refactor
   - support full openapi spec (really cba right now ;) https://swagger.io/docs/specification/paths-and-operations/
+  - how to support optional query parameters?
+  - how to support wildcards?
+  - need to test all different variants like string number boolean
+  - and need to support array referencing a component
 - http client using fetch (browser) so we can test e2e in memory
   - generate a client from open api spec? :D
 - figure out what things to not export and hide
@@ -71,6 +74,9 @@ Design choices:
 
     - do we like the h22p static for exposing the api
       - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
+      - does it mean that the whole of the library gets imported for any use-case and therefore cannot be tree-shaken?
+      - what if we split up the library into separate libraries like h22p-router h22p-core etc.? does that mean then we cannot
+      use the static pattern? or is there some way to extend the class in a type-safe way? don't think so
     - can we generate open api spec from just types :S might need some other api around routing
     - is there a better way to do the type-safe expanded path in the router that doesn't require it having a slash at the end
       - if typescript gets some advanced types letting you say that a string must consist of certain chars and not others
