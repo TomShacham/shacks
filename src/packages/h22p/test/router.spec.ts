@@ -63,7 +63,7 @@ describe('test', () => {
         it('handle an in-memory type-safe request and response', async () => {
             const response = await routes.getResource.handler.handle({
                 method: 'GET',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/sub/456/?q1=v1&q2=v2',
                 body: undefined,
                 headers: {"content-type": "text/csv"},
             });
@@ -83,7 +83,7 @@ describe('test', () => {
         it('build a type-safe request', async () => {
             const typeSafeRequest = routes.getResource.request(
                 'GET',
-                '/resource/123/sub/456?q1=v1&q2=v2',
+                '/resource/123/sub/456/?q1=v1&q2=v2',
                 undefined,
                 {"content-type": "text/csv"}
             );
@@ -93,7 +93,7 @@ describe('test', () => {
                     "content-type": "text/csv",
                 },
                 "method": "GET",
-                "uri": "/resource/123/sub/456?q1=v1&q2=v2"
+                "uri": "/resource/123/sub/456/?q1=v1&q2=v2"
             })
 
             /*
@@ -130,7 +130,7 @@ describe('test', () => {
             );
             const wrongBody = routes.getResource.request(
                 'GET',
-                '/resource/123/sub/456?q1=v1&q2=v2',
+                '/resource/123/sub/456/?q1=v1&q2=v2',
                 // we should be @ts-expect-error 'ing for a body when we want undefined
                 // but for some reason TS think it's an unused @ts-expect-error ....
                 // @ts-ignore
@@ -139,14 +139,14 @@ describe('test', () => {
             );
             const emptyHeaders = routes.getResource.request(
                 'GET',
-                '/resource/123/sub/456?q1=v1&q2=v2',
+                '/resource/123/sub/456/?q1=v1&q2=v2',
                 undefined,
                 // @ts-expect-error
                 {}
             );
             const wrongHeaders = routes.getResource.request(
                 'GET',
-                '/resource/123/sub/456?q1=v1&q2=v2',
+                '/resource/123/sub/456/?q1=v1&q2=v2',
                 undefined,
                 // @ts-expect-error
                 {"content-type": "text/html"}
@@ -156,14 +156,14 @@ describe('test', () => {
         it('handle json body', async () => {
             await routes.postJsonResource.handler.handle({
                 method: 'POST',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/',
                 // @ts-expect-error -- not a string body
                 body: {foo: {bar: 'json'}},
                 headers: {"content-type": "text/csv"},
             });
             const response = await routes.postJsonResource.handler.handle({
                 method: 'POST',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/',
                 body: {foo: {baz: 'json'}},
                 headers: {"content-type": "text/csv"},
             });
@@ -175,14 +175,14 @@ describe('test', () => {
         it('handle string body', async () => {
             await routes.postStringResource.handler.handle({
                 method: 'POST',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/',
                 // @ts-expect-error -- not a string body
                 body: {foo: {bar: 'json'}},
                 headers: {"content-type": "text/csv"},
             });
             const response = await routes.postStringResource.handler.handle({
                 method: 'POST',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/',
                 // @ts-expect-error -- not a string body
                 body: 'any thing',
                 headers: {"content-type": "text/csv"},
@@ -195,14 +195,14 @@ describe('test', () => {
         it('handle stream body', async () => {
             await routes.postStreamResource.handler.handle({
                 method: 'POST',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/',
                 // @ts-expect-error -- not a stream body
                 body: '{"a": 123}',
                 headers: {"content-type": "text/csv"},
             });
             const response = await routes.postStreamResource.handler.handle({
                 method: 'POST',
-                uri: '/resource/123/sub/456?q1=v1&q2=v2',
+                uri: '/resource/123/',
                 body: stream.Readable.from('{"a": 123}'),
                 headers: {"content-type": "text/csv"},
             });
@@ -224,12 +224,12 @@ describe('test', () => {
 
             const resp = await r.handle({
                 method: 'GET',
-                uri: 'stuff/before/resource/123/sub/456/stuff/after',
+                uri: 'stuff/before/resource/123/sub/456/stuff/after/',
                 body: undefined,
                 headers: {},
             });
 
-            expect(resp.body).eq('wildcards: stuff/before stuff/after')
+            expect(resp.body).eq('wildcards: stuff/before stuff/after/')
 
             await routes.wildcard.handler.handle({
                 method: 'GET',
@@ -258,7 +258,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/csv"} as const)
             });
-            const res = await r.handle(h22p.request({method: 'GET', uri: '/not/found'}))
+            const res = await r.handle(h22p.request({method: 'GET', uri: '/not/found/'}))
             expect(res.status).eq(404);
             expect(await Body.text(res.body)).eq('Not found');
         })
@@ -278,7 +278,7 @@ describe('test', () => {
 
         it('path param', async () => {
             const rs = {
-                getResource: get('/resource/{id}/sub/{subId}?q1&q2', {
+                getResource: get('/resource/{id}/sub/{subId}', {
                     handle: async (req) => {
                         const path = req.vars?.path;
                         return {status: 200, body: `Hello ${path?.id} ${path?.subId}`, headers: {"foo": "bar"}}

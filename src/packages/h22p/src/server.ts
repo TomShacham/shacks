@@ -13,7 +13,7 @@ export type HttpServer = {
 
 export async function httpServer(handler: HttpHandler, port = 0, host: string = '127.0.0.1'): Promise<HttpServer> {
     const server = http.createServer();
-    process.on('uncaughtException', (e) => {
+    process.once('uncaughtException', (e) => {
         if ('code' in e && e.code === 'ECONNRESET') {
             console.log('Connection reset by client');
         }

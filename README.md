@@ -65,9 +65,16 @@ Design choices:
 - application/x-www-urlencoded forms // note chrome only sends this if either a) you specify accept-charset on your form
   or b) you send a response header of content-type "text/html; charset=utf-8"
 - you can only read a body once because it's a stream, so you need to hand it around if you want to re-use it
+- uri in a type-safe router must end with a "/" so that we can ensure the type of the uri (see open questions)
 
 ## Open questions
 
     - do we like the h22p static for exposing the api
       - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
     - can we generate open api spec from just types :S might need some other api around routing
+    - is there a better way to do the type-safe expanded path in the router that doesn't require it having a slash at the end
+      - if typescript gets some advanced types letting you say that a string must consist of certain chars and not others
+      but until then the type-error is really obtuse if we want to ensure that a type-safe path cannot contain further segments
+      e.g. /user/{userId} expands to type /user/${string} but that allows /user/123/blah/blah/blah because ${string} is too permissive
+      but then restraining the type to /user/${nonForwardSlashes} gives quite horrible errors 
+      and forces the user to have a / at the end of any uri so we can do the above type foo (i.e. /user/123/ <- extra slash)

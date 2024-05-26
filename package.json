@@ -5,7 +5,7 @@
     "clean": "./clean.sh",
     "release": "./release.sh",
     "build": "tsc",
-    "test": "tsc; mocha --require ts-node/register 'src/packages/**/*spec.ts'"
+    "test": "tsc --noEmit; mocha --require ts-node/register 'src/packages/**/*spec.ts'"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
