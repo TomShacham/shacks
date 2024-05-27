@@ -19,18 +19,18 @@ Simple because:
 Design choices:
 
     + composition over configuation (made easy because there is one simple http interface)
-      h22p is light on configuration options, instead you can implement HttpHandler and delegate
+      h22p is light on configuration options, instead you can implement HttpHandler to get 
+      whatever behaviour you want around request/response
     + http client responses 4xx or 5xx are not exceptions
       unlike a lot of clients out there, we do not throw an exception so you do not need to try/catch requests
-    + type-safe routing to preserve type safety 
-
+    + there is no routing precedence, we do not want any complexity, it's first come, first served
 
 ## Todo
 
 - routing
-  - do we want a way to make a query parameter optional? e.g. with a "?" or something; or mandatory with a "!"
-  - or should queries always be optional? should routing work based on query parameter?
+  - port tests -
 - http client using fetch (browser) so we can test e2e in memory
+  - turn client spec into a contract i.e. parameterise the client
   - generate a client from open api spec? :D
   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
   - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
@@ -72,7 +72,8 @@ Design choices:
 - uri in a type-safe router must end with a "/" so that we can ensure the type of the uri (see open questions)
 - open api spec doesn't support optional parameters
   - responses are optional, you don't have to add metadata to your routing if you don't want to!
-  - doesnt support components (i.e. no way to reference some shared object; just use a shared example object from tests)
+  - doesn't support components (i.e. no way to reference some shared object; just use a shared example object from
+    tests)
   - no way to say a parameter is optional (in the routing api, if a query param is present then it's required)
 
 ## Open questions

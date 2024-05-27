@@ -396,6 +396,33 @@ describe('test', () => {
             expect(foundWithoutQ1.status).eq(200);
             expect(await Body.text(foundWithoutQ1.body)).eq('id-123 v2');
         });
+
+        it('missing the trailing slash on a route still matches a path with a slash', async () => {
+            const r = router({
+                getResource: get('/resource', {
+                    handle: async (req) => {
+                        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                    }
+                }, {"content-type": "text/csv"} as const)
+            });
+            const res = await r.handle(h22p.request({method: 'GET', uri: '/resource/'}))
+            expect(res.status).eq(200);
+            expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
+        })
+
+        it('missing the trailing slash on the request still matches a route with a slash', async () => {
+            const r = router({
+                getResource: get('/resource/', {
+                    handle: async (req) => {
+                        return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                    }
+                }, {"content-type": "text/csv"} as const)
+            });
+            // @ts-ignore
+            const res = await r.handle(h22p.request({method: 'GET', uri: '/resource'}))
+            expect(res.status).eq(200);
+            expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
+        })
     })
 
 })

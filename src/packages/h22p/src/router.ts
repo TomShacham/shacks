@@ -131,15 +131,16 @@ export class Router implements HttpHandler {
         const matcher = route.matcher;
         const uri = URI.parse(path);
         const query = UrlEncodedMessage.parse(uri.query);
-        const [matcherPath, matcherQuery] = matcher.uri.split("?");
-        const uriMatcher = (matcherPath !== '/' && matcherPath.endsWith('/'))
-            ? matcherPath.slice(0, -1)
-            : matcherPath;
-        const exactMatch = uriMatcher === path;
+        const [pathMatcher, queryMatcher] = matcher.uri.split("?");
+        const pathMatcherNoTrailingSlash = (pathMatcher !== '/' && pathMatcher.endsWith('/'))
+            ? pathMatcher.slice(0, -1)
+            : pathMatcher;
+        const pathNoTrailingSlash = path !== "/" && path.endsWith('/') ? path.slice(0, -1) : path;
+        const exactMatch = pathMatcherNoTrailingSlash === pathNoTrailingSlash;
         if (exactMatch) {
             return {route, vars: {path: {}, query, wildcards: [], fragment: uri.fragment?.slice(1)}}
         }
-        return this.fuzzyMatch(uriMatcher, matcherQuery, uri, path, route, query);
+        return this.fuzzyMatch(pathMatcherNoTrailingSlash, queryMatcher, uri, path, route, query);
     }
 
     private fuzzyMatch(uriMatcher: string, matcherQuery: string, uri: Uri<string>, path: string, route: Route<Method, string, any, HttpRequestHeaders, any>, query: queryObject<string>) {
