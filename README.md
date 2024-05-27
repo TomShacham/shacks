@@ -30,6 +30,8 @@ Design choices:
 - open api spec generation
   - support full openapi spec (really cba right now ;) https://swagger.io/docs/specification/paths-and-operations/
   - request body spec
+  - test what happens if no example responses are provided (could that be a good enough api spec? and therefore keep the
+    routing api simple)
   - how to support optional query parameters?
   - how to support wildcards?
   - and need to support array referencing a component

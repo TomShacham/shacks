@@ -1,67 +1,8 @@
 import stream from "stream";
-import {HttpMessageBody, HttpResponse, JsonObject} from "./interface";
+import {HttpMessageBody, HttpResponse, JsonObject, JsonValue, MessageBody} from "./interface";
 import {Route, Routes} from "./router";
 import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
-
-export type OpenapiMetadata = {
-    server: { description: string; url: string };
-    description: string;
-    title: string;
-    apiVersion: string
-};
-type SchemaType = {
-    "type": "string" | "integer" | "object" | "array" | "boolean" | "binary"
-};
-export type OpenapiParameter = {
-    "name": string // "userId",
-    "in": "path" | "query" | "header" | "cookie", // "path"
-    "required": boolean, // path parameters are always required
-    "description": string // "ID of the user to retrieve",
-    "schema": SchemaType
-};
-export type OpenapiResponses = {
-    [statusCode: string]: {
-        "content": {
-            [contentType: string]: { // "application/json"
-                "schema": responseSchema
-            }
-        }
-    }
-};
-export type responseSchema = responseValueType | responseObjectType;
-type responseObjectType =
-    | { type: "object", properties: responseObjectType | { [prop: string]: responseObjectType | responseValueType } }
-type responseValueType =
-    | { type: "string", example: string }
-    | { type: "integer" }
-    | { type: "array", items: { "$ref": `#/components/${string}` } }
-export type Resource = {
-    operationId: string; // "getUserById",
-    "parameters": OpenapiParameter[],
-    "responses": OpenapiResponses
-
-};
-type Paths = {
-    [path: string]: {
-        [mtd: string]: Resource
-    }
-};
-export type OpenApiSchema = {
-    "openapi": "3.0.3",
-    "info": {
-        "title": string, // "Example API"
-        "description": string, // "This is a sample API to demonstrate OpenAPI documentation."
-        "version": string, // "1.0.0"
-    },
-    "servers": [
-        {
-            "url": string, // "https://api.example.com/v1",
-            "description": string, // "Production server"
-        }
-    ],
-    paths: Paths
-};
 
 export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSchema {
     return Object.entries(rs).reduce((acc, [routeName, route]) => {
@@ -69,12 +10,12 @@ export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSch
         const paths = acc.paths;
         const method = route.matcher.method;
         const parameters = requestParameters(route);
+        const requestBody = requestBodyFrom(route.matcher.body);
         const responses = route.responses;
         const definition = {
             operationId: routeName,
-            ...(parameters.length === 0 ? {} : {
-                "parameters": parameters
-            }),
+            ...(parameters.length === 0 ? {} : {parameters}),
+            ...(requestBody === undefined ? {} : {requestBody}),
             "responses": responsesSchema(responses)
         };
         const mtd = method.toLowerCase();
@@ -134,19 +75,34 @@ export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSch
                     "in": "query",
                     "required": true,
                     "schema": {type: "string"}
-
                 }))
         ];
     }
+
+    function requestBodyFrom(body: MessageBody): OpenapiRequestBody | undefined {
+        if (body === undefined) return undefined;
+        const contentType = contentTypeHeaderFromBody(body);
+        return {
+            required: true,
+            content: {
+                [contentType]: {
+                    schema: bodyTypes(body),
+                    examples: {
+                        example1: {value: exampleBodyFrom(body)}
+                    }
+                }
+            }
+        }
+    }
 }
 
-function responsesSchema(responses: HttpResponse[]) {
+function responsesSchema(responses: HttpResponse[]): OpenapiResponses {
     return responses.reduce((acc, r) => {
         const header = r.headers['content-type'] as string | undefined;
         acc[r.status.toString()] = {
             content: {
                 [header ?? contentTypeHeaderFromBody(r.body)]: {
-                    schema: bodyTypes(r)
+                    schema: bodyTypes(r.body, r.statusText)
                 }
             }
         }
@@ -154,7 +110,7 @@ function responsesSchema(responses: HttpResponse[]) {
     }, {} as OpenapiResponses);
 }
 
-function objectTypes(body: JsonObject): responseSchema {
+function objectTypes(body: JsonObject): bodySchema {
     return Object.keys(body).reduce((obj, key) => {
         if (typeof body[key] === "string") {
             // @ts-ignore
@@ -174,17 +130,16 @@ function objectTypes(body: JsonObject): responseSchema {
             obj[key] = {type: "object", properties: objectTypes(body[key])}
         }
         return obj
-    }, {} as responseSchema)
+    }, {} as bodySchema)
 }
 
-function bodyTypes(res: HttpResponse): responseSchema {
-    const body = res.body;
+function bodyTypes(body: MessageBody, statusText?: string): bodySchema {
     if (typeof body === "string") {
         return {type: "string", example: body}
     } else if (body instanceof stream.Readable || body instanceof Buffer) {
         return {type: "string", example: 'stream'}
     } else if (body === undefined) {
-        return {type: "string", example: res.statusText ?? '[empty string]'}
+        return {type: "string", example: statusText ?? '[empty string]'}
     } else if (Array.isArray(body)) {
         // TODO how to reference components ;D
         return {type: "array", items: {"$ref": "#/components/schemas/pet"}}
@@ -192,6 +147,18 @@ function bodyTypes(res: HttpResponse): responseSchema {
         // @ts-ignore
         return {type: "object", properties: objectTypes(body)};
     }
+}
+
+function exampleBodyFrom(body: MessageBody): string | JsonObject | JsonValue[] {
+    return typeof body === 'string'
+        ? "string"
+        : body instanceof stream.Readable
+            ? "stream"
+            : body instanceof Buffer
+                ? "buffer"
+                : typeof body === 'object'
+                    ? body
+                    : ""
 }
 
 function contentTypeHeaderFromBody(body: HttpMessageBody): string {
@@ -205,3 +172,75 @@ function contentTypeHeaderFromBody(body: HttpMessageBody): string {
                     ? 'application/json'
                     : 'application/octet-stream'
 }
+
+
+type OpenapiMetadata = {
+    server: { description: string; url: string };
+    description: string;
+    title: string;
+    apiVersion: string
+};
+type SchemaType = {
+    "type": "string" | "integer" | "object" | "array" | "boolean" | "binary"
+};
+type OpenapiParameter = {
+    "name": string // "userId",
+    "in": "path" | "query" | "header" | "cookie", // "path"
+    "required": boolean, // path parameters are always required
+    "description": string // "ID of the user to retrieve",
+    "schema": SchemaType
+};
+type OpenapiRequestBody = {
+    required: true,
+    content: {
+        [contentType: string]: {
+            schema: bodySchema,
+            examples: {
+                example1: { value: MessageBody }
+            }
+        }
+    }
+};
+type OpenapiResponses = {
+    [statusCode: string]: {
+        "content": {
+            [contentType: string]: { // e.g. "application/json"
+                "schema": bodySchema
+            }
+        }
+    }
+};
+type bodySchema = responseValueType | responseObjectType;
+type responseObjectType =
+    | { type: "object", properties: responseObjectType | { [prop: string]: responseObjectType | responseValueType } }
+type responseValueType =
+    | { type: "string", example: string }
+    | { type: "integer" }
+    | { type: "array", items: { "$ref": `#/components/${string}` } }
+type Resource = {
+    operationId: string; // "getUserById",
+    requestBody?: OpenapiRequestBody,
+    parameters?: OpenapiParameter[],
+    responses?: OpenapiResponses
+
+};
+type Paths = {
+    [path: string]: {
+        [mtd: string]: Resource
+    }
+};
+type OpenApiSchema = {
+    "openapi": "3.0.3",
+    "info": {
+        "title": string, // "Example API"
+        "description": string, // "This is a sample API to demonstrate OpenAPI documentation."
+        "version": string, // "1.0.0"
+    },
+    "servers": [
+        {
+            "url": string, // "https://api.example.com/v1",
+            "description": string, // "Production server"
+        }
+    ],
+    paths: Paths
+};
