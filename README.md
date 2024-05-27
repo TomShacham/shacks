@@ -27,8 +27,6 @@ Design choices:
 
 ## Todo
 
-- routing
-  - port tests -
 - http client using fetch (browser) so we can test e2e in memory
   - turn client spec into a contract i.e. parameterise the client
   - generate a client from open api spec? :D

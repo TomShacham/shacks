@@ -3,7 +3,7 @@ import {URI} from "./uri";
 import * as http from "http";
 import stream from "node:stream";
 
-export class HttpClient implements HttpHandler {
+export class NodeHttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
     }
 

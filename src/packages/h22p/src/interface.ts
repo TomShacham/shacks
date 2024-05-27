@@ -1,6 +1,6 @@
 import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
 import * as stream from "stream";
-import {HttpClient} from "./client";
+import {NodeHttpClient} from "./nodeClient";
 import {httpServer, HttpServer} from "./server";
 import {h22pStream} from "./body";
 import {Status} from "./status";
@@ -182,8 +182,8 @@ export class h22p {
         return {method: 'GET' as M, uri: '/' as Uri, body: undefined as B, headers: {} as ReqHds, ...req}
     }
 
-    static client(baseUrl: string = ''): HttpClient {
-        return new HttpClient(baseUrl)
+    static client(baseUrl: string = ''): NodeHttpClient {
+        return new NodeHttpClient(baseUrl)
     }
 
     static async server(handler: HttpHandler, port = 0, host: string = '127.0.0.1'): Promise<HttpServer> {
