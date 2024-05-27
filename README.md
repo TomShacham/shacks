@@ -29,13 +29,16 @@ Design choices:
 
 - open api spec generation
   - support full openapi spec (really cba right now ;) https://swagger.io/docs/specification/paths-and-operations/
+  - request body spec
   - how to support optional query parameters?
   - how to support wildcards?
-  - need to test all different variants like string number boolean
   - and need to support array referencing a component
 - http client using fetch (browser) so we can test e2e in memory
   - generate a client from open api spec? :D
+  - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+  - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
 - figure out what things to not export and hide
+  - break up h22p into things like Req and Res and Multipart etc. ?
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)
   - so-called "filters" like 404 catch all and tracing and 5xx translation
@@ -69,6 +72,7 @@ Design choices:
   or b) you send a response header of content-type "text/html; charset=utf-8"
 - you can only read a body once because it's a stream, so you need to hand it around if you want to re-use it
 - uri in a type-safe router must end with a "/" so that we can ensure the type of the uri (see open questions)
+- open api spec doesn't support
 
 ## Open questions
 

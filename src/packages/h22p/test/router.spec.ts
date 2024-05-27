@@ -247,6 +247,39 @@ describe('test', () => {
                 headers: {},
             });
         })
+
+        it('can perform type narrow of responses', async () => {
+            const routes = {
+                postUser: post('/users/{userId}', {example: 'payload'}, {
+                        handle: async (req) => {
+                            if (Math.random() > 0.5) {
+                                return h22p.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
+                            } else {
+                                return h22p.notFound();
+                            }
+                        }
+                    }, {"content-type": "application/json"} as const,
+                    [
+                        h22p.created({
+                            body: {user: {name: 'tom', worksAt: 'Evil Corp', employed: true, yearsExperience: 10}},
+                            headers: {"content-type": "application/json"},
+                        }),
+                        h22p.notFound({headers: {"content-type": "text/plain"}}),
+                    ])
+            }
+
+            const foo = await routes.postUser.handler.handle({
+                method: 'POST',
+                uri: '/users/123/',
+                body: {example: 'payload'},
+                headers: {"content-type": 'application/json'}
+            })
+            if (foo.status === 200) {
+                // Todo make this compile ;(
+                // @ts-expect-error
+                foo.body.user
+            }
+        })
     })
 
     describe('routing logic of router', () => {

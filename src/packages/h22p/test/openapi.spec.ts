@@ -7,8 +7,7 @@ describe('openapi', () => {
         const routes = {
             getUser: get('/users/{userId}?name', {
                     handle: async (req) => {
-                        const u = req.uri
-                        if (u.length > 5) {
+                        if (Math.random() > 0.5) {
                             return h22p.ok({body: 'hello, world'})
                         } else {
                             return h22p.notFound();
@@ -21,8 +20,7 @@ describe('openapi', () => {
                 ]),
             postUser: post('/users/{userId}', {example: 'payload'}, {
                     handle: async (req) => {
-                        const u = req.uri
-                        if (u.length > 5) {
+                        if (Math.random() > 0.5) {
                             return h22p.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                         } else {
                             return h22p.notFound();
@@ -31,15 +29,14 @@ describe('openapi', () => {
                 }, {"content-type": "application/json"} as const,
                 [
                     h22p.created({
-                        body: {user: {name: 'tom', worksAt: 'Evil Corp'}},
+                        body: {user: {name: 'tom', worksAt: 'Evil Corp', employed: true, yearsExperience: 10}},
                         headers: {"content-type": "application/json"},
                     }),
                     h22p.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
             getUserAccount: get('/users/{userId}/account/{accountId}?name&accountType', {
                     handle: async (req) => {
-                        const u = req.uri
-                        if (u.length > 5) {
+                        if (Math.random() > 0.5) {
                             return h22p.ok({body: 'hello, world'})
                         } else {
                             return h22p.notFound();
@@ -54,16 +51,6 @@ describe('openapi', () => {
                 ]),
         }
 
-        const foo = await routes.getUser.handler.handle({
-            method: 'GET',
-            uri: '/users/123/?name=tom',
-            body: undefined,
-            headers: {"content-type": 'text/plain'}
-        })
-        if (foo.status === 200) {
-            // Todo make this not compile ;(
-            foo.body
-        }
         const schema = openApiSpecFrom(routes as any, {
             description: "This is a sample API to demonstrate OpenAPI documentation.",
             title: "Example API",
@@ -181,6 +168,12 @@ function expectedOpenapiSpec() {
                                                         "type": "string",
                                                         "example": "Evil Corp"
                                                     },
+                                                    "yearsExperience": {
+                                                        "type": "integer"
+                                                    },
+                                                    "employed": {
+                                                        "type": "boolean"
+                                                    }
                                                 }
                                             },
                                         }

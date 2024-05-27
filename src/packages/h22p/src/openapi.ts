@@ -107,7 +107,7 @@ export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSch
     }
 
 
-    function requestParameters(route: Route<any, any, any, any, any>) {
+    function requestParameters(route: Route<any, any, any, any, any>): OpenapiParameter[] {
         const uri = URI.parse(route.matcher.uri);
         const pathParameterNames = (uri.path ?? '')
                 .match(new RegExp('\\{([^}]+)}', 'g'))
@@ -120,7 +120,7 @@ export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSch
                 "in": "path", //  | "query" | "header" | "cookie", // "path"
                 "required": true, // path parameters are always required
                 "schema": {type: "string"}
-            } as OpenapiParameter)),
+            })),
             ...Object.keys(requestHeaders).map((name: string) => ({
                 name: name,
                 "in": "header", //  | "query" | "header" | "cookie", // "path"
@@ -159,9 +159,12 @@ function objectTypes(body: JsonObject): responseSchema {
         if (typeof body[key] === "string") {
             // @ts-ignore
             obj[key] = {type: "string", example: body[key]}
-        } else if (typeof body[key] === "number") {
+        } else if (typeof body[key] === "number" || typeof body[key] === "bigint") {
             // @ts-ignore
             obj[key] = {type: "integer"}
+        } else if (typeof body[key] === "boolean") {
+            // @ts-ignore
+            obj[key] = {type: "boolean"}
         } else if (Array.isArray(body)) {
             // TODO how to reference components ;D
             // @ts-ignore
