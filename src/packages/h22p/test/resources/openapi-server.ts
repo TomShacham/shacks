@@ -69,7 +69,10 @@ function routes() {
                 h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                 h22p.notFound({headers: {"content-type": "text/plain"}}),
             ]),
-        postUser: post('/users/{userId}', {example: 'payload'}, {
+        postUser: post('/users/{userId}/*', {
+                foo: 'bar',
+                gov: {st: "downing", info: {occupied: true, no: 10, who: 'dishy'}}
+            }, {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {

@@ -1,5 +1,5 @@
 import stream from "stream";
-import {HttpMessageBody, HttpResponse, JsonObject, JsonValue, MessageBody} from "./interface";
+import {HttpMessageBody, HttpResponse, JsonBody, JsonObject, MessageBody} from "./interface";
 import {Route, Routes} from "./router";
 import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
@@ -149,7 +149,7 @@ function bodyTypes(body: MessageBody, statusText?: string): bodySchema {
     }
 }
 
-function exampleBodyFrom(body: MessageBody): string | JsonObject | JsonValue[] {
+function exampleBodyFrom(body: MessageBody): string | JsonBody {
     return typeof body === 'string'
         ? "string"
         : body instanceof stream.Readable
@@ -196,7 +196,7 @@ type OpenapiRequestBody = {
         [contentType: string]: {
             schema: bodySchema,
             examples: {
-                example1: { value: MessageBody }
+                example1: { value: string | JsonBody }
             }
         }
     }

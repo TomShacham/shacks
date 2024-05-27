@@ -27,14 +27,9 @@ Design choices:
 
 ## Todo
 
-- open api spec generation
-  - support full openapi spec (really cba right now ;) https://swagger.io/docs/specification/paths-and-operations/
-  - request body spec
-  - test what happens if no example responses are provided (could that be a good enough api spec? and therefore keep the
-    routing api simple)
-  - how to support optional query parameters?
-  - how to support wildcards?
-  - and need to support array referencing a component
+- routing
+  - do we want a way to make a query parameter optional? e.g. with a "?" or something; or mandatory with a "!"
+  - or should queries always be optional? should routing work based on query parameter?
 - http client using fetch (browser) so we can test e2e in memory
   - generate a client from open api spec? :D
   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
@@ -44,6 +39,7 @@ Design choices:
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)
   - so-called "filters" like 404 catch all and tracing and 5xx translation
+  - static file handler
   - database with transactions
   - streaming files to db eg csv with manipulation on the fly including totals
   - streaming files to s3
@@ -74,7 +70,10 @@ Design choices:
   or b) you send a response header of content-type "text/html; charset=utf-8"
 - you can only read a body once because it's a stream, so you need to hand it around if you want to re-use it
 - uri in a type-safe router must end with a "/" so that we can ensure the type of the uri (see open questions)
-- open api spec doesn't support
+- open api spec doesn't support optional parameters
+  - responses are optional, you don't have to add metadata to your routing if you don't want to!
+  - doesnt support components (i.e. no way to reference some shared object; just use a shared example object from tests)
+  - no way to say a parameter is optional (in the routing api, if a query param is present then it's required)
 
 ## Open questions
 

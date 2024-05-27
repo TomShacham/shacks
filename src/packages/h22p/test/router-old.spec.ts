@@ -3,60 +3,6 @@ import {router} from "../src";
 describe('router', () => {
 
 
-    //
-    // it('wildcard with path params and query params', async () => {
-    //     const router = new Router([
-    //         read()('GET', "*/resource/{id}/sub/{subId}/*?q1&q2", async (req) => {
-    //             const pathParams = req.vars.path;
-    //             const queryParams = req.vars.query;
-    //             const wilcards = req.vars.wildcards.join(' ');
-    //             return h22p.response({
-    //                 status: 200,
-    //                 body: `Hello ${wilcards} ${pathParams.id} ${pathParams.subId} ${queryParams.q1} ${queryParams.q2}`
-    //             })
-    //         })
-    //     ]);
-    //     const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky?q1=v1&q2=v2'))
-    //     expect(res.status).eq(200);
-    //     expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456 v1 v2');
-    // })
-    //
-    // it('matches if a fragment is expected but not provided', async () => {
-    //     const router = new Router([
-    //         read()('GET', "*/resource/{id}/sub/{subId}/*?q1&q2#fragment", async (req) => {
-    //             const pathParams = req.vars.path;
-    //             const queryParams = req.vars.query;
-    //             const wildcards = req.vars.wildcards.join(' ');
-    //             const fragment = req.vars.fragment
-    //             return h22p.response({
-    //                 status: 200,
-    //                 body: `Hello ${wildcards} ${pathParams.id} ${pathParams.subId} ${queryParams.q1} ${queryParams.q2}`
-    //             })
-    //         })
-    //     ]);
-    //     const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky?q1=v1&q2=v2'))
-    //     expect(res.status).eq(200);
-    //     expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456 v1 v2');
-    // })
-    //
-    // it('wildcard with path params and query params and fragment', async () => {
-    //     const router = new Router([
-    //         read()('GET', "*/resource/{id}/sub/{subId}/*?q1&q2", async (req) => {
-    //             const pathParams = req.vars.path;
-    //             const queryParams = req.vars.query;
-    //             const wildcards = req.vars.wildcards.join(' ');
-    //             const fragment = req.vars.fragment
-    //             return h22p.response({
-    //                 status: 200,
-    //                 body: `Hello ${wildcards} ${pathParams.id} ${pathParams.subId} ${queryParams.q1} ${queryParams.q2} ${fragment}`
-    //             })
-    //         })
-    //     ]);
-    //     const res = await router.handle(h22p.get('bingo/bongo/resource/123/sub/456/hanky/panky?q1=v1&q2=v2#frag'))
-    //     expect(res.status).eq(200);
-    //     expect(await Body.text(res.body)).eq('Hello bingo/bongo hanky/panky 123 456 v1 v2 frag');
-    // })
-    //
     // it('query params dont have to be there for the route to match', async () => {
     //     const router = new Router([
     //         read()('GET', "*/resource/{id}/sub/{subId}/*?q1&q2", async (req) => {

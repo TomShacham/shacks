@@ -1,5 +1,5 @@
 import {h22p, HttpHandler, HttpMessageBody, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "./interface";
-import {URI} from "./uri";
+import {Uri, URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
 import {h22pStream} from "./body";
 
@@ -92,6 +92,16 @@ export function post<
     }
 }
 
+type RouteMatch = {
+    route: Route<Method, string, any, HttpRequestHeaders, any>,
+    vars: {
+        path: NodeJS.Dict<string>,
+        query: NodeJS.Dict<string>,
+        fragment: string | undefined,
+        wildcards: string[]
+    }
+};
+
 export class Router implements HttpHandler {
     constructor(public routes: Route<Method, string, any, HttpRequestHeaders, any>[]) {
     }
@@ -99,7 +109,7 @@ export class Router implements HttpHandler {
     handle(req: RoutedHttpRequest): Promise<HttpResponse> {
         const notFoundHandler = this.notFound();
         const matchingHandler = this.matches(req.uri, req.method);
-        if (matchingHandler.route) {
+        if (matchingHandler) {
             Object.defineProperty(req, 'vars', {value: matchingHandler.vars})
             return matchingHandler.route.handler.handle(req);
         } else {
@@ -107,43 +117,62 @@ export class Router implements HttpHandler {
         }
     }
 
-    private matches(path: string, method: string): {
-        route?: Route<Method, string, any, HttpRequestHeaders, any>,
-        vars: {
-            path: NodeJS.Dict<string>,
-            query: NodeJS.Dict<string>,
-            fragment: string | undefined,
-            wildcards: string[]
-        }
-    } {
+    private matches(path: string, method: string): RouteMatch | undefined {
         for (const route of this.routes) {
             const matcher = route.matcher;
             if (matcher.method === method && matcher.uri !== undefined) {
-                const uri = URI.parse(path);
-                const query = UrlEncodedMessage.parse(uri.query);
-                const noQuery = matcher.uri.split("?")[0];
-                const noTrailingSlash = (noQuery !== '/' && noQuery.endsWith('/')) ? noQuery.slice(0, -1) : noQuery;
-                const exactMatch = noTrailingSlash === path;
-                if (exactMatch) return {route, vars: {path: {}, query, wildcards: [], fragment: uri.fragment?.slice(1)}}
-                const regex = this.regexCapturingVars(noTrailingSlash);
-                const pathNoQuery = path.split("?")[0];
-                const matches = regex.test(pathNoQuery);
-                if (matches) {
-                    const groups = pathNoQuery.match(regex)!.groups as NodeJS.Dict<string>;
-                    if (groups) return {
-                        route, vars: this.populateVars(groups, query, uri.fragment?.slice(1))
-
-                    }
-                }
+                const match = this.match(route, path);
+                if (match) return match;
             }
         }
-        return {vars: {path: {}, query: {}, wildcards: [], fragment: undefined}}
     }
 
-    private regexCapturingVars(noTrailingSlash: string) {
-        let s = noTrailingSlash.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
+    private match(route: Route<Method, string, any, HttpRequestHeaders, any>, path: string): RouteMatch | undefined {
+        const matcher = route.matcher;
+        const uri = URI.parse(path);
+        const query = UrlEncodedMessage.parse(uri.query);
+        const [matcherPath, matcherQuery] = matcher.uri.split("?");
+        const uriMatcher = (matcherPath !== '/' && matcherPath.endsWith('/'))
+            ? matcherPath.slice(0, -1)
+            : matcherPath;
+        const exactMatch = uriMatcher === path;
+        if (exactMatch) {
+            return {route, vars: {path: {}, query, wildcards: [], fragment: uri.fragment?.slice(1)}}
+        }
+        return this.fuzzyMatch(uriMatcher, matcherQuery, uri, path, route, query);
+    }
+
+    private fuzzyMatch(uriMatcher: string, matcherQuery: string, uri: Uri<string>, path: string, route: Route<Method, string, any, HttpRequestHeaders, any>, query: queryObject<string>) {
+        const pathMatchingRegex = this.regexToCaptureVars(uriMatcher);
+        const mandatoryQueriesMatch = this.queriesMatch(matcherQuery, uri);
+        const matches = pathMatchingRegex.test(path) && mandatoryQueriesMatch;
+        if (matches) {
+            const pathNoQuery = path.split("?")[0];
+            const groups = pathNoQuery.match(pathMatchingRegex)!.groups as NodeJS.Dict<string>;
+            if (groups) return {
+                route, vars: this.populateVars(groups, query, uri.fragment?.slice(1))
+            }
+        }
+    }
+
+    private queriesMatch(matcherQuery: string | undefined, uri: Uri<string>): boolean {
+        if (matcherQuery === undefined) return true;
+        const queryMatching = matcherQuery.split("&").reduce((acc, next) => {
+            if (next.includes("!")) {
+                const withoutBang = next.replace("!", "");
+                acc.push(new RegExp(`(?<query_${withoutBang}>${withoutBang}=[^&]+)`));
+            }
+            return acc;
+        }, [] as RegExp[]);
+        return queryMatching.every(m => m.exec(uri.query ?? '') !== null);
+    }
+
+    private regexToCaptureVars(uriMatcher: string) {
+        // replace the path params with a regex capture
+        let s = uriMatcher.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
+        // replace the wildcards with a regex capture
         for (const wildcard of s.split('*')) {
-            s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.+)`)
+            s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.{0,})`)
         }
         return new RegExp(s);
     }
