@@ -371,21 +371,30 @@ describe('test', () => {
             expect(await Body.text(res.body)).eq('id-123 v1  - some/path');
         })
 
-        it('if query params are in route then they need to be provided to match', async () => {
+        it('if query params with "!" are in route then they need to be provided to match (in any order)', async () => {
             const rs = {
                 getResource: get('/resource/{id}/?q1&q2!', {
                     handle: async (req) => {
-                        const wilds = req.vars?.wildcards.join(' - ');
                         const pathId = req.vars?.path.id;
-                        const queries = Object.values(req.vars?.query ?? {}).join(' ');
-                        return {status: 200, body: `${pathId} ${queries} ${wilds}`, headers: {"foo": "bar"}}
+                        const queries = Object.values(req.vars?.query ?? {}).join('&');
+                        return {status: 200, body: `${pathId} ${queries}`, headers: {"foo": "bar"}}
                     }
                 }, {"content-type": "text/csv"} as const)
             };
             const r = router(rs);
-            const res = await r.handle(h22p.get('/resource/id-123/?q1=v1'))
-            expect(res.status).eq(404);
-            expect(await Body.text(res.body)).eq('Not found');
+            const notFound = await r.handle(h22p.get('/resource/id-123/?q1=v1'))
+            expect(notFound.status).eq(404);
+            expect(await Body.text(notFound.body)).eq('Not found');
+
+            // and query can be in any order
+            const found = await r.handle(h22p.get('/resource/id-123/?q2=v2&q1=v1'))
+            expect(found.status).eq(200);
+            expect(await Body.text(found.body)).eq('id-123 v2&v1');
+
+            // and query can be in any order
+            const foundWithoutQ1 = await r.handle(h22p.get('/resource/id-123/?q2=v2'))
+            expect(foundWithoutQ1.status).eq(200);
+            expect(await Body.text(foundWithoutQ1.body)).eq('id-123 v2');
         });
     })
 
