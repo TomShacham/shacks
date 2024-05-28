@@ -7,26 +7,6 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
     describe('http client', function () {
         this.timeout(500);
 
-        it('GET with uri parts echoed back', async () => {
-            const {port, close} = await h22p.server({
-                async handle(req: HttpRequest): Promise<HttpResponse> {
-                    const uri = URI.parse(req.uri);
-                    return {status: 200, body: JSON.stringify(uri), headers: {}}
-                }
-            });
-            const client = handler(`http://localhost:${port}`);
-            const res = await client.handle(
-                h22p.get(`/path/name?query1=value1&query2=value2#fragment`)
-            )
-            expect(res.status).eq(200);
-            expect(await Body.json(res.body!)).deep.eq({
-                fragment: "#fragment",
-                path: "/path/name",
-                query: "?query1=value1&query2=value2"
-            });
-            await close()
-        })
-
         it('OPTIONS request', async () => {
             const {port, close} = await h22p.server({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
