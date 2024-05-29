@@ -6,8 +6,8 @@ async function browserTestServer() {
     const {server, close, port} = await httpServer({
         async handle(req: HttpRequest): Promise<HttpResponse> {
             const uri = URI.parse(req.uri);
-            if (uri.path === '/src/packages/h22p/bun/index.js') {
-                const body = fs.readFileSync('./src/packages/h22p/bun/index.js', 'utf-8');
+            if (uri.path === '/src/packages/h22p/bun/browser-index.js') {
+                const body = fs.readFileSync('./src/packages/h22p/bun/browser-index.js', 'utf-8');
                 return Res.ok({
                     body: body,
                     headers: {'content-type': 'text/javascript'}
@@ -26,7 +26,7 @@ async function browserTestServer() {
 <head>
     <meta charset="UTF-8" />
     <title>Test h22p in the browser</title>
-    <script type="module" src="./src/packages/h22p/bun/index.js">
+    <script type="module" src="./src/packages/h22p/bun/browser-index.js">
         {
             "imports": {
                 "h22p": "./index.js"

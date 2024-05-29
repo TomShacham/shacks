@@ -2,12 +2,13 @@ import {HttpRequest, HttpResponse} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
-import {Body, MultipartForm} from "../src/body";
+import {Body} from "../src/body";
 import * as stream from "stream";
 import * as zlib from "zlib";
 import {Res} from "../src/response";
 import {Req} from "../src/request";
 import {nodeClient} from "../src";
+import {MultipartForm} from "../src/multipartForm";
 
 describe('client / server', function () {
     it('sends and receives http messages', async () => {

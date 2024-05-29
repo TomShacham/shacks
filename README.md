@@ -29,7 +29,6 @@ Design choices:
 
 - address inline TODOs
 - http client using fetch (browser) so we can test e2e from browser
-  - see if we can compile h22p to run in the browser!
   - write a test that loads h22p into the browser and exercises the routes
     - client-side with server-in-memory
     - as well as server-side using fetch as a client from the browser

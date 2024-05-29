@@ -1,11 +1,9 @@
 import {expect} from "chai";
-import {Body, h22pStream, Route, router} from "../src";
+import {Body, h22pStream, Req, Res, Route, Router} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
-import {Req} from "../src/request";
-import {Res} from "../src/response";
 
-describe('test', () => {
+describe('router', () => {
     describe('type-safe routing', () => {
         const routes = {
             getResource: Route.get('/resource/{id}/sub/{subId}?q1&q2', {
@@ -213,7 +211,7 @@ describe('test', () => {
                     }
                 })
             }
-            const r = router(routes);
+            const r = Router.of(routes);
 
             const resp = await r.handle({
                 method: 'GET',
@@ -277,7 +275,7 @@ describe('test', () => {
 
     describe('routing logic of router', () => {
         it('not found default', async () => {
-            const r = router({
+            const r = Router.of({
                 getResource: Route.get('/resource', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
@@ -290,7 +288,7 @@ describe('test', () => {
         })
 
         it('simple route', async () => {
-            const r = router({
+            const r = Router.of({
                 getResource: Route.get('/', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
@@ -311,7 +309,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/csv"} as const)
             };
-            const r = router(rs);
+            const r = Router.of(rs);
             const res = await r.handle(Req.get('/resource/123/sub/456'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq('Hello 123 456');
@@ -326,7 +324,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/csv"} as const)
             };
-            const r = router(rs);
+            const r = Router.of(rs);
             const res = await r.handle(Req.get('/a/b/c/resource/d/e/f/sub/456/g/h/i'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq('/a/b/c - d/e/f - g/h/i');
@@ -341,7 +339,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/csv"} as const)
             };
-            const r = router(rs);
+            const r = Router.of(rs);
             const res = await r.handle(Req.get('/resource/'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq(' - ');
@@ -358,7 +356,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/csv"} as const)
             };
-            const r = router(rs);
+            const r = Router.of(rs);
             const res = await r.handle(Req.get('/resource/some/path/id-123/?q1=v1#frag'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq('id-123 v1  - some/path');
@@ -374,7 +372,7 @@ describe('test', () => {
                     }
                 }, {"content-type": "text/csv"} as const)
             };
-            const r = router(rs);
+            const r = Router.of(rs);
             const notFound = await r.handle(Req.get('/resource/id-123/?q1=v1'))
             expect(notFound.status).eq(404);
             expect(await Body.text(notFound.body)).eq('Not found');
@@ -391,7 +389,7 @@ describe('test', () => {
         });
 
         it('missing the trailing slash on a route still matches a path with a slash', async () => {
-            const r = router({
+            const r = Router.of({
                 getResource: Route.get('/resource', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
@@ -404,7 +402,7 @@ describe('test', () => {
         })
 
         it('missing the trailing slash on the request still matches a route with a slash', async () => {
-            const r = router({
+            const r = Router.of({
                 getResource: Route.get('/resource/', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}

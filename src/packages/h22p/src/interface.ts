@@ -1,5 +1,5 @@
 import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
-import * as stream from "stream";
+import stream from "stream";
 import {h22pStream} from "./body";
 
 export interface HttpHandler<
@@ -9,9 +9,7 @@ export interface HttpHandler<
     handle(req: Req): Promise<Res>
 }
 
-// non json
-export type SimpleBody = string | Buffer;
-export type HttpMessageBody = JsonBody | SimpleBody | stream.Readable | undefined;
+export type HttpMessageBody = JsonBody | string | Buffer | stream.Readable | undefined;
 export type MessageBody<B extends HttpMessageBody = HttpMessageBody> = h22pStream<B> | B;
 
 /*
@@ -39,11 +37,6 @@ export type BodyType<B extends HttpMessageBody> = B extends h22pStream<infer X>
 export type ReadMethods = 'GET' | 'CONNECT' | 'TRACE' | 'HEAD' | 'OPTIONS';
 export type WriteMethods = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type Method = ReadMethods | WriteMethods;
-
-export function isReadMethod<R, B, Path, M>(method: Method) {
-    return method === 'GET' || method === 'OPTIONS' || method === 'HEAD' || method === 'TRACE' || method === 'CONNECT';
-}
-
 export type HttpRequestHeaders = IncomingHttpHeaders
 export type HttpResponseHeaders = OutgoingHttpHeaders
 
@@ -73,10 +66,6 @@ export interface HttpResponse<
     trailers?: NodeJS.Dict<string>
 }
 
-export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
-    return typeof body === 'string' || body instanceof Buffer;
-}
-
 // TODO set content-type header if not set and body type can be inferred as object / string / stream etc
 
 
@@ -85,3 +74,14 @@ export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
  in order to supply metadata that might be dynamically generated while the message body is sent,
  such as a message integrity check, digital signature, or post-processing status.
 */
+export function isBuffer(body: HttpMessageBody): body is Buffer {
+    return typeof body === 'object' && body.constructor && body.constructor.name === 'Buffer';
+}
+
+export function isStream(body: MessageBody): body is stream.Readable {
+    return typeof body === 'object' && '_read' in body;
+}
+
+export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {
+    return typeof body === 'string' || isBuffer(body);
+}

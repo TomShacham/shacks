@@ -1,4 +1,4 @@
-import {HttpMessageBody, HttpRequest, HttpRequestHeaders, isSimpleBody, Method} from "./interface";
+import {HttpMessageBody, HttpRequest, HttpRequestHeaders, isBuffer, Method} from "./interface";
 
 export class Req {
     static of<
@@ -51,7 +51,7 @@ export class Req {
             Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                 for node to be happy, even though POST, PUT and PATCH can figure themselves out...
          */
-        if (isSimpleBody(body)) {
+        if (typeof body === 'string' || isBuffer(body)) {
             const contentLength = body.length.toString();
             return {method: 'DELETE', body: body, uri: path, headers: {...headers, "content-length": contentLength}}
         } else {

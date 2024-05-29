@@ -1,8 +1,7 @@
-import {HttpHandler, HttpResponse, Method} from "./interface";
+import {HttpHandler, HttpResponse, isBuffer, isStream, Method} from "./interface";
 import * as http from "http";
 import {AddressInfo, Server} from "node:net";
 import * as timers from "timers";
-import * as stream from "stream";
 import process from 'node:process';
 import {Req} from "./request";
 
@@ -35,7 +34,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
         }));
         if (method?.toLowerCase() === 'head') setDefaultContentLengthAndType(res);
         nodeResponse.writeHead(res.status, res.headers)
-        if (res.body instanceof stream.Readable) {
+        if (isStream(res.body)) {
             res.body.on('end', () => nodeResponse.end())
             res.body.pipe(nodeResponse)
         } else if (typeof res.body === 'object') {
@@ -68,7 +67,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
     }
 
     function setDefaultContentLengthAndType(res: HttpResponse) {
-        if (res.headers["content-length"] === undefined && (typeof res.body === 'string' || res.body instanceof Buffer)) {
+        if (res.headers["content-length"] === undefined && (typeof res.body === 'string' || isBuffer(res.body))) {
             res.headers["content-length"] = res.body.length.toString()
         }
         if (res.headers["content-type"] === undefined && (typeof res.body === 'string')) {

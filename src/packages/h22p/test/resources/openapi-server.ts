@@ -1,7 +1,4 @@
-import {httpServer} from "../../src/server";
-import {openApiSpecFrom} from "../../src/openapi";
-import {Res} from "../../src/response";
-import {HttpRequest, HttpResponse, Route, URI} from "../../src";
+import {HttpRequest, HttpResponse, httpServer, OpenApi, Res, Route, URI} from "../../src";
 
 
 async function openApiSwaggerServer() {
@@ -9,7 +6,7 @@ async function openApiSwaggerServer() {
         async handle(req: HttpRequest): Promise<HttpResponse> {
             const uri = URI.parse(req.uri);
             if (uri.path === '/api/v3/openapi.json') {
-                const spec = openApiSpecFrom(routes() as any, {
+                const spec = OpenApi.specFrom(routes() as any, {
                     server: {description: 'some description', url: 'http://localhost:3000'},
                     apiVersion: '0.0.0',
                     description: 'my test openapi server',

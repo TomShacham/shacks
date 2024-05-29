@@ -2,10 +2,23 @@ export * from './body'
 export * from './server'
 export * from './request'
 export * from './response'
-export * from './interface'
+export {
+    HttpHandler,
+    HttpRequest,
+    HttpResponse,
+    HttpMessageBody,
+    HttpRequestHeaders,
+    HttpResponseHeaders,
+    Method,
+    JsonBody,
+    MessageBody
+} from './interface'
 export * from './nodeClient'
 export * from './router'
 export * from './uri'
-export * from './fetchClient'
-export * from './openapi'
+export {FetchClient} from './fetchClient'
+export * from './openApi'
 export {Status} from "./status";
+export {MultipartForm} from "./multipartForm";
+export {isStream} from "./interface";
+export {isSimpleBody} from "./interface";

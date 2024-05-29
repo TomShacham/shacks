@@ -1,4 +1,4 @@
-import {HttpHandler, HttpRequest, HttpResponse} from "./interface";
+import {HttpHandler, HttpMessageBody, HttpRequest, HttpResponse} from "./interface";
 import {h22pStream} from "./body";
 import stream from "stream";
 import {Res} from "./response";
@@ -8,16 +8,7 @@ export class FetchClient implements HttpHandler {
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
-        const body = req.body === undefined ? undefined
-            : new ReadableStream({
-                async start(controller) {
-                    for await (const value of h22pStream.of(req.body)) {
-                        controller.enqueue(value);
-                    }
-                    controller.close();
-                }
-            })
-
+        const body = req.body === undefined ? undefined : createReadableStream(req.body)
         /*
             Fetch does not like you setting "transfer-encoding: chunked" yourself, it blows up!
             https://github.com/vercel/next.js/issues/48214
@@ -58,6 +49,17 @@ export class FetchClient implements HttpHandler {
             ? h22pStream.of(undefined) :
             stream.Readable.from(res.body as unknown as AsyncIterable<Uint8Array>)
     }
+}
+
+export function createReadableStream(arg: HttpMessageBody) {
+    return new ReadableStream({
+        async start(controller) {
+            for await (const value of h22pStream.of(arg)) {
+                controller.enqueue(value);
+            }
+            controller.close();
+        }
+    });
 }
 
 /*

@@ -1,52 +1,63 @@
-import {HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, isReadMethod} from "./interface";
+import {HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, isBuffer, isStream, Method} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
-import stream from "node:stream";
 import {Res} from "./response";
+import {IncomingMessage} from "node:http";
 
 export class NodeHttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
-        const parsedUri = URI.parse(this.baseUrl + req.uri)
         return new Promise(async resolve => {
-            const options = {
-                hostname: parsedUri.hostname,
-                port: parsedUri.port,
-                path: (parsedUri.path ?? '') + (parsedUri.query ?? '') + (parsedUri.fragment ?? ''),
-                username: parsedUri.username ?? undefined,
-                password: parsedUri.password ?? undefined,
-                method: req.method,
-                headers: req.headers
-            };
+            const options = this.nodeRequestFrom(req);
             const nodeRequest = http.request(options, nodeResponse => {
-                const {statusCode, statusMessage, headers, trailers} = nodeResponse;
                 // TODO what do headers really look like;do we get the value as `number` as IncomingHttpHeaders suggests
                 nodeResponse.once('readable', () => {
-                    resolve(Res.of({
-                        status: statusCode,
-                        statusText: statusMessage,
-                        body: nodeResponse,
-                        headers: (headers as HttpRequestHeaders),
-                        trailers
-                    }))
+                    resolve(this.h22pResponseFrom(nodeResponse))
                 });
             });
-            if (isReadMethod(req.method)) {
-                // do not write a body if it's a GET or HEAD etc
-            } else if (req.body instanceof stream.Readable) {
+            if (this.isReadMethod(req.method)) {
+                // we do not write a body if it's a GET or HEAD etc. so this just does nothing
+            } else if (isStream(req.body)) {
                 for await (const chunk of req.body) {
                     nodeRequest.write(chunk)
                 }
-            } else if (req.body instanceof Buffer || typeof req.body === 'string') {
+            } else if (isBuffer(req.body) || typeof req.body === 'string') {
                 nodeRequest.write(req.body);
             } else if (typeof req.body === 'object') {
                 nodeRequest.write(JSON.stringify(req.body));
             }
             nodeRequest.end()
         })
+    }
 
+    private nodeRequestFrom(req: HttpRequest) {
+        const parsedUri = URI.parse(this.baseUrl + req.uri)
+        return {
+            hostname: parsedUri.hostname,
+            port: parsedUri.port,
+            path: (parsedUri.path ?? '') + (parsedUri.query ?? '') + (parsedUri.fragment ?? ''),
+            username: parsedUri.username ?? undefined,
+            password: parsedUri.password ?? undefined,
+            method: req.method,
+            headers: req.headers
+        };
+    }
+
+    private h22pResponseFrom(nodeResponse: IncomingMessage) {
+        const {statusCode, statusMessage, headers, trailers} = nodeResponse;
+        return Res.of({
+            status: statusCode,
+            statusText: statusMessage,
+            body: nodeResponse,
+            headers: (headers as HttpRequestHeaders),
+            trailers
+        });
+    }
+
+    private isReadMethod<R, B, Path, M>(method: Method) {
+        return method === 'GET' || method === 'OPTIONS' || method === 'HEAD' || method === 'TRACE' || method === 'CONNECT';
     }
 }
 

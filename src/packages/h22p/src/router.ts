@@ -73,7 +73,8 @@ function get<
         handler: {
             handle: (req: RoutedHttpRequest<'GET', Uri, undefined, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+                // @ts-ignore // TODO why on earth is this a function in the browser and not an object?!
+                return typeof handler === 'function' ? handler(req) : handler.handle(req);
             }
         },
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
@@ -252,6 +253,10 @@ export class Router implements HttpHandler {
     constructor(public routes: route<Method, string, any, HttpRequestHeaders, any>[]) {
     }
 
+    static of(routes: { [key: string]: route<any, any, any, any, any> }) {
+        return new Router(Object.values(routes))
+    }
+
     handle(req: RoutedHttpRequest): Promise<HttpResponse> {
         const notFoundHandler = this.notFound();
         const matchingHandler = this.matches(req.uri, req.method);
@@ -356,10 +361,6 @@ export class Router implements HttpHandler {
 
         return randomString;
     }
-}
-
-export function router(routes: { [key: string]: route<any, any, any, any, any> }) {
-    return new Router(Object.values(routes))
 }
 
 export type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`

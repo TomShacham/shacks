@@ -1,7 +1,6 @@
-import {openApiSpecFrom} from "../src/openapi";
 import {expect} from "chai";
 import {Res} from "../src/response";
-import {Route} from "../src";
+import {OpenApi, Route} from "../src";
 
 describe('openapi', () => {
     it('produces openAPI spec', async () => {
@@ -57,7 +56,7 @@ describe('openapi', () => {
                 ]),
         }
 
-        const schema = openApiSpecFrom(routes as any, {
+        const schema = OpenApi.specFrom(routes as any, {
             description: "This is a sample API to demonstrate OpenAPI documentation.",
             title: "Example API",
             apiVersion: "1.0.0",
