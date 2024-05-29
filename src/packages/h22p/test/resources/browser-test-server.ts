@@ -7,13 +7,19 @@ async function browserTestServer() {
         async handle(req: HttpRequest): Promise<HttpResponse> {
             const uri = URI.parse(req.uri);
             if (uri.path === '/src/packages/h22p/bun/browser-index.js') {
-                const body = fs.readFileSync('./src/packages/h22p/bun/browser-index.js', 'utf-8');
+                const body = fs.readFileSync('./src/packages/h22p/bun/src/browser-index.js', 'utf-8');
                 return Res.ok({
                     body: body,
                     headers: {'content-type': 'text/javascript'}
                 })
             } else if (uri.path === '/data') {
                 return Res.ok({body: {api: 'response'}})
+            } else if (uri.path === '/src/packages/h22p/bun/test/resources/app.js') {
+                const app = fs.readFileSync('./src/packages/h22p/bun/test/resources/app.js', 'utf-8');
+                return Res.ok({
+                    body: app,
+                    headers: {'content-type': 'text/javascript'}
+                })
             } else {
                 return Res.ok({body: html()})
             }
@@ -26,13 +32,8 @@ async function browserTestServer() {
 <head>
     <meta charset="UTF-8" />
     <title>Test h22p in the browser</title>
-    <script type="module" src="./src/packages/h22p/bun/browser-index.js">
-        {
-            "imports": {
-                "h22p": "./index.js"
-           }
-        }
-    </script>
+    <script type="module" src="./src/packages/h22p/bun/browser-index.js"> </script>
+    <script type="module" src="./src/packages/h22p/bun/test/resources/app.js"> </script>
 </head>
 <body>
 </body>
