@@ -10,10 +10,13 @@
     "declaration": true,
     "outDir": "dist",
     "module": "commonjs",
+    "lib": [
+      "dom"
+    ],
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "target": "esnext",
+    "target": "es6",
     "moduleDetection": "force",
     "noEmitOnError": true
   },

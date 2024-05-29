@@ -6,7 +6,7 @@ export class UrlEncodedMessage {
         if (typeof str !== 'string') return {} as queryObject<S>;
 
         str = (str.startsWith('?') ? str.slice(1) : str) as S;
-        str = (str.replaceAll("+", " ")) as S;
+        str = (str.replace(new RegExp("\\+", 'g'), " ")) as S;
         const keyValuePairs = str.split('&');
         for (const pair of keyValuePairs) {
             const [key, value] = pair.split('=');

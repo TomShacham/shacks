@@ -170,7 +170,7 @@ export class Router implements HttpHandler {
 
     private regexToCaptureVars(uriMatcher: string) {
         // replace the path params with a regex capture
-        let s = uriMatcher.replaceAll(/\{(\w+)}/g, '(?<$1>[^\/]+)');
+        let s = uriMatcher.replace(/\{(\w+)}/g, '(?<$1>[^\/]+)');
         // replace the wildcards with a regex capture
         for (const wildcard of s.split('*')) {
             s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.{0,})`)
