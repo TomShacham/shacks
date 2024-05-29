@@ -1,7 +1,7 @@
 import {httpServer} from "../../src/server";
 import {openApiSpecFrom} from "../../src/openapi";
 import {Res} from "../../src/response";
-import {get, , HttpRequest, HttpResponse, post, URI} from "../../src";
+import {HttpRequest, HttpResponse, Route, URI} from "../../src";
 
 
 async function openApiSwaggerServer() {
@@ -56,7 +56,7 @@ openApiSwaggerServer();
 
 function routes() {
     return {
-        getUser: get('/users/{userId}?name', {
+        getUser: Route.get('/users/{userId}?name', {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {
@@ -70,7 +70,7 @@ function routes() {
                 Res.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                 Res.notFound({headers: {"content-type": "text/plain"}}),
             ]),
-        postUser: post('/users/{userId}/*', {
+        postUser: Route.post('/users/{userId}/*', {
                 foo: 'bar',
                 gov: {st: "downing", info: {occupied: true, no: 10, who: 'dishy'}}
             }, {
@@ -90,7 +90,7 @@ function routes() {
                 }),
                 Res.notFound({headers: {"content-type": "text/plain"}}),
             ]),
-        getUserAccount: get('/users/{userId}/account/{accountId}?name&accountType', {
+        getUserAccount: Route.get('/users/{userId}/account/{accountId}?name&accountType', {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {

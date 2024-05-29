@@ -1,6 +1,6 @@
 import {httpServer} from "../../src/server";
 import * as fs from 'fs';
-import {, HttpRequest, HttpResponse, URI} from "../../src";
+import {HttpRequest, HttpResponse, Res, URI} from "../../src";
 
 async function browserTestServer() {
     const {server, close, port} = await httpServer({

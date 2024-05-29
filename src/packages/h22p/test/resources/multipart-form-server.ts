@@ -1,6 +1,5 @@
-import {httpServer} from "../../src/server";
+import {HttpRequest, HttpResponse, httpServer, MultipartForm, Res} from "../../src";
 import * as fs from "fs";
-import {, HttpRequest, HttpResponse, MultipartForm} from "../../src";
 
 async function multipartFormServer() {
     let {baselineHeap, heap} = heapStats();

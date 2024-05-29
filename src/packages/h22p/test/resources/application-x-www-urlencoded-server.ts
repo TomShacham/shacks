@@ -1,6 +1,4 @@
-import {httpServer} from "../../src/server";
-import {Body, HttpRequest, HttpResponse} from "../../src";
-import {Res} from "../../src/response";
+import {Body, HttpRequest, HttpResponse, httpServer, Res} from "../../src";
 
 async function applicationXWwwUrlencodedServer() {
     const {server, close} = await httpServer({
