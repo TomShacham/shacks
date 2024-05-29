@@ -1,5 +1,4 @@
 import {h22p, HttpHandler, HttpRequest, HttpResponse} from "./interface";
-import {URI} from "./uri";
 import {h22pStream} from "./body";
 import stream from "stream";
 
@@ -8,7 +7,6 @@ export class FetchClient implements HttpHandler {
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
-        const parsedUri = URI.parse(this.baseUrl + req.uri)
         const body = req.body === undefined ? undefined
             : new ReadableStream({
                 async start(controller) {
@@ -23,8 +21,7 @@ export class FetchClient implements HttpHandler {
             Fetch does not like you setting "transfer-encoding: chunked" yourself, it blows up!
             https://github.com/vercel/next.js/issues/48214
          */
-
-        if (req.headers['transfer-encoding'] === 'chunked') {
+        if (req.headers && req.headers['transfer-encoding'] === 'chunked') {
             delete req.headers['transfer-encoding']
         }
 
@@ -41,9 +38,11 @@ export class FetchClient implements HttpHandler {
             .then(res => {
                 const responseBody = this.convertBodyToNodeReadableStream(res);
                 const resHeaders: { [key: string]: string } = {};
-                for (const [name, value] of res.headers.entries()) {
-                    resHeaders[name] = value;
-                }
+                res.headers.forEach((v, k) => {
+                    if (k !== null) {
+                        if (v) resHeaders[k] = v
+                    }
+                })
                 return h22p.response({
                     body: responseBody,
                     headers: resHeaders,
@@ -65,16 +64,18 @@ export class FetchClient implements HttpHandler {
     Not all browsers have implemented the response body as an AsyncIterator so here we are
     https://github.com/DefinitelyTyped/DefinitelyTyped/discussions/65542#discussioncomment-6071004
  */
-// @ts-ignore
-ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
-    const reader = this.getReader()
-    try {
-        while (true) {
-            const {done, value} = await reader.read()
-            if (done) return
-            yield value
+if (typeof ReadableStream !== 'undefined') {
+    // @ts-ignore
+    globalThis.ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
+        const reader = this.getReader()
+        try {
+            while (true) {
+                const {done, value} = await reader.read()
+                if (done) return
+                yield value
+            }
+        } finally {
+            reader.releaseLock()
         }
-    } finally {
-        reader.releaseLock()
     }
 }
