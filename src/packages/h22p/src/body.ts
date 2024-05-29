@@ -11,12 +11,14 @@ export class Body {
     static async text<B extends HttpMessageBody>(body: MessageBody<B>): Promise<string> {
         let text = '';
         if (!body) return text;
-        if (body instanceof stream.Readable && body.destroyed) {
+        const isStream = typeof body === 'object' && '_read' in body;
+        const isStreamDestroyed = isStream && 'destroyed' in body && body.destroyed;
+        if (isStreamDestroyed) {
             console.warn('Stream destroyed so not trying to read body');
             return text;
         }
         const textDecoder = new TextDecoder();
-        if (body instanceof stream.Readable) {
+        if (isStream) {
             for await (const chunk of body) {
                 text += typeof chunk === 'string' ? chunk : textDecoder.decode(chunk);
             }

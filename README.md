@@ -27,8 +27,8 @@ Design choices:
 
 ## Todo
 
-- http client using fetch (browser) so we can test e2e in memory
-  - turn client spec into a contract i.e. parameterise the client
+- http client using fetch (browser) so we can test e2e from browser
+  - see if we can compile h22p to run in the browser!
   - generate a client from open api spec? :D
   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
   - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
