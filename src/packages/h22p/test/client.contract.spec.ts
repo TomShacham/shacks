@@ -1,20 +1,22 @@
 import {expect} from "chai";
-import {Body, h22p, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, URI} from "../src";
+import {Body, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, URI} from "../src";
 import * as stream from "stream";
 import {UrlEncodedMessage} from "../src/urlEncodedMessage";
+import {Req} from "../src/request";
+import {h22pServer} from "../src/server";
 
 export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
     describe('http client', function () {
         this.timeout(500);
 
         it('OPTIONS request', async () => {
-            const {port, close} = await h22p.server({
+            const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
                     return {status: 200, body: 'OPTIONS', headers: {"allow": "GET"}}
                 }
             });
             const client = handler(`http://localhost:${port}`);
-            const res = await client.handle(h22p.options(`/`));
+            const res = await client.handle(Req.options(`/`));
 
             expect(res.status).eq(200);
             expect(await Body.text(res.body!)).eq('OPTIONS');
@@ -23,7 +25,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
         })
 
         it('HEAD request doesnt send body in response and sets default headers if not set in handler', async () => {
-            const {port, close} = await h22p.server({
+            const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
                     const queryString = URI.parse(req.uri).query;
                     const query = UrlEncodedMessage.parse(queryString ?? '');
@@ -40,7 +42,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
 
             const client = handler(``);
             const repsonse = await client.handle(
-                h22p.head(`http://localhost:${port}/`)
+                Req.head(`http://localhost:${port}/`)
             )
             expect(repsonse.status).eq(200);
             expect(await Body.text(repsonse.body!)).not.eq('THIS DOES GET SENT');
@@ -53,7 +55,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                 doesn't override response headers if they are set in the handler
              */
             const repsonseHardCodedHeaders = await client.handle(
-                h22p.head(`http://localhost:${port}/?hardCodeResponseHeaders=true`)
+                Req.head(`http://localhost:${port}/?hardCodeResponseHeaders=true`)
             )
             expect(repsonseHardCodedHeaders.status).eq(200);
             expect(await Body.text(repsonseHardCodedHeaders.body!)).not.eq('THIS DOESNT GET SENT');
@@ -69,7 +71,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     for node to be happy, even though POST, PUT and PATCH can figure themselves out...
              */
 
-            const {port, close} = await h22p.server({
+            const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
                     return {status: 200, body: req.body, headers: {method: req.method}}
                 }
@@ -81,20 +83,20 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
             const bodyJson = {"hello": "world"};
             const bodyBuffer = Buffer.from(bodyString);
 
-            const postResponseString = await client.handle(h22p.post(`/`, bodyString, {}))
-            const putResponseString = await client.handle(h22p.put(`/`, bodyString, {}))
-            const patchResponseString = await client.handle(h22p.patch(`/`, bodyString, {}))
-            const deleteResponseString = await client.handle(h22p.delete(`/`, bodyString, {}))
+            const postResponseString = await client.handle(Req.post(`/`, bodyString, {}))
+            const putResponseString = await client.handle(Req.put(`/`, bodyString, {}))
+            const patchResponseString = await client.handle(Req.patch(`/`, bodyString, {}))
+            const deleteResponseString = await client.handle(Req.delete(`/`, bodyString, {}))
 
             await testMethod(postResponseString, 'POST', bodyString);
             await testMethod(putResponseString, 'PUT', bodyString);
             await testMethod(patchResponseString, 'PATCH', bodyString);
             await testMethod(deleteResponseString, 'DELETE', bodyString);
 
-            const postResponseJson = await client.handle(h22p.post(`/`, bodyJson, {}))
-            const putResponseJson = await client.handle(h22p.put(`/`, bodyJson, {}))
-            const patchResponseJson = await client.handle(h22p.patch(`/`, bodyJson, {}))
-            const deleteResponseJson = await client.handle(h22p.delete(`/`, bodyJson, {}))
+            const postResponseJson = await client.handle(Req.post(`/`, bodyJson, {}))
+            const putResponseJson = await client.handle(Req.put(`/`, bodyJson, {}))
+            const patchResponseJson = await client.handle(Req.patch(`/`, bodyJson, {}))
+            const deleteResponseJson = await client.handle(Req.delete(`/`, bodyJson, {}))
 
             await testMethod(postResponseJson, 'POST', JSON.stringify(bodyJson));
             await testMethod(putResponseJson, 'PUT', JSON.stringify(bodyJson));
@@ -102,20 +104,20 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
             await testMethod(deleteResponseJson, 'DELETE', JSON.stringify(bodyJson));
 
 
-            const postResponseBuffer = await client.handle(h22p.post(`/`, bodyBuffer, {}))
-            const putResponseBuffer = await client.handle(h22p.put(`/`, bodyBuffer, {}))
-            const patchResponseBuffer = await client.handle(h22p.patch(`/`, bodyBuffer, {}))
-            const deleteResponseBuffer = await client.handle(h22p.delete(`/`, bodyBuffer, {}))
+            const postResponseBuffer = await client.handle(Req.post(`/`, bodyBuffer, {}))
+            const putResponseBuffer = await client.handle(Req.put(`/`, bodyBuffer, {}))
+            const patchResponseBuffer = await client.handle(Req.patch(`/`, bodyBuffer, {}))
+            const deleteResponseBuffer = await client.handle(Req.delete(`/`, bodyBuffer, {}))
 
             await testMethod(postResponseBuffer, 'POST', bodyString);
             await testMethod(putResponseBuffer, 'PUT', bodyString);
             await testMethod(patchResponseBuffer, 'PATCH', bodyString);
             await testMethod(deleteResponseBuffer, 'DELETE', bodyString);
 
-            const postResponseStream = await client.handle(h22p.post(`/`, stream.Readable.from(bodyString), {}))
-            const putResponseStream = await client.handle(h22p.put(`/`, stream.Readable.from(bodyString), {}))
-            const patchResponseStream = await client.handle(h22p.patch(`/`, stream.Readable.from(bodyString), {}))
-            const deleteResponseStream = await client.handle(h22p.delete(`/`, stream.Readable.from(bodyString), {}))
+            const postResponseStream = await client.handle(Req.post(`/`, stream.Readable.from(bodyString), {}))
+            const putResponseStream = await client.handle(Req.put(`/`, stream.Readable.from(bodyString), {}))
+            const patchResponseStream = await client.handle(Req.patch(`/`, stream.Readable.from(bodyString), {}))
+            const deleteResponseStream = await client.handle(Req.delete(`/`, stream.Readable.from(bodyString), {}))
 
             await testMethod(postResponseStream, 'POST', bodyString);
             await testMethod(putResponseStream, 'PUT', bodyString);
@@ -133,14 +135,14 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
         })
 
         it('can send a multipart/form-data request with simple body', async () => {
-            const {port, close} = await h22p.server({
+            const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
                     return {status: 200, body: req.body, headers: {}}
                 }
             });
 
             const client = handler(`http://localhost:${port}`);
-            const request = h22p.post(`/`, Body.asMultipartForm([{
+            const request = Req.post(`/`, Body.asMultipartForm([{
                 headers: [{
                     name: 'content-type',
                     value: 'text/plain'
@@ -163,14 +165,14 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
         })
 
         it('can send a multipart/form-data request with stream body', async () => {
-            const {port, close} = await h22p.server({
+            const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
                     return {status: 200, body: req.body, headers: {}}
                 }
             });
 
             const client = handler(`http://localhost:${port}`);
-            const request = h22p.post(`/`, Body.asMultipartForm([{
+            const request = Req.post(`/`, Body.asMultipartForm([{
                 headers: [{
                     name: 'content-type',
                     value: 'text/plain'
@@ -193,14 +195,14 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
         })
 
         it('can send multiple parts in multipart/form-data request', async () => {
-            const {port, close} = await h22p.server({
+            const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
                     return {status: 200, body: req.body, headers: {}}
                 }
             });
 
             const client = handler(`http://localhost:${port}`);
-            const request = h22p.post(`/`, Body.asMultipartForm([
+            const request = Req.post(`/`, Body.asMultipartForm([
                 {
                     headers: [{
                         name: 'content-type',

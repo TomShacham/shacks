@@ -27,13 +27,16 @@ Design choices:
 
 ## Todo
 
+- address inline TODOs
 - http client using fetch (browser) so we can test e2e from browser
   - see if we can compile h22p to run in the browser!
+  - write a test that loads h22p into the browser and exercises the routes
+    - client-side with server-in-memory
+    - as well as server-side using fetch as a client from the browser
+      - generate a client-kinda-thing from the routes
   - generate a client from open api spec? :D
   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
   - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
-- figure out what things to not export and hide
-  - break up h22p into things like Req and Res and Multipart etc. ?
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)
   - so-called "filters" like 404 catch all and tracing and 5xx translation
@@ -76,12 +79,6 @@ Design choices:
 
 ## Open questions
 
-    - do we like the h22p static for exposing the api
-      - i dont like global leakage and it aids in discoverability, but a bit more verbose (h22p. = 5 more chars)
-      - does it mean that the whole of the library gets imported for any use-case and therefore cannot be tree-shaken?
-      - what if we split up the library into separate libraries like h22p-router h22p-core etc.? does that mean then we cannot
-      use the static pattern? or is there some way to extend the class in a type-safe way? don't think so
-    - can we generate open api spec from just types :S might need some other api around routing
     - is there a better way to do the type-safe expanded path in the router that doesn't require it having a slash at the end
       - if typescript gets some advanced types letting you say that a string must consist of certain chars and not others
       but until then the type-error is really obtuse if we want to ensure that a type-safe path cannot contain further segments

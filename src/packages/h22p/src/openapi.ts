@@ -1,6 +1,6 @@
 import stream from "stream";
 import {HttpMessageBody, HttpResponse, JsonBody, JsonObject, MessageBody} from "./interface";
-import {Route, Routes} from "./router";
+import {route, Routes} from "./router";
 import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
 
@@ -48,7 +48,7 @@ export function openApiSpecFrom(rs: Routes, config: OpenapiMetadata): OpenApiSch
     }
 
 
-    function requestParameters(route: Route<any, any, any, any, any>): OpenapiParameter[] {
+    function requestParameters(route: route<any, any, any, any, any>): OpenapiParameter[] {
         const uri = URI.parse(route.matcher.uri);
         const pathParameterNames = (uri.path ?? '')
                 .match(new RegExp('\\{([^}]+)}', 'g'))

@@ -1,9 +1,11 @@
 import {testClientContract} from "./client.contract.spec";
-import {Body, h22p, HttpRequest, HttpResponse, URI} from "../src";
+import {Body, HttpRequest, HttpResponse, nodeClient, URI} from "../src";
 import {expect} from "chai";
+import {Req} from "../src/request";
+import {h22pServer} from "../src/server";
 
 describe('h22p node client', () => {
-    const handler = h22p.client;
+    const handler = nodeClient;
 
     describe('contract', () => {
         testClientContract(handler);
@@ -14,7 +16,7 @@ describe('h22p node client', () => {
      */
 
     it('GET with uri parts echoed back', async () => {
-        const {port, close} = await h22p.server({
+        const {port, close} = await h22pServer({
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 const uri = URI.parse(req.uri);
                 return {status: 200, body: JSON.stringify(uri), headers: {}}
@@ -22,7 +24,7 @@ describe('h22p node client', () => {
         });
         const client = handler(`http://localhost:${port}`);
         const res = await client.handle(
-            h22p.get(`/path/name?query1=value1&query2=value2#fragment`)
+            Req.get(`/path/name?query1=value1&query2=value2#fragment`)
         )
         expect(res.status).eq(200);
         expect(await Body.json(res.body!)).deep.eq({

@@ -1,21 +1,14 @@
 import {expect} from "chai";
-import {Body, get, h22p, h22pStream, post, router} from "../src";
+import {Body, h22pStream, Route, router} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
-
-// todo put, patch etc
-//  - some good name for them? put them in h22p.static ?
-//  open api docs based off routes
-//    - how do we do responses :S
-//  move the old router tests over still some edge cases to test
-//    - like matching on headers and query exactly if they're supplied;
-//    - should body parameter be optional because we aren't matching on it; or should we match on it ?
-
+import {Req} from "../src/request";
+import {Res} from "../src/response";
 
 describe('test', () => {
     describe('type-safe routing', () => {
         const routes = {
-            getResource: get('/resource/{id}/sub/{subId}?q1&q2', {
+            getResource: Route.get('/resource/{id}/sub/{subId}?q1&q2', {
                 handle: async (req) => {
                     try {
                         const s = await Body.json(req.body);
@@ -27,21 +20,21 @@ describe('test', () => {
                     return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                 }
             }, {"content-type": "text/csv"} as const),
-            postJsonResource: post('/resource/{id}', {foo: {baz: 'json'}}, {
+            postJsonResource: Route.post('/resource/{id}', {foo: {baz: 'json'}}, {
                 handle: async (req) => {
                     const s = await Body.json(req.body);
                     s.foo.baz
                     return {status: 200, body: {quux: 'json'}, headers: {}}
                 }
             }),
-            postStringResource: post('/resource/{id}', '', {
+            postStringResource: Route.post('/resource/{id}', '', {
                 handle: async (req) => {
                     const s = await Body.text(req.body);
                     s.slice
                     return {status: 200, body: 'some response string', headers: {}}
                 }
             }),
-            postStreamResource: post('/resource/{id}', stream.Readable.from(''), {
+            postStreamResource: Route.post('/resource/{id}', stream.Readable.from(''), {
                 handle: async (req) => {
                     const s = await Body.json(req.body);
                     // @ts-expect-error - I can't preserve a stream type and an h22pStream type cos theyre both stream.Readable ;(
@@ -50,7 +43,7 @@ describe('test', () => {
                     return {status: 200, body: stream.Readable.from('123'), headers: {}}
                 }
             }),
-            postH22pStreamResource: post('/resource/{id}', h22pStream.of({"a": 123}), {
+            postH22pStreamResource: Route.post('/resource/{id}', h22pStream.of({"a": 123}), {
                 handle: async (req) => {
                     const s = await Body.json(req.body);
                     s.a
@@ -213,7 +206,7 @@ describe('test', () => {
 
         it('wildcard match', async () => {
             const routes = {
-                wildcard: get('*/resource/{id}/sub/{subId}/*', {
+                wildcard: Route.get('*/resource/{id}/sub/{subId}/*', {
                     handle: async (req) => {
                         const wildcards = req.vars?.wildcards;
                         return {status: 200, body: `wildcards: ${wildcards?.join(' ')}`, headers: {"foo": "bar"}}
@@ -250,21 +243,21 @@ describe('test', () => {
 
         it('can perform type narrow of responses', async () => {
             const routes = {
-                postUser: post('/users/{userId}', {example: 'payload'}, {
+                postUser: Route.post('/users/{userId}', {example: 'payload'}, {
                         handle: async (req) => {
                             if (Math.random() > 0.5) {
-                                return h22p.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
+                                return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                             } else {
-                                return h22p.notFound();
+                                return Res.notFound();
                             }
                         }
                     }, {"content-type": "application/json"} as const,
                     [
-                        h22p.created({
+                        Res.created({
                             body: {user: {name: 'tom', worksAt: 'Evil Corp', employed: true, yearsExperience: 10}},
                             headers: {"content-type": "application/json"},
                         }),
-                        h22p.notFound({headers: {"content-type": "text/plain"}}),
+                        Res.notFound({headers: {"content-type": "text/plain"}}),
                     ])
             }
 
@@ -285,33 +278,33 @@ describe('test', () => {
     describe('routing logic of router', () => {
         it('not found default', async () => {
             const r = router({
-                getResource: get('/resource', {
+                getResource: Route.get('/resource', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                     }
                 }, {"content-type": "text/csv"} as const)
             });
-            const res = await r.handle(h22p.request({method: 'GET', uri: '/not/found/'}))
+            const res = await r.handle(Req.of({method: 'GET', uri: '/not/found/'}))
             expect(res.status).eq(404);
             expect(await Body.text(res.body)).eq('Not found');
         })
 
         it('simple route', async () => {
             const r = router({
-                getResource: get('/', {
+                getResource: Route.get('/', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                     }
                 }, {"content-type": "text/csv"} as const)
             });
-            const res = await r.handle(h22p.request({method: 'GET', uri: '/'}))
+            const res = await r.handle(Req.of({method: 'GET', uri: '/'}))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
         })
 
         it('path param', async () => {
             const rs = {
-                getResource: get('/resource/{id}/sub/{subId}', {
+                getResource: Route.get('/resource/{id}/sub/{subId}', {
                     handle: async (req) => {
                         const path = req.vars?.path;
                         return {status: 200, body: `Hello ${path?.id} ${path?.subId}`, headers: {"foo": "bar"}}
@@ -319,14 +312,14 @@ describe('test', () => {
                 }, {"content-type": "text/csv"} as const)
             };
             const r = router(rs);
-            const res = await r.handle(h22p.get('/resource/123/sub/456'))
+            const res = await r.handle(Req.get('/resource/123/sub/456'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq('Hello 123 456');
         })
 
         it('wildcard with values', async () => {
             const rs = {
-                getResource: get('*/resource/*/sub/{subId}/*', {
+                getResource: Route.get('*/resource/*/sub/{subId}/*', {
                     handle: async (req) => {
                         const wilds = req.vars?.wildcards.join(' - ');
                         return {status: 200, body: wilds, headers: {"foo": "bar"}}
@@ -334,14 +327,14 @@ describe('test', () => {
                 }, {"content-type": "text/csv"} as const)
             };
             const r = router(rs);
-            const res = await r.handle(h22p.get('/a/b/c/resource/d/e/f/sub/456/g/h/i'))
+            const res = await r.handle(Req.get('/a/b/c/resource/d/e/f/sub/456/g/h/i'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq('/a/b/c - d/e/f - g/h/i');
         })
 
         it('wildcard without values', async () => {
             const rs = {
-                getResource: get('*/resource/*', {
+                getResource: Route.get('*/resource/*', {
                     handle: async (req) => {
                         const wilds = req.vars?.wildcards.join(' - ');
                         return {status: 200, body: wilds, headers: {"foo": "bar"}}
@@ -349,14 +342,14 @@ describe('test', () => {
                 }, {"content-type": "text/csv"} as const)
             };
             const r = router(rs);
-            const res = await r.handle(h22p.get('/resource/'))
+            const res = await r.handle(Req.get('/resource/'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq(' - ');
         })
 
         it('wildcard with query and path params and fragment', async () => {
             const rs = {
-                getResource: get('*/resource/*/{id}/?q1', {
+                getResource: Route.get('*/resource/*/{id}/?q1', {
                     handle: async (req) => {
                         const wilds = req.vars?.wildcards.join(' - ');
                         const pathId = req.vars?.path.id;
@@ -366,14 +359,14 @@ describe('test', () => {
                 }, {"content-type": "text/csv"} as const)
             };
             const r = router(rs);
-            const res = await r.handle(h22p.get('/resource/some/path/id-123/?q1=v1#frag'))
+            const res = await r.handle(Req.get('/resource/some/path/id-123/?q1=v1#frag'))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq('id-123 v1  - some/path');
         })
 
         it('if query params with "!" are in route then they need to be provided to match (in any order)', async () => {
             const rs = {
-                getResource: get('/resource/{id}/?q1&q2!', {
+                getResource: Route.get('/resource/{id}/?q1&q2!', {
                     handle: async (req) => {
                         const pathId = req.vars?.path.id;
                         const queries = Object.values(req.vars?.query ?? {}).join('&');
@@ -382,44 +375,44 @@ describe('test', () => {
                 }, {"content-type": "text/csv"} as const)
             };
             const r = router(rs);
-            const notFound = await r.handle(h22p.get('/resource/id-123/?q1=v1'))
+            const notFound = await r.handle(Req.get('/resource/id-123/?q1=v1'))
             expect(notFound.status).eq(404);
             expect(await Body.text(notFound.body)).eq('Not found');
 
             // and query can be in any order
-            const found = await r.handle(h22p.get('/resource/id-123/?q2=v2&q1=v1'))
+            const found = await r.handle(Req.get('/resource/id-123/?q2=v2&q1=v1'))
             expect(found.status).eq(200);
             expect(await Body.text(found.body)).eq('id-123 v2&v1');
 
             // and query can be in any order
-            const foundWithoutQ1 = await r.handle(h22p.get('/resource/id-123/?q2=v2'))
+            const foundWithoutQ1 = await r.handle(Req.get('/resource/id-123/?q2=v2'))
             expect(foundWithoutQ1.status).eq(200);
             expect(await Body.text(foundWithoutQ1.body)).eq('id-123 v2');
         });
 
         it('missing the trailing slash on a route still matches a path with a slash', async () => {
             const r = router({
-                getResource: get('/resource', {
+                getResource: Route.get('/resource', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                     }
                 }, {"content-type": "text/csv"} as const)
             });
-            const res = await r.handle(h22p.request({method: 'GET', uri: '/resource/'}))
+            const res = await r.handle(Req.of({method: 'GET', uri: '/resource/'}))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
         })
 
         it('missing the trailing slash on the request still matches a route with a slash', async () => {
             const r = router({
-                getResource: get('/resource/', {
+                getResource: Route.get('/resource/', {
                     handle: async (req) => {
                         return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                     }
                 }, {"content-type": "text/csv"} as const)
             });
             // @ts-ignore
-            const res = await r.handle(h22p.request({method: 'GET', uri: '/resource'}))
+            const res = await r.handle(Req.of({method: 'GET', uri: '/resource'}))
             expect(res.status).eq(200);
             expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
         })

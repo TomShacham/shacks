@@ -1,6 +1,6 @@
 import {httpServer} from "../../src/server";
-import {h22p, HttpRequest, HttpResponse, URI} from "../../src";
 import * as fs from 'fs';
+import {, HttpRequest, HttpResponse, URI} from "../../src";
 
 async function browserTestServer() {
     const {server, close, port} = await httpServer({
@@ -8,14 +8,14 @@ async function browserTestServer() {
             const uri = URI.parse(req.uri);
             if (uri.path === '/src/packages/h22p/bun/index.js') {
                 const body = fs.readFileSync('./src/packages/h22p/bun/index.js', 'utf-8');
-                return h22p.ok({
+                return Res.ok({
                     body: body,
                     headers: {'content-type': 'text/javascript'}
                 })
             } else if (uri.path === '/data') {
-                return h22p.ok({body: {api: 'response'}})
+                return Res.ok({body: {api: 'response'}})
             } else {
-                return h22p.ok({body: html()})
+                return Res.ok({body: html()})
             }
         }
     }, 3000, '127.0.0.1');

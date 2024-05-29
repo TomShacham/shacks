@@ -1,7 +1,8 @@
-import {h22p, HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, isReadMethod} from "./interface";
+import {HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, isReadMethod} from "./interface";
 import {URI} from "./uri";
 import * as http from "http";
 import stream from "node:stream";
+import {Res} from "./response";
 
 export class NodeHttpClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
@@ -23,7 +24,7 @@ export class NodeHttpClient implements HttpHandler {
                 const {statusCode, statusMessage, headers, trailers} = nodeResponse;
                 // TODO what do headers really look like;do we get the value as `number` as IncomingHttpHeaders suggests
                 nodeResponse.once('readable', () => {
-                    resolve(h22p.response({
+                    resolve(Res.of({
                         status: statusCode,
                         statusText: statusMessage,
                         body: nodeResponse,
@@ -47,4 +48,8 @@ export class NodeHttpClient implements HttpHandler {
         })
 
     }
+}
+
+export function nodeClient(baseUrl: string = ''): NodeHttpClient {
+    return new NodeHttpClient(baseUrl)
 }

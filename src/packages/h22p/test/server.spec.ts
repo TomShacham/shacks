@@ -1,22 +1,25 @@
-import {h22p, HttpRequest, HttpResponse} from "../src/interface";
+import {HttpRequest, HttpResponse} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
 import {Body, MultipartForm} from "../src/body";
 import * as stream from "stream";
 import * as zlib from "zlib";
+import {Res} from "../src/response";
+import {Req} from "../src/request";
+import {nodeClient} from "../src";
 
 describe('client / server', function () {
     it('sends and receives http messages', async () => {
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                return h22p.response({status: 201, headers: req.headers, body: await Body.text(req.body!)})
+                return Res.of({status: 201, headers: req.headers, body: await Body.text(req.body!)})
             }
         };
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await h22p.client(`http://localhost:${port}`).handle({
+            const response = await nodeClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -38,7 +41,7 @@ describe('client / server', function () {
     it('streaming one way', async () => {
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                return h22p.response({
+                return Res.of({
                     status: 201,
                     headers: {foo: 'bar'},
                     body: JSON.stringify({size: (await Body.text(req.body!)).length})
@@ -55,7 +58,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await h22p.client(`http://localhost:${port}`).handle({
+            const response = await nodeClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -77,13 +80,13 @@ describe('client / server', function () {
 
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const responseFromProxy = await h22p.client(`http://localhost:${proxyPort}`).handle({
+                const responseFromProxy = await nodeClient(`http://localhost:${proxyPort}`).handle({
                     method: "POST",
                     uri: `/`,
                     body: req.body, // file read stream
                     headers: {}
                 })
-                return h22p.response({
+                return Res.of({
                     status: 200,
                     body: responseFromProxy.body
                 })
@@ -93,7 +96,7 @@ describe('client / server', function () {
         const proxyHandler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 const body = (req.body as stream.Readable).pipe(zlib.createGzip());
-                return h22p.response({
+                return Res.of({
                     status: 201,
                     headers: {foo: 'bar'},
                     body: body,
@@ -111,7 +114,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await h22p.client(`http://localhost:${port}`).handle({
+            const response = await nodeClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -140,7 +143,7 @@ describe('client / server', function () {
                 const text1 = await Body.text(b1);
                 const text2 = await Body.text(b2);
 
-                return h22p.response({status: 200, body: JSON.stringify({text: text1, file: text2})})
+                return Res.of({status: 200, body: JSON.stringify({text: text1, file: text2})})
             }
         };
 
@@ -160,7 +163,7 @@ Upload test file
 --${boundary}--
 
 `
-            const response = await h22p.client(`http://localhost:${port}`).handle({
+            const response = await nodeClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
@@ -181,14 +184,14 @@ Upload test file
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
                 const headers = {...req.headers, "location": "/path", "FoO": "BaR"};
-                return h22p.seeOther({headers: headers, body: ''})
+                return Res.seeOther({headers: headers, body: ''})
             }
         };
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await h22p.client(`http://localhost:${port}`).handle(
-                h22p.get(`/`, {"ReQuEsT-HeAdEr": "r1", "array": ["1", "2", "3"]})
+            const response = await nodeClient(`http://localhost:${port}`).handle(
+                Req.get(`/`, {"ReQuEsT-HeAdEr": "r1", "array": ["1", "2", "3"]})
             );
             expect(response.status).to.eq(303);
             expect(response.statusText).to.eq("See Other");

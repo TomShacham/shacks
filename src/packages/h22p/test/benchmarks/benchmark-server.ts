@@ -1,4 +1,4 @@
-import {h22p, HttpRequest, HttpResponse} from "../src";
+import {h22pServer, HttpRequest, HttpResponse, Res} from "../../src";
 
 process.on('uncaughtException', (e) => {
     if ('code' in e && e.code === 'ECONNRESET') {
@@ -7,9 +7,9 @@ process.on('uncaughtException', (e) => {
 })
 
 async function server() {
-    await h22p.server({
+    await h22pServer({
         async handle(req: HttpRequest): Promise<HttpResponse> {
-            return h22p.ok({body: 'hello, world!'})
+            return Res.ok({body: 'hello, world!'})
         }
     }, 3333, '127.0.0.1');
 }

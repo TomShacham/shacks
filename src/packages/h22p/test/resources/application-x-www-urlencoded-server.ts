@@ -1,17 +1,18 @@
 import {httpServer} from "../../src/server";
-import {Body, h22p, HttpRequest, HttpResponse} from "../../src";
+import {Body, HttpRequest, HttpResponse} from "../../src";
+import {Res} from "../../src/response";
 
 async function applicationXWwwUrlencodedServer() {
     const {server, close} = await httpServer({
         async handle(req: HttpRequest): Promise<HttpResponse> {
             if (req.method === 'POST') {
                 const body = await Body.form(req);
-                return h22p.ok({body, headers: {"content-type": "text/html; charset=utf-8"}})
+                return Res.ok({body, headers: {"content-type": "text/html; charset=utf-8"}})
             }
             if (req.method === 'GET') {
-                return h22p.response({body: html(), status: 200, headers: {"content-type": "text/html; charset=utf-8"}})
+                return Res.of({body: html(), status: 200, headers: {"content-type": "text/html; charset=utf-8"}})
             } else {
-                return h22p.response({body: '', status: 302, headers: {"Location": "/file"}})
+                return Res.of({body: '', status: 302, headers: {"Location": "/file"}})
             }
         }
     }, 3000, '127.0.0.1');

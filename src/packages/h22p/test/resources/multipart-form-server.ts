@@ -1,6 +1,6 @@
 import {httpServer} from "../../src/server";
-import {h22p, HttpRequest, HttpResponse, MultipartForm} from "../../src";
 import * as fs from "fs";
+import {, HttpRequest, HttpResponse, MultipartForm} from "../../src";
 
 async function multipartFormServer() {
     let {baselineHeap, heap} = heapStats();
@@ -28,9 +28,9 @@ async function multipartFormServer() {
 
             }
             if (req.method === 'GET') {
-                return h22p.response({body: html(), status: 200})
+                return Res.of({body: html(), status: 200})
             } else {
-                return h22p.response({body: '', status: 302, headers: {"Location": "/file"}})
+                return Res.of({body: '', status: 302, headers: {"Location": "/file"}})
             }
         }
     }, 3000, '127.0.0.1');

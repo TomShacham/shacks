@@ -1,6 +1,7 @@
 import {httpServer} from "../../src/server";
-import {get, h22p, HttpRequest, HttpResponse, post, URI} from "../../src";
 import {openApiSpecFrom} from "../../src/openapi";
+import {Res} from "../../src/response";
+import {get, , HttpRequest, HttpResponse, post, URI} from "../../src";
 
 
 async function openApiSwaggerServer() {
@@ -14,9 +15,9 @@ async function openApiSwaggerServer() {
                     description: 'my test openapi server',
                     title: 'h22p Openapi Spec'
                 });
-                return h22p.response({body: spec, status: 200})
+                return Res.of({body: spec, status: 200})
             } else {
-                return h22p.response({body: html(), status: 200})
+                return Res.of({body: html(), status: 200})
             }
         }
     }, 3000, '127.0.0.1');
@@ -59,15 +60,15 @@ function routes() {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {
-                        return h22p.ok({body: 'hello, world'})
+                        return Res.ok({body: 'hello, world'})
                     } else {
-                        return h22p.notFound();
+                        return Res.notFound();
                     }
                 }
             }, {"content-type": "text/plain"} as const,
             [
-                h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
-                h22p.notFound({headers: {"content-type": "text/plain"}}),
+                Res.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
+                Res.notFound({headers: {"content-type": "text/plain"}}),
             ]),
         postUser: post('/users/{userId}/*', {
                 foo: 'bar',
@@ -76,34 +77,34 @@ function routes() {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {
-                        return h22p.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
+                        return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                     } else {
-                        return h22p.notFound();
+                        return Res.notFound();
                     }
                 }
             }, {"content-type": "application/json"} as const,
             [
-                h22p.created({
+                Res.created({
                     body: {user: {name: 'tom', worksAt: 'Evil Corp'}},
                     headers: {"content-type": "application/json"},
                 }),
-                h22p.notFound({headers: {"content-type": "text/plain"}}),
+                Res.notFound({headers: {"content-type": "text/plain"}}),
             ]),
         getUserAccount: get('/users/{userId}/account/{accountId}?name&accountType', {
                 handle: async (req) => {
                     const u = req.uri
                     if (u.length > 5) {
-                        return h22p.ok({body: 'hello, world'})
+                        return Res.ok({body: 'hello, world'})
                     } else {
-                        return h22p.notFound();
+                        return Res.notFound();
                     }
                 }
             }, {"content-type": "text/plain"} as const,
             // TODO why does it care about the Body type but not the Headers or Status ??
             //   it doesnt seem to care about Body type either now ;D
             [
-                h22p.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
-                h22p.notFound({headers: {"content-type": "text/plain"}}),
+                Res.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
+                Res.notFound({headers: {"content-type": "text/plain"}}),
             ]),
     }
 }

@@ -1,6 +1,7 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse} from "./interface";
+import {HttpHandler, HttpRequest, HttpResponse} from "./interface";
 import {h22pStream} from "./body";
 import stream from "stream";
+import {Res} from "./response";
 
 export class FetchClient implements HttpHandler {
     constructor(public baseUrl: string = '') {
@@ -43,7 +44,7 @@ export class FetchClient implements HttpHandler {
                         if (v) resHeaders[k] = v
                     }
                 })
-                return h22p.response({
+                return Res.of({
                     body: responseBody,
                     headers: resHeaders,
                     status: res.status,

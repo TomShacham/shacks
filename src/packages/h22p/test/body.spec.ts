@@ -2,7 +2,7 @@ import * as stream from "stream";
 import {expect} from "chai";
 import {Body, MultipartForm} from "../src/body";
 import * as fs from "fs";
-import {h22p} from "../src/interface";
+import {Req} from "../src/request";
 
 describe('body', () => {
 
@@ -19,7 +19,7 @@ describe('body', () => {
     describe('Body.form', () => {
         it('throws if header is not present', async () => {
             try {
-                const form = await Body.form(h22p.post('/', 'name=tom&pic=plom', {}))
+                const form = await Body.form(Req.post('/', 'name=tom&pic=plom', {}))
             } catch (e) {
                 expect((e as Error).message).eq('Content type is not application/x-www-form-urlencoded so bailing on parsing form')
             }
@@ -27,7 +27,7 @@ describe('body', () => {
 
         it('parses application/x-www-form-urlencoded', async () => {
             const form = await Body.form(
-                h22p.post('/', 'name=tom&pic=plom', {"content-type": "application/x-www-form-urlencoded"})
+                Req.post('/', 'name=tom&pic=plom', {"content-type": "application/x-www-form-urlencoded"})
             )
             expect(form).deep.eq({"name": "tom", "pic": "plom"})
         });
@@ -36,7 +36,7 @@ describe('body', () => {
             const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60%2B';
 
             const form = await Body.form(
-                h22p.post('/', `name=tom&pic=${specialChars}`, {"content-type": "application/x-www-form-urlencoded"})
+                Req.post('/', `name=tom&pic=${specialChars}`, {"content-type": "application/x-www-form-urlencoded"})
             )
 
             expect(form).deep.eq({
@@ -47,7 +47,7 @@ describe('body', () => {
 
         it('handles plus - turns into a space', async () => {
             const form = await Body.form(
-                h22p.post('/', `name=t+o%2Bm`, {"content-type": "application/x-www-form-urlencoded"})
+                Req.post('/', `name=t+o%2Bm`, {"content-type": "application/x-www-form-urlencoded"})
             )
 
             expect(form).deep.eq({
@@ -61,7 +61,7 @@ describe('body', () => {
             //   or b) you send a response header of content-type "text/html; charset=utf-8"
 
             const form = await Body.form(
-                h22p.post('/', stringWithUnicodeChar, {"content-type": "application/x-www-form-urlencoded"})
+                Req.post('/', stringWithUnicodeChar, {"content-type": "application/x-www-form-urlencoded"})
             )
 
             expect(form).deep.eq({
@@ -89,7 +89,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -124,7 +124,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -166,7 +166,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -240,7 +240,7 @@ describe('body', () => {
                 '' // body end
             ].join('\n') // <---------- just using LF
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -286,7 +286,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -322,7 +322,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -361,7 +361,7 @@ describe('body', () => {
                 fs.readFileSync(`${__dirname}/resources/hamburger.png`),
                 Buffer.from(postFile, 'binary')])
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(inputStream),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -392,7 +392,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -419,7 +419,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -446,7 +446,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -461,7 +461,7 @@ describe('body', () => {
 
         it('if only sent a termination boundary (e.g. input has no name) then we blow up instead of hanging', async () => {
             const boundary = '------WebKitFormBoundaryByKYauLmhh2M99wi';
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(`--${boundary}--`),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -486,7 +486,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -540,7 +540,7 @@ describe('body', () => {
                 '' // body end
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -607,7 +607,7 @@ describe('body', () => {
             const readStream = fs.createReadStream('/dev/urandom', {end: 1_000_000});
             readStream.unshift(Buffer.from(preFile, 'binary'))
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: readStream,
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}
@@ -641,7 +641,7 @@ describe('body', () => {
                 `--${boundary}--`,
             ].join('\r\n')
 
-            const req = h22p.request({
+            const req = Req.of({
                 method: 'POST',
                 body: stream.Readable.from(wireData),
                 headers: {"content-type": `multipart/form-data; boundary=${boundary}`}

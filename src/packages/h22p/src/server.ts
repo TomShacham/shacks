@@ -1,9 +1,10 @@
-import {h22p, HttpHandler, HttpResponse, Method} from "./interface";
+import {HttpHandler, HttpResponse, Method} from "./interface";
 import * as http from "http";
 import {AddressInfo, Server} from "node:net";
 import * as timers from "timers";
 import * as stream from "stream";
 import process from 'node:process';
+import {Req} from "./request";
 
 export type HttpServer = {
     server: Server;
@@ -26,7 +27,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
 
     server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {
         const {headers, method, url} = nodeReq;
-        const res = await handler.handle(h22p.request({
+        const res = await handler.handle(Req.of({
             body: nodeReq,
             headers,
             method: method as Method,
@@ -76,4 +77,8 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
     }
 
     return {server, port, close};
+}
+
+export async function h22pServer(handler: HttpHandler, port = 0, host: string = '127.0.0.1'): Promise<HttpServer> {
+    return httpServer(handler, port, host);
 }
