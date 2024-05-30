@@ -4,7 +4,7 @@
   "scripts": {
     "clean": "./clean.sh",
     "release": "./release.sh",
-    "build": "tsc",
+    "build": "tsc; bun run src/packages/h22p/build.ts",
     "test": "tsc --noEmit; mocha --require ts-node/register 'src/packages/**/*spec.ts'"
   },
   "main": "dist/index.js",
@@ -19,6 +19,7 @@
     "@types/node": "20.11.4",
     "chai": "4.4.1",
     "mocha": "10.2.0",
+    "puppeteer": "^22.10.0",
     "ts-node": "10.9.2",
     "typescript": "5.4.5"
   }

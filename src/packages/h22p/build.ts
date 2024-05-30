@@ -4,20 +4,24 @@ import * as fs from "fs";
 
 const entrypoints = [
     `/src/browser-index.ts`,
-    `/test/resources/app.ts`
+    `/test/browser/test-app.ts`
 ];
 
-Bun.build({
-    entrypoints: entrypoints.map(entry => `${__dirname}${entry}`),
-    outdir: './bun',
-    target: "browser"
-}).then(r => {
-    if (!r.success) throw new Error(`Failed to compile \n ${r.logs.join('\n')}`)
-    entrypoints.forEach(path => {
-        const pathToBuiltJs = path.replace('.ts', '.js');
-        return bunHotFixes(`./bun${pathToBuiltJs}`);
-    });
-}).then(d => console.log('compiled'));
+const outdir = `${__dirname}/bun`;
+Bun
+    .build({
+        entrypoints: entrypoints.map(entry => `${__dirname}${entry}`),
+        outdir: outdir,
+        target: "browser"
+    })
+    .then(r => {
+        if (!r.success) throw new Error(`Failed to compile \n ${r.logs.join('\n')}`);
+        entrypoints.forEach(path => {
+            const pathToBuiltJs = path.replace('.ts', '.js');
+            return bunHotFixes(`${outdir}${pathToBuiltJs}`);
+        });
+    })
+    .then(_ => console.log(`bun compiled to ${outdir}`));
 
 
 function bunHotFixes(filePath: string) {

@@ -1,9 +1,7 @@
 import {expect} from "chai";
-import {Body, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, URI} from "../src";
+import {Body, h22pServer, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../src";
 import * as stream from "stream";
 import {UrlEncodedMessage} from "../src/urlEncodedMessage";
-import {Req} from "../src/request";
-import {h22pServer} from "../src/server";
 
 export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
     describe('http client', function () {

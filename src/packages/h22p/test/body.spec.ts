@@ -1,9 +1,7 @@
 import * as stream from "stream";
 import {expect} from "chai";
-import {Body} from "../src/body";
+import {Body, MultipartForm, Req} from "../src";
 import * as fs from "fs";
-import {Req} from "../src/request";
-import {MultipartForm} from "../src/multipartForm";
 
 describe('body', () => {
 

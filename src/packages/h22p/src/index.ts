@@ -20,5 +20,3 @@ export {FetchClient} from './fetchClient'
 export * from './openApi'
 export {Status} from "./status";
 export {MultipartForm} from "./multipartForm";
-export {isStream} from "./interface";
-export {isSimpleBody} from "./interface";

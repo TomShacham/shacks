@@ -115,7 +115,6 @@ export class Body {
     }
 }
 
-
 export type ContentTypes = | 'text/plain'
     | 'text/html'
     | 'text/css'

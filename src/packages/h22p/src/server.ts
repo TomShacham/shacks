@@ -20,8 +20,9 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
     })
     const listening = server.listen({port: port ?? 0, host: host})
     await new Promise(res => server.on('listening', (e: Event) => {
-        port = (listening.address() as AddressInfo).port
-        res(e)
+        port = (listening.address() as AddressInfo).port;
+        console.log(`h22p server listening on ${port}`);
+        res(e);
     }))
 
     server.on('request', async (nodeReq: http.IncomingMessage, nodeResponse: http.ServerResponse) => {

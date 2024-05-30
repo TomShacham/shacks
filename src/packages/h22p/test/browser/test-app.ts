@@ -1,5 +1,9 @@
 import {Route, Router} from "../../src";
 
+/*
+    This is our test app that will be loaded into the browser
+    so that we can make http requests in-memory in the browser!
+ */
 
 // @ts-ignore
 global.app = Router.of({

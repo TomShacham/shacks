@@ -22,10 +22,10 @@
   },
   "include": [
     "src/packages/**/*",
-    "src/**/*.spec.ts"
   ],
   "exclude": [
     "node_modules",
-    "src/app-example"
+    "src/app-example",
+    "src/packages/h22p/test"
   ]
 }

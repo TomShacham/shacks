@@ -1,7 +1,17 @@
 export * from './body'
 export * from './request'
 export * from './response'
-export * from './interface'
+export {
+    HttpHandler,
+    HttpRequest,
+    HttpResponse,
+    HttpMessageBody,
+    HttpRequestHeaders,
+    HttpResponseHeaders,
+    Method,
+    JsonBody,
+    MessageBody
+} from './interface'
 export * from './router'
 export * from './uri'
 export {FetchClient} from './fetchClient'
