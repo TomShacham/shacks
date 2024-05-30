@@ -97,8 +97,6 @@ function routes() {
                     }
                 }
             }, {"content-type": "text/plain"} as const,
-            // TODO why does it care about the Body type but not the Headers or Status ??
-            //   it doesnt seem to care about Body type either now ;D
             [
                 Res.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                 Res.notFound({headers: {"content-type": "text/plain"}}),

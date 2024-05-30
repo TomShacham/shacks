@@ -73,8 +73,7 @@ function get<
         handler: {
             handle: (req: RoutedHttpRequest<'GET', Uri, undefined, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                // @ts-ignore // TODO why on earth is this a function in the browser and not an object?!
-                return typeof handler === 'function' ? handler(req) : handler.handle(req);
+                return handler.handle(req);
             }
         },
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),

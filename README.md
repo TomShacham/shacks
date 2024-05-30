@@ -29,21 +29,19 @@ Design choices:
 
 - address inline TODOs
 - http client using fetch (browser) so we can test e2e from browser
-  - write a test that loads h22p into the browser and exercises the routes
     - closing stream (and implement on node http client too)
       - https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultController/close
     - https://github.com/mdn/dom-examples/tree/main/streams
+  - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
     - can we really do multipart forms as the tests seem to suggest?
-      - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
     - support all the other parameters like cache, credentials, referrerPolicy, and mode
-      - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
     - why is handler a function in the browser but an object on the server 🤔
     - client-side with server-in-memory
     - as well as server-side using fetch as a client from the browser
       - generate a client-kinda-thing from the routes
   - generate a client from open api spec? :D
   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-  - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
+- support Lambda and Cloudflare Workers as HttpHandlers
 - deploy to cloudflare cos heroku $$$
 - example app (idea is to iterate the library through using it to actually build stuff)
   - so-called "filters" like 404 catch all and tracing and 5xx translation
