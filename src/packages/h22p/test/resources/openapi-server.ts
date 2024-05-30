@@ -55,8 +55,7 @@ function routes() {
     return {
         getUser: Route.get('/users/{userId}?name', {
                 handle: async (req) => {
-                    const u = req.uri
-                    if (u.length > 5) {
+                    if (Math.random() > 0.5) {
                         return Res.ok({body: 'hello, world'})
                     } else {
                         return Res.notFound();
@@ -72,8 +71,7 @@ function routes() {
                 gov: {st: "downing", info: {occupied: true, no: 10, who: 'dishy'}}
             }, {
                 handle: async (req) => {
-                    const u = req.uri
-                    if (u.length > 5) {
+                    if (Math.random() > 0.5) {
                         return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                     } else {
                         return Res.notFound();
@@ -89,8 +87,7 @@ function routes() {
             ]),
         getUserAccount: Route.get('/users/{userId}/account/{accountId}?name&accountType', {
                 handle: async (req) => {
-                    const u = req.uri
-                    if (u.length > 5) {
+                    if (Math.random() > 0.5) {
                         return Res.ok({body: 'hello, world'})
                     } else {
                         return Res.notFound();

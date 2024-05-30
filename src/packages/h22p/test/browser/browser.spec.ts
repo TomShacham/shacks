@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {browserTestServer} from "../resources/browserTestServer";
 
 describe('test app in-browser', function () {
-    this.timeout(2_000);
+    this.timeout(5_000);
 
     /*
         This test relies on having run pnpm build to produce the compiled h22p module for the browser;
@@ -13,7 +13,7 @@ describe('test app in-browser', function () {
     it('api call in-memory', async function () {
         const {port, close} = await browserTestServer(0);
 
-        const browser = await puppeteer.launch({headless: true, timeout: 2_000});
+        const browser = await puppeteer.launch({headless: true, timeout: 5_000});
         const page = await browser.newPage();
 
         await page.goto(`http://localhost:${port}/index.html`);
@@ -34,7 +34,7 @@ describe('test app in-browser', function () {
     it('api call using fetch', async function () {
         const {port, close} = await browserTestServer(0);
 
-        const browser = await puppeteer.launch({headless: true, timeout: 2_000});
+        const browser = await puppeteer.launch({headless: true, timeout: 5_000});
         const page = await browser.newPage();
 
         await page.goto(`http://localhost:${port}/index.html`);

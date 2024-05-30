@@ -12,7 +12,8 @@ Bun
     .build({
         entrypoints: entrypoints.map(entry => `${__dirname}${entry}`),
         outdir: outdir,
-        target: "browser"
+        target: "browser",
+        // minify: true
     })
     .then(r => {
         if (!r.success) throw new Error(`Failed to compile \n ${r.logs.join('\n')}`);
