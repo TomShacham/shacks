@@ -1,4 +1,4 @@
-// @ts-nocheck  --- I've done this because @types/bun conflicts with @types/node and this file causes tsc to fail
+// @ts-nocheck  --- nocheck because @types/bun conflicts with @types/node and this file causes tsc to fail
 import * as Bun from 'bun';
 import * as fs from "fs";
 

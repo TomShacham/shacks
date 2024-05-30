@@ -11,7 +11,7 @@ describe('test app in-browser', function () {
         which is output to a /bun directory in the h22p package
      */
 
-    it('test some api call in-memory', async function () {
+    it('api call in-memory', async function () {
         const {port, close} = await browserTestServer();
 
         const browser = await puppeteer.launch({headless: true, timeout: 2_000});
@@ -27,6 +27,27 @@ describe('test app in-browser', function () {
         `);
 
         expect(out).deep.eq({"bar": "json"});
+
+        await close();
+        await browser.close();
+    })
+
+    it('api call using fetch', async function () {
+        const {port, close} = await browserTestServer();
+
+        const browser = await puppeteer.launch({headless: true, timeout: 2_000});
+        const page = await browser.newPage();
+
+        await page.goto(`http://localhost:${port}/index.html`);
+        const out = await page.evaluate(`
+            new h22p.FetchClient('http://localhost:${port}').handle(
+                h22p.Req.get("/data")
+            )
+            .then(r => h22p.Body.json(r.body))
+            .then(j => j)
+        `);
+
+        expect(out).deep.eq({some: "data"});
 
         await close();
         await browser.close();
@@ -50,6 +71,8 @@ async function browserTestServer() {
                     body: testAppModule,
                     headers: {'content-type': 'text/javascript'}
                 })
+            } else if (uri.path === '/data') {
+                return Res.ok({body: {some: "data"}})
             } else {
                 return Res.ok({body: html()})
             }
