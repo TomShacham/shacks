@@ -36,8 +36,8 @@ importers:
   src/app-example:
     dependencies:
       '@shacks/h22p':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.1.1
+        version: 1.1.1
       ts-node:
         specifier: 10.9.2
         version: 10.9.2(@types/node@20.12.12)(typescript@5.4.3)
@@ -78,8 +78,8 @@ packages:
     engines: { node: '>=18' }
     hasBin: true
 
-  '@shacks/h22p@1.1.0':
-    resolution: { integrity: sha512-cqK9WMF2jfjouekI/Xvgz7t/ItoKAvUVhpGqE+dQp9VpdE45rmNGBJRuYC9gDsb/kpBguKRPbPk+tiJmArbiAA== }
+  '@shacks/h22p@1.1.1':
+    resolution: { integrity: sha512-BbLrXdpplh90ddVe81begRsFUxEyEiTkRB0NDudMfWSCph+5i9MJgps2cquc18PbB3Trem4W/aW/GMfyuhUwlA== }
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: { integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA== }
@@ -868,7 +868,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@shacks/h22p@1.1.0': { }
+  '@shacks/h22p@1.1.1': { }
 
   '@tootallnate/quickjs-emscripten@0.23.0': { }
 

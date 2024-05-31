@@ -1,4 +1,4 @@
-import {h22p, HttpHandler, HttpRequest, HttpResponse, route, router, URI} from '@shacks/h22p'
+import {HttpHandler, HttpRequest, HttpResponse, httpServer, Res, Route, Router, URI} from "../packages/h22p/src";
 
 function isProductionEnv(env: string = process.env.NODE_ENV ?? 'local') {
     return env === 'production';
@@ -11,17 +11,18 @@ async function main() {
 
     console.log('app starting on', {port, host});
 
-    const routingHandler = router([
-        route('GET', '/path/{id}', async (req) => {
-            return h22p.response({body: `hello, ${req.vars.path.id}`})
-        }),
-        route('GET', '/', async (req) => {
-            return h22p.response({body: 'hello, world!'})
-        }),
-
-    ]);
+    const routingHandler = Router.of({
+        getResource: Route.get('/path/{id}', async (req) => {
+                return Res.ok({body: `hello, ${req.vars?.path.id}`})
+            }
+        ),
+        getRoot: Route.get('/', async (req) => {
+                return Res.ok({body: 'hello, world!'})
+            }
+        ),
+    });
     const decorated = new RedirectToHttps(routingHandler);
-    const {server, close} = await h22p.server(decorated, port, host);
+    const {server, close} = await httpServer(decorated, port, host);
 }
 
 class RedirectToHttps implements HttpHandler {
@@ -31,10 +32,10 @@ class RedirectToHttps implements HttpHandler {
     async handle(req: HttpRequest): Promise<HttpResponse> {
         const protocol = req.headers['x-forwarded-proto'];
         if (isProductionEnv() && protocol !== 'https') {
-            const url = URI.of(req.path);
+            const url = URI.parse(req.uri);
             const location = `https://${req.headers.host}${url.path}`;
             console.log(`redirecting from http to https for ${url.path}`);
-            return h22p.response({status: 301, headers: {"location": location}, body: "Moved permanently"})
+            return Res.movedPermanently({headers: {"location": location}, body: "Moved permanently"})
         } else {
             return this.delegate.handle(req);
         }
