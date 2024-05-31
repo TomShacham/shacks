@@ -10,9 +10,7 @@ export type handler<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse
-> = {
-    handle: (req: RoutedHttpRequest<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
-}
+> = (req: RoutedHttpRequest<Mtd, Uri, ReqB, ReqHds>) => Promise<Res>
 
 // this is lower case just so we can export class Route with all our routing methods
 export type route<
@@ -70,12 +68,11 @@ function get<
 >(uri: Uri, handler: handler<"GET", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<"GET", Uri, undefined, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'GET', Uri, undefined, ReqHds>) => {
-                Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
-            }
-        },
+        handler: (req: RoutedHttpRequest<'GET', Uri, undefined, ReqHds>) => {
+            Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
+            return handler(req);
+        }
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'GET', uri, body: undefined, headers: headers ?? {} as ReqHds}),
         responses: responses ?? []
@@ -89,12 +86,11 @@ function head<
 >(uri: Uri, handler: handler<"HEAD", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<"HEAD", Uri, undefined, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'HEAD', Uri, undefined, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'HEAD', Uri, undefined, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'HEAD', uri, body: undefined, headers: headers ?? {} as ReqHds}),
         responses: responses ?? []
@@ -108,12 +104,11 @@ function options<
 >(uri: Uri, handler: handler<"OPTIONS", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<"OPTIONS", Uri, undefined, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'OPTIONS', Uri, undefined, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'OPTIONS', Uri, undefined, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'OPTIONS', uri, body: undefined, headers: headers ?? {} as ReqHds}),
         responses: responses ?? []
@@ -127,12 +122,11 @@ function connect<
 >(uri: Uri, handler: handler<"CONNECT", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<"CONNECT", Uri, undefined, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'CONNECT', Uri, undefined, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'CONNECT', Uri, undefined, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'CONNECT', uri, body: undefined, headers: headers ?? {} as ReqHds}),
         responses: responses ?? []
@@ -146,12 +140,11 @@ function trace<
 >(uri: Uri, handler: handler<"TRACE", Uri, undefined, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<"TRACE", Uri, undefined, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'TRACE', Uri, undefined, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'TRACE', Uri, undefined, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'TRACE', uri, body: undefined, headers: headers ?? {} as ReqHds}),
         responses: responses ?? []
@@ -166,12 +159,11 @@ function post<
 >(uri: Uri, body: ReqB, handler: handler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<'POST', Uri, ReqB, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'POST', uri, body, headers: headers ?? {} as ReqHds}),
         responses: responses ?? [],
@@ -186,12 +178,11 @@ function put<
 >(uri: Uri, body: ReqB, handler: handler<'PUT', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<'PUT', Uri, ReqB, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'PUT', Uri, ReqB, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'PUT', Uri, ReqB, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'PUT', uri, body, headers: headers ?? {} as ReqHds}),
         responses: responses ?? [],
@@ -206,12 +197,11 @@ function patch<
 >(uri: Uri, body: ReqB, handler: handler<'PATCH', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<'PATCH', Uri, ReqB, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'PATCH', Uri, ReqB, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'PATCH', Uri, ReqB, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'PATCH', uri, body, headers: headers ?? {} as ReqHds}),
         responses: responses ?? [],
@@ -226,12 +216,11 @@ function del<
 >(uri: Uri, body: ReqB, handler: handler<'DELETE', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : route<'DELETE', Uri, ReqB, ReqHds, Res> {
     return {
-        handler: {
-            handle: (req: RoutedHttpRequest<'DELETE', Uri, ReqB, ReqHds>) => {
+        handler: (req: RoutedHttpRequest<'DELETE', Uri, ReqB, ReqHds>) => {
                 Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
-                return handler.handle(req);
+            return handler(req);
             }
-        },
+        ,
         request: (mtd, uri, body, headers) => ({method: mtd, uri, body, headers: headers}),
         matcher: ({method: 'DELETE', uri, body, headers: headers ?? {} as ReqHds}),
         responses: responses ?? [],
@@ -252,7 +241,7 @@ export class Router implements HttpHandler {
     constructor(public routes: route<Method, string, any, HttpRequestHeaders, any>[]) {
     }
 
-    static of(routes: { [key: string]: route<any, any, any, any, any> }) {
+    static of(routes: { [key: string]: any }) {
         return new Router(Object.values(routes))
     }
 
@@ -261,7 +250,7 @@ export class Router implements HttpHandler {
         const matchingHandler = this.matches(req.uri, req.method);
         if (matchingHandler) {
             Object.defineProperty(req, 'vars', {value: matchingHandler.vars})
-            return matchingHandler.route.handler.handle(req);
+            return matchingHandler.route.handler(req);
         } else {
             return notFoundHandler.handle(req);
         }

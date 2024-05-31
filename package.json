@@ -1,6 +1,6 @@
 {
   "name": "@shacks/h22p",
-  "version": "1.0.13",
+  "version": "1.1.0",
   "scripts": {
     "clean": "./clean.sh",
     "release": "./release.sh",

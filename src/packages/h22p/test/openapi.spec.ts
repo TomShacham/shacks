@@ -5,13 +5,11 @@ import {OpenApi, Route} from "../src";
 describe('openapi', () => {
     it('produces openAPI spec', async () => {
         const routes = {
-            getUser: Route.get('/users/{userId}?name', {
-                    handle: async (req) => {
-                        if (Math.random() > 0.5) {
-                            return Res.ok({body: 'hello, world'})
-                        } else {
-                            return Res.notFound();
-                        }
+            getUser: Route.get('/users/{userId}?name', async (req) => {
+                    if (Math.random() > 0.5) {
+                        return Res.ok({body: 'hello, world'})
+                    } else {
+                        return Res.notFound();
                     }
                 }, {"content-type": "text/plain"} as const,
                 [
@@ -23,13 +21,11 @@ describe('openapi', () => {
                         st: "downing",
                         info: {occupied: true, no: 10, who: 'dishy'}
                     }
-                }, {
-                    handle: async (req) => {
-                        if (Math.random() > 0.5) {
-                            return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
-                        } else {
-                            return Res.notFound();
-                        }
+                }, async (req) => {
+                    if (Math.random() > 0.5) {
+                        return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
+                    } else {
+                        return Res.notFound();
                     }
                 }, {"content-type": "application/json"} as const,
                 [
@@ -39,13 +35,11 @@ describe('openapi', () => {
                     }),
                     Res.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
-            getUserAccount: Route.get('/users/{userId}/account/{accountId}?name&accountType', {
-                    handle: async (req) => {
-                        if (Math.random() > 0.5) {
-                            return Res.ok({body: 'hello, world'})
-                        } else {
-                            return Res.notFound();
-                        }
+            getUserAccount: Route.get('/users/{userId}/account/{accountId}?name&accountType', async (req) => {
+                    if (Math.random() > 0.5) {
+                        return Res.ok({body: 'hello, world'})
+                    } else {
+                        return Res.notFound();
                     }
                 }, {"content-type": "text/plain"} as const,
                 // TODO why does it care about the Body type but not the Headers or Status ??
