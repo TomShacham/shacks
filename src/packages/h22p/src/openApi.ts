@@ -1,5 +1,5 @@
 import {HttpMessageBody, HttpResponse, isBuffer, isStream, JsonBody, JsonObject, MessageBody} from "./interface";
-import {route, Routes} from "./router";
+import {RouteDefinition, Routes} from "./router";
 import {URI} from "./uri";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
 
@@ -50,7 +50,7 @@ export class OpenApi {
     }
 
 
-    private static requestParameters(route: route<any, any, any, any, any>): OpenapiParameter[] {
+    private static requestParameters(route: RouteDefinition<any, any, any, any, any>): OpenapiParameter[] {
         const uri = URI.parse(route.matcher.uri);
         const pathParameterNames = (uri.path ?? '')
                 .match(new RegExp('\\{([^}]+)}', 'g'))

@@ -72,6 +72,7 @@ Design choices:
   or b) you send a response header of content-type "text/html; charset=utf-8"
 - you can only read a body once because it's a stream, so you need to hand it around if you want to re-use it
 - uri in a type-safe router must end with a "/" so that we can ensure the type of the uri (see open questions)
+  - also if there is a query i.e. /resource/123?q1=v1 needs to be /resource/123/?q1=v1
 - open api spec doesn't support optional parameters
   - responses are optional, you don't have to add metadata to your routing if you don't want to!
   - doesn't support components (i.e. no way to reference some shared object; just use a shared example object from

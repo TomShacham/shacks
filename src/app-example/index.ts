@@ -13,6 +13,7 @@ async function main() {
 
     const routingHandler = Router.of({
         getResource: Route.get('/path/{id}', async (req) => {
+            req.vars!.path;
                 return Res.ok({body: `hello, ${req.vars?.path.id}`})
             }
         ),
