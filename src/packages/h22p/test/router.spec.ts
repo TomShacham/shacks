@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {Body, h22pStream, Req, Res, Route, Router} from "../src";
 import stream from "stream";
 import {doesNotTypeCheck} from "./helpers";
+import {it} from "mocha";
 
 describe('router', () => {
     describe('type-safe routing', () => {
@@ -440,7 +441,18 @@ describe('router', () => {
                 path: {"id": "123"}, query: {"q1": "v1"}, wildcards: ["wild"]
             });
         });
+    })
 
+    it('only matches path on the URI path supplied so ignores hostname, query etc.', async () => {
+        const r = Router.of({
+            getResource: Route.get('/resource/', async (req) => {
+                    return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
+                }
+                , {"content-type": "text/csv"} as const)
+        });
+        const res = await r.handle(Req.get('http://localhost:3000/resource?q1=v1'))
+        expect(res.status).eq(200);
+        expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
     })
 
 })

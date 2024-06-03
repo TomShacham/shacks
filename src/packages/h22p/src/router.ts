@@ -363,13 +363,14 @@ export class Router implements HttpHandler {
     constructor(public routes: RouteDefinition<Method, string, any, HttpRequestHeaders, any>[]) {
     }
 
-    static of(routes: { [key: string]: any }) {
+    static of(routes: { [key: string]: RouteDefinition<any, any, any, any, any> }) {
         return new Router(Object.values(routes))
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
         const notFoundHandler = this.notFound();
-        const matchingHandler = this.matches(req.uri, req.method);
+        const path = URI.parse(req.uri).path ?? '';
+        const matchingHandler = this.matches(path, req.method);
         if (matchingHandler) {
             // convert to a routed http request by adding vars
             Object.defineProperty(req, 'vars', {value: matchingHandler.vars, configurable: true})
