@@ -42,21 +42,20 @@ Design choices:
   - websockets?
   - pulumi? or some IaC to define our service
     - example monorepo sharing a client across it
-- address inline TODOs
+- inline TODOs
 - http client using fetch (browser) so we can test e2e from browser
     - closing stream (and implement on node http client too)
       - https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultController/close
     - https://github.com/mdn/dom-examples/tree/main/streams
   - https://medium.com/deno-the-complete-reference/sending-form-data-using-fetch-in-node-js-8cedd0b2af85
-    - can we really do multipart forms as the tests seem to suggest?
+    - can we really do multipart forms as the tests seem to suggest? test in browser
     - support all the other parameters like cache, credentials, referrerPolicy, and mode
   - generate a client from open api spec? :D
   - https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 - support Lambda and Cloudflare Workers as HttpHandlers
 - deploy to cloudflare cos heroku $$$
 - performance test
-  - look at why we are getting ECONNRESET
-  - how to do rate limiting or backpressure on node accepting connections
+  - more realistic scenarios like reading from a db
 - security e.g. header obfuscation like in helmet etc. (node should handle this?)
 - Server sent events
 - content-range

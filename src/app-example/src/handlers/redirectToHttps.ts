@@ -1,10 +1,9 @@
 import {HttpHandler, HttpRequest, HttpResponse, Res, URI} from "@shacks/h22p";
-import {isProductionEnv} from "../env/isProductionEnv";
 
 export class RedirectToHttps implements HttpHandler {
     constructor(
         private delegate: HttpHandler,
-        private redirectPredicate: () => boolean = isProductionEnv) {
+        private redirectPredicate: () => boolean) {
     }
 
     async handle(req: HttpRequest): Promise<HttpResponse> {

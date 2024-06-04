@@ -1,11 +1,11 @@
 import {RedirectToHttps} from "./handlers/redirectToHttps";
-import {isProductionEnv} from "./env/isProductionEnv";
+import {Env} from "./env/environment";
 import {httpServer, Res, Route, Router} from "@shacks/h22p";
 
 async function main() {
     const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-    const isProd = isProductionEnv();
-    const host = isProd ? '0.0.0.0' : '127.0.0.1';
+    const env = new Env(process.env);
+    const host = env.isProduction() ? '0.0.0.0' : '127.0.0.1';
 
     console.log('app starting on', {port, host});
 
@@ -20,7 +20,7 @@ async function main() {
         ),
     });
 
-    const decorated = new RedirectToHttps(routingHandler);
+    const decorated = new RedirectToHttps(routingHandler, env.isProduction);
     const {server, close} = await httpServer(decorated, port, host);
 }
 
