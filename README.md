@@ -28,7 +28,7 @@ Design choices:
 ## Todo
 
 - example app (idea is to iterate the library through using it to actually build stuff)
-  - so-called "filters" like 404 catch all and tracing and 5xx translation
+  - open telemetry tracing
   - static file handler
   - database with transactions
   - streaming files to db eg csv with manipulation on the fly including totals
