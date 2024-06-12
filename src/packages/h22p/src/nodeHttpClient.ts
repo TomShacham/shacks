@@ -41,7 +41,7 @@ export class NodeHttpClient implements HttpHandler {
             username: parsedUri.username ?? undefined,
             password: parsedUri.password ?? undefined,
             method: req.method,
-            headers: req.headers
+            headers: this.removeUndefinedHeaders(req.headers)
         };
     }
 
@@ -59,8 +59,15 @@ export class NodeHttpClient implements HttpHandler {
     private isReadMethod<R, B, Path, M>(method: Method) {
         return method === 'GET' || method === 'OPTIONS' || method === 'HEAD' || method === 'TRACE' || method === 'CONNECT';
     }
+
+    private removeUndefinedHeaders(headers: HttpRequestHeaders) {
+        return Object.entries(headers).reduce((acc, [name, value]) => {
+            if (value) acc[name] = value;
+            return acc;
+        }, {} as { [key: string]: string | string[] });
+    }
 }
 
-export function nodeClient(baseUrl: string = ''): NodeHttpClient {
+export function nodeHttpClient(baseUrl: string = ''): NodeHttpClient {
     return new NodeHttpClient(baseUrl)
 }

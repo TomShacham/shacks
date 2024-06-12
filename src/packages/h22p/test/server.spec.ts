@@ -2,13 +2,9 @@ import {HttpRequest, HttpResponse} from "../src/interface";
 import {httpServer} from "../src/server";
 import {assert, expect} from "chai";
 import * as fs from "fs";
-import {Body} from "../src/body";
+import {Body, MultipartForm, nodeHttpClient, Req, Res} from "../src";
 import * as stream from "stream";
 import * as zlib from "zlib";
-import {Res} from "../src/response";
-import {Req} from "../src/request";
-import {nodeClient} from "../src";
-import {MultipartForm} from "../src/multipartForm";
 
 describe('client / server', function () {
     it('sends and receives http messages', async () => {
@@ -20,7 +16,7 @@ describe('client / server', function () {
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await nodeClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -59,7 +55,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await nodeClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -81,7 +77,7 @@ describe('client / server', function () {
 
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const responseFromProxy = await nodeClient(`http://localhost:${proxyPort}`).handle({
+                const responseFromProxy = await nodeHttpClient(`http://localhost:${proxyPort}`).handle({
                     method: "POST",
                     uri: `/`,
                     body: req.body, // file read stream
@@ -115,7 +111,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await nodeClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -164,7 +160,7 @@ Upload test file
 --${boundary}--
 
 `
-            const response = await nodeClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
@@ -191,7 +187,7 @@ Upload test file
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await nodeClient(`http://localhost:${port}`).handle(
+            const response = await nodeHttpClient(`http://localhost:${port}`).handle(
                 Req.get(`/`, {"ReQuEsT-HeAdEr": "r1", "array": ["1", "2", "3"]})
             );
             expect(response.status).to.eq(303);

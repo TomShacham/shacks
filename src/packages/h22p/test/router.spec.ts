@@ -205,14 +205,14 @@ describe('router', () => {
             }
             const r = Router.of(routes);
 
-            const resp = await r.handle(Req.get('stuff/before/resource/123/sub/456/stuff/after/'));
+            const resp = await r.handle(Req.get('/stuff/before/resource/123/sub/456/stuff/after/'));
 
-            expect(resp.body).eq('wildcards: stuff/before stuff/after')
+            expect(resp.body).eq('wildcards: /stuff/before stuff/after')
 
-            // can have anything in the place of the wildcard
-            await routes.wildcard.handle(Req.get('abc/resource/123/sub/456/def'));
+            // can have anything in the place of the wildcard (should compile below)
+            await routes.wildcard.handle(Req.get('/abc/resource/123/sub/456/def'));
 
-            // but doesn't need to have anything in place of the wildcard
+            // but doesn't need to have anything in place of the wildcard (should compile below)
             await routes.wildcard.handle({
                 method: 'GET',
                 uri: '/resource/123/sub/456/',
@@ -220,7 +220,7 @@ describe('router', () => {
                 headers: {},
             });
 
-            // but does need to fulfil the basic contract
+            // but does need to fulfil the basic contract (should compile below)
             await routes.wildcard.handle({
                 method: 'GET',
                 // @ts-expect-error
@@ -228,7 +228,6 @@ describe('router', () => {
                 body: undefined,
                 headers: {},
             });
-
         })
 
         it('can perform type narrow of responses', async () => {
@@ -443,7 +442,7 @@ describe('router', () => {
         });
     })
 
-    it('only matches path on the URI path supplied so ignores hostname, query etc.', async () => {
+    it('only matches path on the URI path supplied, ignoring hostname, query etc.', async () => {
         const r = Router.of({
             getResource: Route.get('/resource/', async (req) => {
                     return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
@@ -453,6 +452,10 @@ describe('router', () => {
         const res = await r.handle(Req.get('http://localhost:3000/resource?q1=v1'))
         expect(res.status).eq(200);
         expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
+    })
+
+    it('matches based on headers?', async () => {
+        throw new Error('not tested')
     })
 
 })

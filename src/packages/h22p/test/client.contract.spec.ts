@@ -2,9 +2,10 @@ import {expect} from "chai";
 import {Body, h22pServer, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../src";
 import * as stream from "stream";
 import {UrlEncodedMessage} from "../src/urlEncodedMessage";
+import {it} from "mocha";
 
 export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
-    describe('http client', function () {
+    describe('http contract', function () {
         this.timeout(500);
 
         it('OPTIONS request', async () => {
@@ -63,7 +64,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
             await close()
         })
 
-        it('POST, PUT and PATCH, DELETE with body *string* echoed back', async () => {
+        it('POST, PUT and PATCH, DELETE with body echoed back', async () => {
             /*
                 Interestingly, DELETE needs a content length header or to set transfer-encoding to chunked
                     for node to be happy, even though POST, PUT and PATCH can figure themselves out...
@@ -254,6 +255,23 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     '--custom-boundary--'].join('\r\n'));
             await close()
         })
-    })
 
+        it('gets rid of undefined headers because node http client blows up otherwise', async () => {
+            const {port, close} = await h22pServer({
+                async handle(req: HttpRequest): Promise<HttpResponse> {
+                    return {status: 200, body: 'OPTIONS', headers: {"allow": "GET"}}
+                }
+            });
+            const client = handler(`http://localhost:${port}`);
+            // header of foo: undefined
+            const res = await client.handle(Req.options(`/`, {foo: undefined}));
+
+            // this will hang if we don't remove the foo: undefined header in node http client
+            expect(res.status).eq(200);
+            expect(await Body.text(res.body!)).eq('OPTIONS');
+            expect(res.headers?.allow).eq('GET');
+            await close()
+        })
+    })
 }
+

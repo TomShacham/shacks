@@ -2,10 +2,11 @@
 
 Simple 99% use-case client/server:
 
-    + type-safe routing
-    + streaming
-    + multipart/form-data
     + fast
+    + streaming
+    + multipart/form-data built-in
+    + type-safe routing 
+    + openapi spec generation
 
 Simple because:
 
@@ -13,8 +14,10 @@ Simple because:
     + no reflection; no magic; no DI framework; small well-tested codebase
     + symmetrical client and server (ie same interface) 
     + immutable http message objects as close to wire format as possible
-    + start/stop server in one line of code and just a few ms startup time 
+    + start/stop server in one line of code 
+    + server starts up in milliseconds (unlike heavy frameworks)
     + test in-memory or over the wire (so can easily build a fast test suite)
+    + type-safe routing with minimal extra syntax
 
 Design choices:
 
@@ -24,6 +27,7 @@ Design choices:
     + http client responses 4xx or 5xx are not exceptions
       unlike a lot of clients out there, we do not throw an exception so you do not need to try/catch requests
     + there is no routing precedence, we do not want any complexity, it's first come, first served
+    + fast (about 4x faster than express from my tests) 
 
 ## Todo
 
@@ -34,14 +38,12 @@ Design choices:
   - streaming files to db eg csv with manipulation on the fly including totals
   - streaming files to s3
   - simple json api
+  - example monorepo sharing a client across it
   - htmx
   - react + happydom in-memory e2e testing
   - browser testing with react
   - deploy to cloudflare and use wrangler to test it locally
-  - CRDTs?
-  - websockets?
   - pulumi? or some IaC to define our service
-    - example monorepo sharing a client across it
 - inline TODOs
 - http client using fetch (browser) so we can test e2e from browser
     - closing stream (and implement on node http client too)

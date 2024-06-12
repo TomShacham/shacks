@@ -13,7 +13,7 @@ export {
     JsonBody,
     MessageBody
 } from './interface'
-export * from './nodeClient'
+export * from './nodeHttpClient'
 export * from './router'
 export * from './uri'
 export {FetchClient} from './fetchClient'

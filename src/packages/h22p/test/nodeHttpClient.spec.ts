@@ -1,11 +1,9 @@
 import {testClientContract} from "./client.contract.spec";
-import {Body, HttpRequest, HttpResponse, nodeClient, URI} from "../src";
+import {Body, h22pServer, HttpRequest, HttpResponse, nodeHttpClient, Req, URI} from "../src";
 import {expect} from "chai";
-import {Req} from "../src/request";
-import {h22pServer} from "../src/server";
 
 describe('h22p node client', () => {
-    const handler = nodeClient;
+    const handler = nodeHttpClient;
 
     describe('contract', () => {
         testClientContract(handler);

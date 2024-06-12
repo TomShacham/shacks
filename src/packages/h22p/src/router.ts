@@ -369,8 +369,7 @@ export class Router implements HttpHandler {
 
     handle(req: HttpRequest): Promise<HttpResponse> {
         const notFoundHandler = this.notFound();
-        const path = URI.parse(req.uri).path ?? '';
-        const matchingHandler = this.matches(path, req.method);
+        const matchingHandler = this.match(req.uri, req.method);
         if (matchingHandler) {
             // convert to a routed http request by adding vars
             Object.defineProperty(req, 'vars', {value: matchingHandler.vars, configurable: true})
@@ -380,11 +379,11 @@ export class Router implements HttpHandler {
         }
     }
 
-    private matches(path: string, method: string): RouteAndMatch | undefined {
+    private match(uri: string, method: string): RouteAndMatch | undefined {
         for (const route of this.routes) {
             const matcher = route.matcher;
             if (matcher.method === method && matcher.uri !== undefined) {
-                const match = RouteMatcher.match(route.matcher, path);
+                const match = RouteMatcher.match(route.matcher, uri);
                 if (match.matches) return {routeDefinition: route, vars: match.vars};
             }
         }
@@ -401,9 +400,11 @@ export class Router implements HttpHandler {
 }
 
 class RouteMatcher {
-    static match(matcher: HttpRequest, path: string): RouteMatch {
-        const uri = URI.parse(path);
-        const query = UrlEncodedMessage.parse(uri.query);
+    static match(matcher: HttpRequest, uriString: string): RouteMatch {
+        const uri = URI.parse(uriString);
+        const path = uri.path ?? '/';
+        const query = uri.query ?? '';
+        const queryObj = UrlEncodedMessage.parse(uri.query);
         const [pathMatcher, queryMatcher] = matcher.uri.split("?");
         const pathMatcherNoTrailingSlash = (pathMatcher !== '/' && pathMatcher.endsWith('/'))
             ? pathMatcher.slice(0, -1)
@@ -411,20 +412,21 @@ class RouteMatcher {
         const pathNoTrailingSlash = path !== "/" && path.endsWith('/') ? path.slice(0, -1) : path;
         const exactMatch = pathMatcherNoTrailingSlash === pathNoTrailingSlash;
         if (exactMatch) {
-            return {matches: true, vars: {path: {}, query, wildcards: [], fragment: uri.fragment?.slice(1)}}
+            return {matches: true, vars: {path: {}, query: queryObj, wildcards: [], fragment: uri.fragment?.slice(1)}}
         }
-        return this.fuzzyMatch(pathMatcherNoTrailingSlash, queryMatcher, uri, path, query);
+        return this.fuzzyMatch(pathMatcherNoTrailingSlash, queryMatcher, uri, path, query, queryObj);
     }
 
     private static fuzzyMatch(
         uriMatcher: string,
-        matcherQuery: string,
+        queryMatcher: string,
         uri: Uri<string>,
         path: string,
-        query: queryObject<string>
+        query: string,
+        queryObj: queryObject<string>
     ): RouteMatch {
         const pathMatchingRegex = this.regexToCaptureVars(uriMatcher);
-        const mandatoryQueriesMatch = this.queriesMatch(matcherQuery, uri);
+        const mandatoryQueriesMatch = this.queriesMatch(queryMatcher, query);
         const matches = pathMatchingRegex.test(path) && mandatoryQueriesMatch;
         if (matches) {
             const pathNoQuery = path.split("?")[0];
@@ -432,7 +434,7 @@ class RouteMatcher {
             if (groups) {
                 return {
                     matches: true,
-                    vars: this.populateVars(groups, query, uri.fragment?.slice(1))
+                    vars: this.populateVars(groups, queryObj, uri.fragment?.slice(1))
                 }
             } else {
                 return {matches: false}
@@ -441,7 +443,7 @@ class RouteMatcher {
         return {matches: false}
     }
 
-    private static queriesMatch(matcherQuery: string | undefined, uri: Uri<string>): boolean {
+    private static queriesMatch(matcherQuery: string | undefined, query: string): boolean {
         if (matcherQuery === undefined) return true;
         const queryMatching = matcherQuery.split("&").reduce((acc, next) => {
             if (next.includes("!")) {
@@ -450,7 +452,7 @@ class RouteMatcher {
             }
             return acc;
         }, [] as RegExp[]);
-        return queryMatching.every(m => m.exec(uri.query ?? '') !== null);
+        return queryMatching.every(m => m.exec(query ?? '') !== null);
     }
 
     private static regexToCaptureVars(uriMatcher: string) {
