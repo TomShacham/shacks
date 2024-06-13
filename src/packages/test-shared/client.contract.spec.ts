@@ -1,7 +1,6 @@
 import {expect} from "chai";
-import {Body, h22pServer, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../src";
+import {Body, h22pServer, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../h22p";
 import * as stream from "stream";
-import {UrlEncodedMessage} from "../src/urlEncodedMessage";
 import {it} from "mocha";
 
 export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
@@ -26,9 +25,8 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
         it('HEAD request doesnt send body in response and sets default headers if not set in handler', async () => {
             const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
-                    const queryString = URI.parse(req.uri).query;
-                    const query = UrlEncodedMessage.parse(queryString ?? '');
-                    if ('hardCodeResponseHeaders' in query)
+                    const queryString = URI.parse(req.uri).query ?? '';
+                    if (queryString.indexOf('hardCodeResponseHeaders') > -1)
                         return {
                             status: 200,
                             body: 'THIS DOESNT GET SENT',

@@ -1,5 +1,5 @@
-import {testClientContract} from "./client.contract.spec";
-import {Body, h22pServer, HttpRequest, HttpResponse, nodeHttpClient, Req, URI} from "../src";
+import {testClientContract} from "../../test-shared/client.contract.spec";
+import {Body, h22pServer, HttpRequest, HttpResponse, nodeHttpClient, Req, URI} from "@shacks/h22p";
 import {expect} from "chai";
 
 describe('h22p node client', () => {

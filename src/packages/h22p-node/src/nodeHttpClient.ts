@@ -1,7 +1,15 @@
-import {HttpHandler, HttpRequest, HttpRequestHeaders, HttpResponse, isBuffer, isStream, Method} from "./interface";
-import {URI} from "./uri";
+import {
+    HttpHandler,
+    HttpRequest,
+    HttpRequestHeaders,
+    HttpResponse,
+    isBuffer,
+    isStream,
+    Method,
+    Res,
+    URI
+} from "@shacks/h22p";
 import * as http from "http";
-import {Res} from "./response";
 import {IncomingMessage} from "node:http";
 
 export class NodeHttpClient implements HttpHandler {

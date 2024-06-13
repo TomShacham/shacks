@@ -1,4 +1,4 @@
-import {getQueryKey, queriesFromString, queryObject} from "./router";
+import {getQueryKey, queriesFromString, queryObject} from "./interface";
 
 export class UrlEncodedMessage {
     static parse<S extends string>(str: S | undefined): queryObject<S> {

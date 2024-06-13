@@ -1,8 +1,9 @@
 import {expect} from "chai";
-import {Body, h22pStream, Req, Res, Route, Router} from "../src";
+import {Body, h22pStream, Req, Res} from "@shacks/h22p";
 import stream from "stream";
-import {doesNotTypeCheck} from "./helpers";
+import {doesNotTypeCheck} from "../../test-shared/helpers";
 import {it} from "mocha";
+import {Route, Router} from "../src/router";
 
 describe('router', () => {
     describe('type-safe routing', () => {

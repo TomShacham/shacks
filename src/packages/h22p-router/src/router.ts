@@ -1,8 +1,23 @@
-import {HttpHandler, HttpMessageBody, HttpRequest, HttpRequestHeaders, HttpResponse, Method} from "./interface";
-import {Uri, URI} from "./uri";
-import {UrlEncodedMessage} from "./urlEncodedMessage";
-import {h22pStream} from "./body";
-import {Res} from "./response";
+import {
+    expandUri,
+    h22pStream,
+    HttpHandler,
+    HttpMessageBody,
+    HttpRequest,
+    HttpRequestHeaders,
+    HttpResponse,
+    Method,
+    pathParameters,
+    pathPart,
+    queryObject,
+    queryParameters,
+    queryPart,
+    Res,
+    toObj,
+    Uri,
+    URI,
+    UrlEncodedMessage
+} from "@shacks/h22p";
 
 export type routedHandler<
     Mtd extends Method,
@@ -492,36 +507,3 @@ class RouteMatcher {
 }
 
 
-export type toQueryString<Qs> = Qs extends `${infer Q1}&${infer Q2}`
-    ? `${Q1}=${string}&${toQueryString<Q2>}`
-    : Qs extends `${infer Q1}`
-        ? `${Q1}=${string}`
-        : Qs;
-export type pathPart<Part> = Part extends `${infer Start}?${infer Query}` ? Start : Part;
-export type queryPart<Part> = Part extends `${infer Start}?${infer Query}` ? Query : '';
-export type isPathParameter<Part> = Part extends `{${infer Name}}` ? Name : never;
-export type pathParameters<Path> = Path extends `${infer PartA}/${infer PartB}`
-    ? isPathParameter<PartA> | pathParameters<PartB>
-    : isPathParameter<Path>;
-export type emptyToString<S extends string> = S extends '' ? string : S;
-export type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
-export type queryParameters<Path extends string> = Path extends ''
-    ? { [key: string]: string }
-    : toObj<queriesFromString<withoutFragment<Path>>>
-export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
-export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
-export type toObj<union extends string> = {
-    [Key in union]: string;
-};
-export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
-export type expandPathParameterOrWildcard<Part extends string> = Part extends `{${infer Name}}`
-    ? `${string}/`
-    : Part extends `*`
-        ? string
-        : `${Part}/`;
-type backToPath<Path extends string> = Path extends `${infer PartA}/${infer PartB}`
-    ? `${expandPathParameterOrWildcard<PartA>}${backToPath<PartB>}`
-    : expandPathParameterOrWildcard<Path>;
-export type expandUri<Part extends string> = Part extends `${infer Path}?${infer Query}`
-    ? `${backToPath<Path>}?${toQueryString<Query>}`
-    : backToPath<Part>;

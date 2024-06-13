@@ -1,7 +1,15 @@
-import {HttpMessageBody, HttpResponse, isBuffer, isStream, JsonBody, JsonObject, MessageBody} from "./interface";
+import {
+    HttpMessageBody,
+    HttpResponse,
+    isBuffer,
+    isStream,
+    JsonBody,
+    JsonObject,
+    MessageBody,
+    URI,
+    UrlEncodedMessage
+} from "@shacks/h22p";
 import {RouteDefinition, Routes} from "./router";
-import {URI} from "./uri";
-import {UrlEncodedMessage} from "./urlEncodedMessage";
 
 export class OpenApi {
     public static specFrom(rs: Routes, config: OpenapiMetadata): OpenApiSchema {

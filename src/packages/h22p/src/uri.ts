@@ -1,4 +1,4 @@
-import {emptyToString, pathPart, queryPart} from "./router";
+import {emptyToString, pathPart, queryPart} from "./interface";
 
 export interface Uri<S extends string> {
     protocol: string;

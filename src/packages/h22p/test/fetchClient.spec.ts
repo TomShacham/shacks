@@ -1,9 +1,6 @@
-import {testClientContract} from "./client.contract.spec";
-import {Body, HttpRequest, HttpResponse, URI} from "../src";
-import {FetchClient} from "../src/fetchClient";
+import {testClientContract} from "../../test-shared/client.contract.spec";
+import {Body, FetchClient, h22pServer, HttpRequest, HttpResponse, Req, URI} from "../src";
 import {expect} from "chai";
-import {Req} from "../src/request";
-import {h22pServer} from "../src/server";
 
 describe('fetch client', () => {
     const handler = (baseUrl: string) => new FetchClient(baseUrl);

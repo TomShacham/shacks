@@ -1,0 +1,30 @@
+{
+  "ts-node": {
+    "files": true,
+    "compilerOptions": {
+      "strict": false
+    }
+  },
+  "compilerOptions": {
+    "strict": true,
+    "declaration": true,
+    "outDir": "dist",
+    "module": "commonjs",
+    "lib": [
+      "dom"
+    ],
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es6",
+    "moduleDetection": "force",
+    "noEmitOnError": true
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "test"
+  ]
+}

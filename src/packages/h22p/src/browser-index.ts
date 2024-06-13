@@ -12,9 +12,7 @@ export {
     JsonBody,
     MessageBody
 } from './interface'
-export * from './router'
 export * from './uri'
 export {FetchClient} from './fetchClient'
-export * from './openApi'
 export {Status} from "./status";
 export {MultipartForm} from "./multipartForm";

@@ -11,12 +11,21 @@ export {
     HttpResponseHeaders,
     Method,
     JsonBody,
-    MessageBody
+    MessageBody,
+    expandUri,
+    toObj,
+    pathParameters,
+    pathPart,
+    queryParameters,
+    queryPart,
+    queryObject,
+    isBuffer,
+    isStream,
+    JsonObject
 } from './interface'
 export * from './nodeHttpClient'
-export * from './router'
 export * from './uri'
 export {FetchClient} from './fetchClient'
-export * from './openApi'
 export {Status} from "./status";
 export {MultipartForm} from "./multipartForm";
+export {UrlEncodedMessage} from './urlEncodedMessage';

@@ -1,7 +1,4 @@
 packages:
-  - src/packages/h22p
+  - src/packages/*
   - src/app-example
-  - src/frontend
-
-  # exclude packages that are inside test directories
-  - '!**/src/test/**'
+  - src/cloudflare-worker-example

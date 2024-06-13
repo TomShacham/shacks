@@ -5,12 +5,14 @@
     "clean": "./clean.sh",
     "release": "./release.sh",
     "build": "tsc; bun run src/packages/h22p/build.ts",
-    "test": "tsc --noEmit; mocha --require ts-node/register 'src/packages/**/*spec.ts'"
+    "test": "tsc --noEmit; mocha --require ts-node/register 'src/packages/**/*spec.ts'",
+    "cf-dev": "wrangler dev src/cloudflare-worker-example/worker.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "workspaces": [
     "src/app-example",
+    "src/cloudflare-worker-example",
     "src/packages/**"
   ],
   "devDependencies": {
@@ -21,6 +23,7 @@
     "mocha": "10.2.0",
     "puppeteer": "22.10.0",
     "ts-node": "10.9.2",
-    "typescript": "5.4.5"
+    "typescript": "5.4.5",
+    "wrangler": "^3.60.2"
   }
 }

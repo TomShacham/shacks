@@ -1,5 +1,5 @@
 import {UrlEncodedMessage} from "./urlEncodedMessage";
-import {queryObject} from "./router";
+import {queryObject} from "./interface";
 
 export class Query {
     static parse<S extends string>(from: S | undefined): queryObject<S> {

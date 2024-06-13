@@ -1,0 +1,11 @@
+name = "worker-muddy-salad-e74c"
+main = "src/worker.js"
+compatibility_date = "2023-12-12"
+node_compat = true
+workers_dev = true
+
+[[routes]]
+pattern = "tomshacks.com"
+zone_name = "tomshacks.com"
+custom_domain = true
+
