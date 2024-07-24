@@ -1,5 +1,11 @@
-/node_modules/
 /.idea/*
-/src/app-examples/*/node_modules/
-/dist/
-/src/**/.wrangler
+node_modules
+dist
+src/example-apps/app-cloudflare-worker/node_modules
+*/**/dist
+*/**/node_modules
+*/**/.wrangler
+.DS_Store
+*/**/.DS_Store
+src/example-apps/app-cloudflare-worker/*/**/*.js
+src/packages/test-shared/browser/bun/
