@@ -1,4 +1,4 @@
 packages:
   - src/packages/*
-  - src/app-example
+  - src/example-apps/*
   - src/cloudflare-worker-example

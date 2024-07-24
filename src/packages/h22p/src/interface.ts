@@ -1,5 +1,5 @@
-import {IncomingHttpHeaders, OutgoingHttpHeaders} from "http";
-import stream from "stream";
+import {IncomingHttpHeaders, OutgoingHttpHeaders} from "node:http";
+import stream from "node:stream";
 import {h22pStream} from "./body";
 
 export interface HttpHandler<
@@ -9,7 +9,7 @@ export interface HttpHandler<
     handle(req: Req): Promise<Res>
 }
 
-export type HttpMessageBody = JsonBody | string | Buffer | stream.Readable | undefined;
+export type HttpMessageBody = JsonBody | string | Buffer | stream.Readable | ReadableStream | undefined;
 export type MessageBody<B extends HttpMessageBody = HttpMessageBody> = h22pStream<B> | B;
 
 /*
@@ -26,6 +26,8 @@ export type BodyType<B extends HttpMessageBody> = B extends h22pStream<infer X>
     ? X
     : B extends stream.Readable
         ? stream.Readable
+        : B extends ReadableStream
+            ? ReadableStream
         : B extends infer J extends JsonBody
             ? J
             : B extends infer J extends string
@@ -79,7 +81,8 @@ export function isBuffer(body: HttpMessageBody): body is Buffer {
 }
 
 export function isStream(body: MessageBody): body is stream.Readable {
-    return typeof body === 'object' && '_read' in body;
+    return (typeof body === 'object' && '_read' in body)
+        || body instanceof ReadableStream
 }
 
 export function isSimpleBody(body: HttpMessageBody): body is string | Buffer {

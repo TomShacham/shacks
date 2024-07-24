@@ -1,4 +1,4 @@
-import stream from "stream";
+import stream from "node:stream";
 import {HttpRequest} from "./interface";
 import {ContentTypes, h22pStream} from "./body";
 

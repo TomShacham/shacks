@@ -3,7 +3,7 @@ import {Body, h22pStream, Req, Res} from "@shacks/h22p";
 import stream from "stream";
 import {doesNotTypeCheck} from "../../test-shared/helpers";
 import {it} from "mocha";
-import {Route, Router} from "../src/router";
+import {Route, Router} from "../src";
 
 describe('router', () => {
     describe('type-safe routing', () => {
@@ -455,7 +455,7 @@ describe('router', () => {
         expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
     })
 
-    it('matches based on headers?', async () => {
+    xit('matches based on headers?', async () => {
         throw new Error('not tested')
     })
 

@@ -160,15 +160,17 @@ export class OpenApi {
     }
 
     private static exampleBodyFrom(body: MessageBody): string | JsonBody {
-        return typeof body === 'string'
-            ? "string"
-            : isStream(body)
-                ? "stream"
-                : isBuffer(body)
-                    ? "buffer"
-                    : typeof body === 'object'
-                        ? body
-                        : ""
+        return body instanceof ReadableStream
+            ? "stream"
+            : typeof body === 'string'
+                ? "string"
+                : isStream(body)
+                    ? "stream"
+                    : isBuffer(body)
+                        ? "buffer"
+                        : typeof body === 'object'
+                            ? body
+                            : ""
     }
 
     private static contentTypeHeaderFromBody(body: HttpMessageBody): string {

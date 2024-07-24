@@ -1,7 +1,8 @@
 import {expect} from "chai";
-import {Body, h22pServer, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../h22p";
+import {Body, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../h22p";
 import * as stream from "stream";
 import {it} from "mocha";
+import {h22pServer} from "../h22p-node/src";
 
 export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
     describe('http contract', function () {

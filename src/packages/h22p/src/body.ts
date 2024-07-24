@@ -8,10 +8,9 @@ import {
     isStream,
     MessageBody
 } from "./interface";
-import * as stream from "stream";
+import * as stream from "node:stream";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
 import {MultipartFormPart} from "./multipartForm";
-import {createReadableStream} from "./fetchClient";
 
 export class Body {
     static async text<B extends HttpMessageBody>(body: MessageBody<B>): Promise<string> {
@@ -159,7 +158,7 @@ export class h22pStream<B extends HttpMessageBody> extends stream.Readable {
         } else if (typeof arg === 'object') {
             return stream.Readable.from(JSON.stringify(arg))
         } else {
-            return stream.Readable.from('')
+            return stream.Readable.from([''])
         }
     }
 
@@ -171,3 +170,13 @@ export class h22pStream<B extends HttpMessageBody> extends stream.Readable {
     }
 }
 
+export function createReadableStream(arg: HttpMessageBody): ReadableStream<any> {
+    return new ReadableStream({
+        async start(controller) {
+            for await (const value of h22pStream.of(arg)) {
+                controller.enqueue(value);
+            }
+            controller.close();
+        }
+    });
+}

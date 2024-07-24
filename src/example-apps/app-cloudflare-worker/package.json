@@ -1,0 +1,23 @@
+{
+  "name": "cloudflare-worker-example",
+  "version": "1.0.0",
+  "engines": {
+    "node": "=20.12.2",
+    "pnpm": "=9.0.6"
+  },
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "build": "bun run build.ts ",
+    "dev": "wrangler dev",
+    "test": "exit 0"
+  },
+  "dependencies": {
+    "@shacks/h22p": "workspace:*",
+    "@shacks/h22p-router": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20240605.0",
+    "wrangler": "3.60.2"
+  }
+}

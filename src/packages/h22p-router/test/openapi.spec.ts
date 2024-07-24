@@ -1,7 +1,6 @@
 import {expect} from "chai";
+import {OpenApi, Route} from "../src";
 import {Res} from "@shacks/h22p";
-import {OpenApi} from "../src/openApi";
-import {Route} from "../src/router";
 
 describe('openapi', () => {
     it('produces openAPI spec', async () => {

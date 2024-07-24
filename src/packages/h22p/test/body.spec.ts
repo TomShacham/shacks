@@ -331,7 +331,7 @@ describe('body', () => {
             // stream isn't aborted at first
             expect(body.readableAborted).eq(false);
             // emit error so that stream aborts
-            body.emit('error', new Error('test error'));
+            body.emit('error', new Error('test error to be expected'));
             // reading body shouldn't throw, just returns empty string
             const text = await Body.text(body);
             expect(body.readableAborted).eq(true);

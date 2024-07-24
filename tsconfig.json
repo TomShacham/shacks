@@ -25,7 +25,7 @@
   ],
   "exclude": [
     "node_modules",
-    "src/app-example",
+    "src/app-heroku",
     "src/packages/h22p/test",
     "src/packages/h22p/build.ts"
   ]

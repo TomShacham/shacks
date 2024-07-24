@@ -1,0 +1,21 @@
+{
+  "name": "app-example",
+  "version": "1.0.0",
+  "engines": {
+    "node": "=20.12.2",
+    "pnpm": "=9.0.6"
+  },
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "test": "tsc --noEmit; mocha --require ts-node/register 'test/**/*spec.ts'"
+  },
+  "dependencies": {
+    "typescript": "5.4.3",
+    "ts-node": "10.9.2",
+    "@shacks/h22p": "workspace:*",
+    "@shacks/h22p-router": "workspace:*",
+    "@shacks/h22p-node": "workspace:*"
+  }
+}
