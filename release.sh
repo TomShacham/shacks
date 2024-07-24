@@ -17,6 +17,8 @@ function test() {
   done
   for app in $apps ; do
     pushd src/example-apps/$app;
+    rm -rf node_modules
+    pnpm i
     pnpm test
     if [ $? != 0 ]; then
       success=false

@@ -9,3 +9,4 @@ src/example-apps/app-cloudflare-worker/node_modules
 */**/.DS_Store
 src/example-apps/app-cloudflare-worker/*/**/*.js
 src/packages/test-shared/browser/bun/
+/src/packages/h22p/test/resources/hamburger-out.png
