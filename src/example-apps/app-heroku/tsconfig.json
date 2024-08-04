@@ -17,7 +17,7 @@
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "target": "es6",
+    "target": "es2018",
     "moduleDetection": "force",
     "noEmitOnError": true
   },
