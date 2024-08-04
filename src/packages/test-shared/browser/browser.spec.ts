@@ -1,10 +1,8 @@
 import puppeteer from 'puppeteer';
 import {expect} from "chai";
 import {browserTestServer} from "./browserTestServer";
-import util from "node:util";
-import {exec} from "node:child_process";
+import {command} from "../helpers";
 
-const execP = util.promisify(exec);
 
 describe('test app in-browser', function () {
     this.timeout(5_000);
@@ -15,7 +13,7 @@ describe('test app in-browser', function () {
      */
 
     it('api call in-memory', async function () {
-        const compile = await execP(`bun run ${__dirname}/build.ts`);
+        const compile = await command(`bun run ${__dirname}/build.ts`);
         const {port, close} = await browserTestServer(0);
 
         const browser = await puppeteer.launch({headless: true, timeout: 5_000});
@@ -37,7 +35,7 @@ describe('test app in-browser', function () {
     })
 
     it('api call using fetch', async function () {
-        const compile = await execP(`bun run ${__dirname}/build.ts`);
+        const compile = await command(`bun run ${__dirname}/build.ts`);
         const {port, close} = await browserTestServer(0);
 
         const browser = await puppeteer.launch({headless: true, timeout: 5_000});

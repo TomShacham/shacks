@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16.2
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=db_user_rw
+      - POSTGRES_PASSWORD=db_password_rw
+      - POSTGRES_DB=h22p
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-U", "postgres" ]
+      interval: 5s
+      timeout: 1s
+      retries: 2

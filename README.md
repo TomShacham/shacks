@@ -32,14 +32,13 @@ Design choices:
 ## Todo
 
 - example app (idea is to iterate the library through using it to actually build stuff)
+  - database with transactions
+  - simple json api
   - open telemetry tracing
   - static file handler
-  - database with transactions
   - streaming files to db eg csv with manipulation on the fly including totals
   - streaming files to s3
-  - simple json api
   - example monorepo sharing a client across it
-  - htmx
   - react + happydom in-memory e2e testing
   - browser testing with react
   - deploy to cloudflare and use wrangler to test it locally
