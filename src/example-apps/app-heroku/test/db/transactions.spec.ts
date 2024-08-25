@@ -1,13 +1,12 @@
-import {Pool} from 'pg';
 import {before, describe} from "mocha";
 import {expect} from "chai";
 import {DbStore, PostgresStore} from "../../src/store/store";
+import {localPostgresPool} from "./localPostgresPool";
 
 describe("transactions", function () {
     this.timeout(2_000);
 
-    const connectionString = 'postgresql://db_user_rw:db_password_rw@localhost:5432/h22p'
-    const database: DbStore = new PostgresStore(new Pool({connectionString}));
+    const database: DbStore = new PostgresStore(localPostgresPool());
 
     before(() => {
         const env = process.env.NODE_ENV;

@@ -1,15 +1,14 @@
-import {Pool} from 'pg';
 import {beforeEach, describe} from "mocha";
 import {expect} from "chai";
 import {DbStore, PostgresStore} from "../../src/store/store";
 import {DbMigrations} from "../../src/store/migrations";
 import fs from "node:fs";
+import {localPostgresPool} from "./localPostgresPool";
 
 describe("migrations", function () {
     this.timeout(200_000);
 
-    const connectionString = 'postgresql://db_user_rw:db_password_rw@localhost:5432/h22p'
-    const database: DbStore = new PostgresStore(new Pool({connectionString}));
+    const database: DbStore = new PostgresStore(localPostgresPool());
 
     beforeEach(async () => {
         const env = process.env.NODE_ENV;
@@ -29,7 +28,7 @@ describe("migrations", function () {
     });
 
     it('run some migrations', async () => {
-        const dbMigrations = new DbMigrations(database, `${__dirname}/../resources/migrations-example`);
+        const dbMigrations = new DbMigrations(database,);
         await dbMigrations.migrate()
         const users = await database.query('SELECT * FROM users');
         const tokens = await database.query('SELECT * FROM tokens');
@@ -44,14 +43,16 @@ describe("migrations", function () {
     });
 
     it('run some migrations and then add a new one', async () => {
-        const dbMigrations = new DbMigrations(database, `${__dirname}/../resources/migrations-example`);
+        const dbMigrations = new DbMigrations(database,);
         await dbMigrations.migrate()
-        const newMigrationFile = `${__dirname}/../resources/migrations-example/003_create_new_migration.sql`;
+        const newMigrationFile = `${__dirname}/../../src/store/migrations/003_create_new_migration.sql`;
         fs.writeFileSync(newMigrationFile, 'CREATE TABLE IF NOT EXISTS bar(id INT PRIMARY KEY)', 'utf-8')
         try {
             await dbMigrations.migrate()
-            const result = await database.query(`SELECT *
-                                                 FROM bar`)
+            const result = await database.query(`
+                SELECT *
+                FROM bar
+            `)
             expect(result).deep.eq([])
         } finally {
             fs.rmSync(newMigrationFile, {force: true})
@@ -59,9 +60,9 @@ describe("migrations", function () {
     });
 
     it('doesnt let you create a new migration between existing ones', async () => {
-        const dbMigrations = new DbMigrations(database, `${__dirname}/../resources/migrations-example`);
+        const dbMigrations = new DbMigrations(database,);
         await dbMigrations.migrate()
-        const newMigrationFile = `${__dirname}/../resources/migrations-example/001b_not_allowed.sql`;
+        const newMigrationFile = `${__dirname}/../../src/store/migrations/001b_not_allowed.sql`;
         fs.writeFileSync(newMigrationFile, 'SELECT NOW()', 'utf-8')
         try {
             await dbMigrations.migrate()
@@ -74,9 +75,9 @@ describe("migrations", function () {
     });
 
     it('doesnt let change the contents of existing migrations', async () => {
-        const dbMigrations = new DbMigrations(database, `${__dirname}/../resources/migrations-example`);
+        const dbMigrations = new DbMigrations(database,);
         await dbMigrations.migrate()
-        const existingMigrationFile = `${__dirname}/../resources/migrations-example/001_create_user.sql`;
+        const existingMigrationFile = `${__dirname}/../../src/store/migrations/001_create_user.sql`;
         const initialContents = fs.readFileSync(existingMigrationFile, 'utf-8');
         fs.writeFileSync(existingMigrationFile, 'SELECT NOW()', 'utf-8')
         try {
@@ -88,5 +89,4 @@ describe("migrations", function () {
             fs.writeFileSync(existingMigrationFile, initialContents, 'utf-8')
         }
     });
-
 })

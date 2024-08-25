@@ -11,7 +11,7 @@ Simple 99% use-case client/server:
 Simple because:
 
     + zero dependencies
-    + no reflection; no magic; no DI framework; small well-tested codebase
+    + no reflection; no magic; no DI framework; small and well-tested codebase
     + symmetrical client and server (ie same interface) 
     + immutable http message objects as close to wire format as possible
     + start/stop server in one line of code 
@@ -32,15 +32,14 @@ Design choices:
 ## Todo
 
 - example app (idea is to iterate the library through using it to actually build stuff)
-  - database with transactions
-  - simple json api
-  - open telemetry tracing
+  - example authentication - create users, sessions, reset password etc
   - static file handler
+  - simple json api
+  - example monorepo sharing a client across it
+  - open telemetry tracing
   - streaming files to db eg csv with manipulation on the fly including totals
   - streaming files to s3
-  - example monorepo sharing a client across it
-  - react + happydom in-memory e2e testing
-  - browser testing with react
+  - browser testing
   - deploy to cloudflare and use wrangler to test it locally
   - pulumi? or some IaC to define our service
 - inline TODOs
@@ -56,6 +55,7 @@ Design choices:
 - support Lambda and Cloudflare Workers as HttpHandlers
 - deploy to cloudflare cos heroku $$$
 - performance test
+  - multipart form streaming
   - more realistic scenarios like reading from a db
 - security e.g. header obfuscation like in helmet etc. (node should handle this?)
 - Server sent events

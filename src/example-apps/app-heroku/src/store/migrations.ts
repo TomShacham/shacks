@@ -3,7 +3,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 
 export class DbMigrations {
-    constructor(private database: DbStore, private directory: string) {
+    constructor(private database: DbStore, private directory: string = `${__dirname}/migrations`) {
     }
 
     private migrationsTableName = `AUTOMATED_MIGRATIONS`;
@@ -19,13 +19,16 @@ export class DbMigrations {
     }
 
     private async runMigrations() {
-        const existingMigrations = await this.database.query(`SELECT *
-                                                              FROM ${this.migrationsTableName}
-                                                              ORDER BY name ASC`);
+        const existingMigrations = await this.database.query(`
+            SELECT *
+            FROM ${this.migrationsTableName}
+            ORDER BY name ASC
+        `);
         let sortedAlphanumerically = fs.readdirSync(this.directory);
         sortedAlphanumerically = sortedAlphanumerically.sort((a, b) => a.localeCompare(b))
         if (existingMigrations.length === 0) {
             for (const migrationFile of sortedAlphanumerically) {
+                console.log({migrationFile});
                 await this.runMigration(migrationFile);
             }
         } else {
@@ -50,8 +53,10 @@ export class DbMigrations {
     }
 
     private async runMigration(migrationFile: string) {
-        const fileContents = this.contentsOf(migrationFile);
-        const result = await this.database.query(fileContents)
+        const queryString = this.contentsOf(migrationFile);
+        console.log({queryString});
+        const result = await this.database.query(queryString) ?? ''
+        console.log(result);
         const hash = this.hash(migrationFile);
         await this.database.query(
             `INSERT INTO ${this.migrationsTableName}
