@@ -1,5 +1,6 @@
 import {Clock} from "../time/clock";
 import {HttpHandler, HttpRequest, Res} from "@shacks/h22p";
+import {clearInterval} from "node:timers";
 
 export class IPThrottling implements HttpHandler {
     /*
@@ -18,7 +19,9 @@ export class IPThrottling implements HttpHandler {
         this.clear(checkInterval)
     }
 
+    private SECONDS_60 = 60_000;
     private lastChecked = this.clock.now();
+    private loop;
 
 
     async handle(req: HttpRequest) {
@@ -26,6 +29,10 @@ export class IPThrottling implements HttpHandler {
             return Res.of({status: 429, body: 'Too many requests'})
         }
         return this.delegate.handle(req)
+    }
+
+    stop() {
+        clearInterval(this.loop);
     }
 
     private overQuota(ip: string) {
@@ -39,8 +46,8 @@ export class IPThrottling implements HttpHandler {
     }
 
     private clear(checkInterval: number) {
-        setInterval(() => {
-            if ((this.clock.now().getTime() - this.lastChecked.getTime()) >= 60) {
+        this.loop = setInterval(() => {
+            if ((this.clock.now().getTime() - this.lastChecked.getTime()) >= this.SECONDS_60) {
                 this.requests = {};
             }
         }, checkInterval)
