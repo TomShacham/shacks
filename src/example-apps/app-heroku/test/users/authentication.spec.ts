@@ -1,9 +1,9 @@
 import {describe} from "mocha";
-import {PostgresUserStore, randomChars, scryptHash, UserRegistration} from "../../src/user/registration";
 import {expect} from "chai";
+import {PostgresUserStore, randomChars, scryptHash, UserRegistration} from "../../src/user/registration";
 import {PostgresStore} from "../../src/store/store";
-import {localPostgresPool} from "./localPostgresPool";
 import {DbMigrations} from "../../src/store/migrations";
+import {localPostgresPool} from "../db/localPostgresPool";
 
 describe('authentication', function () {
     this.timeout(5_000);

@@ -2,7 +2,7 @@ export interface Clock {
     now(): Date
 }
 
-class ClockInMemory implements Clock {
+export class TickingClock implements Clock {
     constructor(private start: number = 0) {
     }
 
@@ -10,8 +10,8 @@ class ClockInMemory implements Clock {
         return new Date(this.start);
     }
 
-    moveForward(by: number = 1) {
-        this.start += by;
+    tick(ms: number = 1) {
+        this.start += ms;
     }
 }
 
@@ -19,4 +19,5 @@ export class SystemClock implements Clock {
     now(): Date {
         return new Date()
     }
+
 }
