@@ -28,7 +28,6 @@ export class DbMigrations {
         sortedAlphanumerically = sortedAlphanumerically.sort((a, b) => a.localeCompare(b))
         if (existingMigrations.length === 0) {
             for (const migrationFile of sortedAlphanumerically) {
-                console.log({migrationFile});
                 await this.runMigration(migrationFile);
             }
         } else {
@@ -54,9 +53,7 @@ export class DbMigrations {
 
     private async runMigration(migrationFile: string) {
         const queryString = this.contentsOf(migrationFile);
-        console.log({queryString});
         const result = await this.database.query(queryString) ?? ''
-        console.log(result);
         const hash = this.hash(migrationFile);
         await this.database.query(
             `INSERT INTO ${this.migrationsTableName}

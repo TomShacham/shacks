@@ -1,9 +1,11 @@
 import {describe} from "mocha";
 import {expect} from "chai";
-import {PostgresUserStore, randomChars, scryptHash, UserRegistration} from "../../src/user/registration";
+import {randomChars, scryptHash, UserRegistration} from "../../src/user/registration";
 import {PostgresStore} from "../../src/store/store";
 import {DbMigrations} from "../../src/store/migrations";
 import {localPostgresPool} from "../db/localPostgresPool";
+import {TickingClock} from "../../src/time/clock";
+import {PostgresUserStore} from "../../src/user/userStore";
 
 describe('authentication', function () {
     this.timeout(5_000);
@@ -13,12 +15,17 @@ describe('authentication', function () {
 
     const database = new PostgresStore(localPostgresPool());
     const userStore = new PostgresUserStore(database);
-    const userRegistration = new UserRegistration(userStore);
+    const tickingClock = new TickingClock();
+    const userRegistration = new UserRegistration(userStore, scryptHash, tickingClock);
     const dbMigrations = new DbMigrations(database);
 
     before(async () => {
         await dbMigrations.migrate();
     })
+
+    after(async () => {
+        await database.close()
+    });
 
     it('hashing is repeatable', async () => {
         const fst = scryptHash("password", "salt").value;
@@ -38,7 +45,7 @@ describe('authentication', function () {
     it('register fails if password is not 8 or more chars', async () => {
         const email = 'tom-' + randomChars(3, 'hex') + '@example.com';
         const register = await userRegistration.register(email, 'passwor');
-        expect(register.error.message).to.equal('Password must be at least 8 characters long');
+        expect(register.error).to.equal('Password must be at least 8 characters long');
     });
 
     it('login fails with generic message if password is not correct', async () => {
@@ -47,7 +54,7 @@ describe('authentication', function () {
         expect(register.value).to.equal('OK')
 
         const login = await userRegistration.login(email, 'password-different');
-        expect(login.error.message).to.eq('Email or password is incorrect')
+        expect(login.error).to.eq('Email or password is incorrect')
     });
 
     it('emails are lowercased and trimmed and whitespace removed', async () => {
@@ -76,8 +83,47 @@ describe('authentication', function () {
         expect(user.salt.length).eq(32)
     })
 
-    // this is to show that timing attacks are not possible, but it's slow, so we don't want to run it continually
+    it('can only attempt 5 times per user per minute', async () => {
+        const email = 'tom-' + randomChars(3, 'hex') + '@example.com';
+        const register = await userRegistration.register(email, 'password');
+        expect(register).to.deep.equal({value: 'OK', error: undefined})
+
+        const login1 = await userRegistration.login(email, 'wrong-password');
+        expect(login1.error).to.deep.eq("Email or password is incorrect")
+        const login2 = await userRegistration.login(email, 'wrong-password');
+        expect(login2.error).to.deep.eq("Email or password is incorrect")
+        const login3 = await userRegistration.login(email, 'wrong-password');
+        expect(login3.error).to.deep.eq("Email or password is incorrect")
+        const login4 = await userRegistration.login(email, 'wrong-password');
+        expect(login4.error).to.deep.eq("Email or password is incorrect")
+        const login5 = await userRegistration.login(email, 'wrong-password');
+        expect(login5.error).to.deep.eq("Email or password is incorrect")
+
+        // attempt now results in error too many attempts
+        const login6 = await userRegistration.login(email, 'wrong-password');
+        expect(login6.error).to.deep.eq("Too many attempts, you have 5 per minute")
+
+        // even correct password does not work
+        const correct1 = await userRegistration.login(email, 'password');
+        expect(correct1.error).to.deep.eq("Too many attempts, you have 5 per minute")
+
+        tickingClock.tick(59_999)
+
+        // now it's been 59.999 secs still fails
+        const correct2 = await userRegistration.login(email, 'password');
+        expect(correct2.error).to.deep.eq("Too many attempts, you have 5 per minute")
+
+        // now it's been 60s it works
+        tickingClock.tick(1)
+        const correct3 = await userRegistration.login(email, 'password');
+        expect(correct3.error).to.eq(undefined)
+        expect(correct3.value.email).to.eq(email)
+
+    });
+
     xit('doesn\'t allow for timing attacks', async () => {
+        // this is to show that timing attacks are not possible,
+        //   but it's slow, so we don't want to run it continually
         const email = 'tom-' + randomChars(3, 'hex') + '@example.com';
         const register = await userRegistration.register(email, 'password');
         expect(register).to.deep.equal({value: 'OK', error: undefined})
