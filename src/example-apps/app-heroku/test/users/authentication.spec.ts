@@ -218,11 +218,18 @@ describe('authentication', function () {
         const login = await userRegistration.login(email, 'password');
         expect(login.value.email).equal(email)
 
+        const usedToken = await userStore.findConfirmationToken(email);
+        expect(usedToken).equal(undefined);
+
         const oneWeek = 7 * 24 * 60 * 60 * 1_000;
         tickingClock.tick(oneWeek)
 
         const login1WeekLater = await userRegistration.login(email, 'password');
         expect(login1WeekLater.error).equal("MFA required")
+
+        const newToken = await userStore.findConfirmationToken(email);
+        const reconfirm = await userRegistration.confirm(email, newToken!)
+        expect(reconfirm.value).deep.equal('Confirmed');
     })
 
     xit('doesn\'t allow for timing attacks', async () => {

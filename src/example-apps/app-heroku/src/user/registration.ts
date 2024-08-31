@@ -64,6 +64,7 @@ export class UserRegistration {
             return Err('Email not confirmed yet')
         }
         if (user.confirmed_at! <= this.clock.now().minusDays(7)) {
+            await this.userStore.saveToken(user.id, randomToken(this.secret))
             return Err('MFA required')
         }
         return Ok(user)
