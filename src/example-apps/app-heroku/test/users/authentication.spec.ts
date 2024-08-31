@@ -4,7 +4,7 @@ import {randomBytes, scryptHash, UserRegistration} from "../../src/user/registra
 import {PostgresStore} from "../../src/store/store";
 import {DbMigrations} from "../../src/store/migrations";
 import {localPostgresPool} from "../db/localPostgresPool";
-import {Clock, TickingClock} from "../../src/time/clock";
+import {TickingClock} from "../../src/time/clock";
 import {PostgresUserStore} from "../../src/user/userStore";
 
 
@@ -189,6 +189,22 @@ describe('authentication', function () {
         expect(loginPostConfirm.error).equal("Email not confirmed yet");
     })
 
+    it('token is single use', async () => {
+        const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
+        const tickingClock = new TickingClock();
+        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), scryptHash, tickingClock)
+        const register = await userRegistration.register(email, 'password');
+        expect(register).to.deep.equal({value: 'OK', error: undefined})
+
+        const token = await userStore.findConfirmationToken(email);
+        const confirm = await userRegistration.confirm(email, token!)
+        expect(confirm.value).deep.equal('Confirmed');
+
+        const used = await userRegistration.confirm(email, token!)
+        expect(used.error).deep.equal('Failed to find token for email')
+
+    })
+
     it('requests MFA if it has been a while', async () => {
 
     })
@@ -228,12 +244,3 @@ describe('authentication', function () {
     })
 
 });
-
-
-function verifyEmailVerificationToken(tokenCreatedAt: number, maxAgeInSeconds: number, clock: Clock): boolean {
-    try {
-        return ((tokenCreatedAt - clock.now().getTime()) - maxAgeInSeconds) > 0
-    } catch (error) {
-        return false; // Invalid token format or other error
-    }
-}

@@ -79,8 +79,8 @@ export class UserRegistration {
             return Err('Token expired');
         }
         if (findToken?.token === token.token) {
-            await this.userStore.deleteConfirmationToken(token.token);
             await this.userStore.confirmUser(email);
+            await this.userStore.deleteConfirmationToken(token.token);
             return Ok('Confirmed')
         }
         return Err('Tokens do not match');
