@@ -179,8 +179,8 @@ describe('authentication', function () {
 
         const token = await userStore.findConfirmationToken(email);
 
-        const hour1 = 60 * 60 * 1_000;
-        tickingClock.tick(hour1);
+        const oneHour = 60 * 60 * 1_000;
+        tickingClock.tick(oneHour);
         tickingClock.tick(1);
         const confirm = await userRegistration.confirm(email, token!)
         expect(confirm).deep.equal({value: undefined, error: 'Token expired'})
@@ -202,11 +202,27 @@ describe('authentication', function () {
 
         const used = await userRegistration.confirm(email, token!)
         expect(used.error).deep.equal('Failed to find token for email')
-
     })
 
     it('requests MFA if it has been a while', async () => {
+        const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
+        const tickingClock = new TickingClock();
+        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), scryptHash, tickingClock)
+        const register = await userRegistration.register(email, 'password');
+        expect(register).to.deep.equal({value: 'OK', error: undefined})
 
+        const token = await userStore.findConfirmationToken(email);
+        const confirm = await userRegistration.confirm(email, token!)
+        expect(confirm.value).deep.equal('Confirmed');
+
+        const login = await userRegistration.login(email, 'password');
+        expect(login.value.email).equal(email)
+
+        const oneWeek = 7 * 24 * 60 * 60 * 1_000;
+        tickingClock.tick(oneWeek)
+
+        const login1WeekLater = await userRegistration.login(email, 'password');
+        expect(login1WeekLater.error).equal("MFA required")
     })
 
     xit('doesn\'t allow for timing attacks', async () => {

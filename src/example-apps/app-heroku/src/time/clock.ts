@@ -38,4 +38,22 @@ class DateTime extends Date {
         this.setHours(this.getHours() + hours);
         return date
     }
+
+    minusHours(hours: number): DateTime {
+        const date = this;
+        this.setHours(this.getHours() - hours);
+        return date
+    }
+
+    plusDays(days: number) {
+        const date = this;
+        this.setDate(this.getDate() + days);
+        return date
+    }
+
+    minusDays(days: number) {
+        const date = this;
+        this.setDate(this.getDate() - days);
+        return date
+    }
 }

@@ -63,6 +63,9 @@ export class UserRegistration {
         if (user.confirmed_at === null) {
             return Err('Email not confirmed yet')
         }
+        if (user.confirmed_at! <= this.clock.now().minusDays(7)) {
+            return Err('MFA required')
+        }
         return Ok(user)
     }
 
@@ -133,3 +136,4 @@ export type LoginError =
     | 'Email or password is incorrect'
     | 'Too many attempts, you have 5 per minute'
     | 'Email not confirmed yet'
+    | 'MFA required'
