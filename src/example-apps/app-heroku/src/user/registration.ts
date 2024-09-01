@@ -87,6 +87,11 @@ export class UserRegistration {
         }
         return Err('Tokens do not match');
     }
+
+    async logout(token: string | undefined) {
+        if (!token) return undefined;
+        return await this.sessionStore.delete(token)
+    }
 }
 
 export const randomToken = (secret: string) => {

@@ -9,6 +9,9 @@
 ### todo
 
 - sessions, sudo mode
+  - frontend with http-only cookies etc
+  - cors policy
+  - csrf
 - forgot, reset password
 - login as, for admin
 - admin users

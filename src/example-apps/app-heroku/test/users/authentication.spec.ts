@@ -241,7 +241,6 @@ describe('authentication', function () {
         tickingClock.tick(-1)
 
         // valid just before 7 days are up
-        console.log('test', tickingClock.now());
         const session2 = await sessionStore.validate(session1!.token)
         expect(session2?.user_id).eq(login.value.id)
 
@@ -257,6 +256,28 @@ describe('authentication', function () {
         tickingClock.tick(days7)
         const session4 = await sessionStore.validate(session1!.token)
         expect(session4).eq(undefined)
+    });
+
+    it('delete a session on logout', async () => {
+        const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
+        const register = await userRegistration.register(email, 'password');
+        expect(register).to.deep.equal({value: 'OK', error: undefined})
+
+        const token = await userStore.findConfirmationToken(email);
+        const confirm = await userRegistration.confirm(email, token!)
+        expect(confirm).deep.equal({value: 'Confirmed', error: undefined})
+
+        const login = await userRegistration.login(email, 'password');
+        expect(login.value.email).to.deep.eq(email);
+
+        const session = await sessionStore.findByUserId(login.value.id)
+        expect(session?.user_id).eq(login.value.id)
+
+        const logout = await userRegistration.logout(session!.token);
+        console.log(session?.token);
+
+        const noSession = await sessionStore.findByUserId(login.value.id)
+        expect(noSession).eq(undefined)
     });
 
     xit('doesn\'t allow for timing attacks', async () => {

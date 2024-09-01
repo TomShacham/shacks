@@ -16,6 +16,8 @@ export interface SessionStore {
     save(userId: string, token: string): Promise<Session>
 
     validate(userId: string, token: string): Promise<Session | undefined>
+
+    delete(token: string): Promise<any>
 }
 
 export class PostgresSessionStore implements SessionStore {
@@ -71,5 +73,12 @@ export class PostgresSessionStore implements SessionStore {
                 `, [plus7Days, now, token]
             )
         )[0]
+    }
+
+    async delete(token: string): Promise<any> {
+        await this.store.query(`
+            delete
+            from sessions
+            where token = $1`, [token])
     }
 }
