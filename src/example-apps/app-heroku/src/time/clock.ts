@@ -56,4 +56,16 @@ class DateTime extends Date {
         this.setDate(this.getDate() - days);
         return date
     }
+
+    plusSeconds(seconds: number) {
+        const date = this;
+        this.setSeconds(this.getSeconds() + seconds);
+        return date
+    }
+
+    minusSeconds(seconds: number) {
+        const date = this;
+        this.setSeconds(this.getSeconds() - seconds);
+        return date
+    }
 }

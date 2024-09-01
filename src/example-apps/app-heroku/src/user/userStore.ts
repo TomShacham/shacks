@@ -87,9 +87,10 @@ export class PostgresUserStore implements UserStore {
     }
 
     async deleteConfirmationToken(token: string): Promise<any> {
-        return this.store.query(`delete
-                                 from tokens
-                                 where token = $1::text`, [token]);
+        return this.store.query(`
+            delete
+            from tokens
+            where token = $1::text`, [token]);
     }
 
     async saveToken(userId: string, token: string): Promise<Token> {

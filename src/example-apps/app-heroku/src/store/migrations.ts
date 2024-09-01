@@ -1,6 +1,6 @@
 import {DbStore} from "./store";
-import fs from "node:fs";
-import crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as crypto from "node:crypto";
 
 export class DbMigrations {
     constructor(private database: DbStore, private directory: string = `${__dirname}/migrations`) {

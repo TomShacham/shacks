@@ -241,13 +241,17 @@ describe('authentication', function () {
         tickingClock.tick(-1)
 
         // valid just before 7 days are up
+        console.log('test', tickingClock.now());
         const session2 = await sessionStore.validate(session1!.token)
         expect(session2?.user_id).eq(login.value.id)
 
         // it refreshes after validate so now ticking forward it should still be valid
         tickingClock.tick(1)
+
         const session3 = await sessionStore.validate(session1!.token)
         expect(session3?.user_id).eq(login.value.id)
+        expect(session3?.expires_at).deep.eq(tickingClock.now().plusDays(7))
+        expect(session3?.refreshed_at).deep.eq(tickingClock.now())
 
         // but invalid after another 7 days
         tickingClock.tick(days7)

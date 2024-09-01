@@ -35,8 +35,7 @@ export class PostgresSessionStore implements SessionStore {
         const session = await this.findByToken(token)
         if (!session) return undefined
         if (session.expires_at <= this.clock.now()) return undefined
-        await this.extend(token)
-        return session;
+        return this.extend(token)
     }
 
     async save(userId: string, token: string): Promise<Session> {
@@ -45,6 +44,7 @@ export class PostgresSessionStore implements SessionStore {
         return (await this.store.query(`
                             insert into sessions
                             values ($1, $2, $3, $4)
+                            returning *
                 `, [token, now, plus7Days, userId]
             )
         )[0]
@@ -60,11 +60,15 @@ export class PostgresSessionStore implements SessionStore {
     }
 
     private async extend(token: string) {
+        const now = this.clock.now().toUTCString();
         const plus7Days = this.clock.now().plusDays(7).toUTCString();
         return (await this.store.query(`
                     update sessions
-                    set expires_at = $1
-                    where token = $2`, [plus7Days, token]
+                    set expires_at   = $1,
+                        refreshed_at = $2
+                    where token = $3
+                    returning *
+                `, [plus7Days, now, token]
             )
         )[0]
     }
