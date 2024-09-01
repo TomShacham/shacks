@@ -1,9 +1,13 @@
-export class Result<R, U> {
-    constructor(public value: R, public error: U) {
+export class Result<R, E> {
+    constructor(public value: R, public error: E) {
     }
 
-    map<S>(f: (t: R) => S): Result<S, U> {
+    map<S>(f: (t: R) => S): Result<S, E> {
         return new Result(f(this.value), this.error);
+    }
+
+    mapFailure<F>(f: (t: E) => F): Result<R, F> {
+        return new Result(this.value, f(this.error));
     }
 }
 

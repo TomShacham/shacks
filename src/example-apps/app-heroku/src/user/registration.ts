@@ -2,14 +2,15 @@ import {Err, Ok, Result} from "../result/result";
 import crypto, {createHmac, scryptSync, timingSafeEqual} from "node:crypto";
 import {Clock} from "../time/clock";
 import {Token, User, UserStore} from "./userStore";
+import {PostgresSessionStore} from "./sessionStore";
 
 
 export class UserRegistration {
     constructor(
         private readonly userStore: UserStore,
-        private readonly hash: (password: string, salt: string) => Result<string, any> = scryptHash,
-        private readonly clock: Clock
-    ) {
+        private readonly sessionStore: PostgresSessionStore,
+        private readonly hash: (password: string, salt: string) => Result<string, any> = scryptHash
+        , private readonly clock: Clock) {
     }
     /*
         We use a "USER_IF_NONE_FOUND" user so that timing attacks cannot be performed whereby an attacker can infer
@@ -63,10 +64,7 @@ export class UserRegistration {
         if (user.confirmed_at === null) {
             return Err('Email not confirmed yet')
         }
-        if (user.confirmed_at! <= this.clock.now().minusDays(7)) {
-            await this.userStore.saveToken(user.id, randomToken(this.secret))
-            return Err('MFA required')
-        }
+        await this.sessionStore.save(user.id, randomToken(this.secret))
         return Ok(user)
     }
 

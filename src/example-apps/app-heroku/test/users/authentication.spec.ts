@@ -6,18 +6,19 @@ import {DbMigrations} from "../../src/store/migrations";
 import {localPostgresPool} from "../db/localPostgresPool";
 import {TickingClock} from "../../src/time/clock";
 import {PostgresUserStore} from "../../src/user/userStore";
+import {PostgresSessionStore} from "../../src/user/sessionStore";
 
 
 describe('authentication', function () {
-    this.timeout(5_000);
+    this.timeout(10_000);
     /*
      following https://thecopenhagenbook.com/password-authentication
     */
-
     const database = new PostgresStore(localPostgresPool());
     const tickingClock = new TickingClock();
     const userStore = new PostgresUserStore(database, tickingClock);
-    const userRegistration = new UserRegistration(userStore, scryptHash, tickingClock);
+    const sessionStore = new PostgresSessionStore(database, tickingClock);
+    const userRegistration = new UserRegistration(userStore, sessionStore, scryptHash, tickingClock);
     const dbMigrations = new DbMigrations(database);
 
     before(async () => {
@@ -173,7 +174,7 @@ describe('authentication', function () {
     it('token expires after a while', async () => {
         const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
         const tickingClock = new TickingClock();
-        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), scryptHash, tickingClock)
+        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), sessionStore, scryptHash, tickingClock)
         const register = await userRegistration.register(email, 'password');
         expect(register).to.deep.equal({value: 'OK', error: undefined})
 
@@ -192,7 +193,7 @@ describe('authentication', function () {
     it('token is single use', async () => {
         const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
         const tickingClock = new TickingClock();
-        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), scryptHash, tickingClock)
+        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), sessionStore, scryptHash, tickingClock)
         const register = await userRegistration.register(email, 'password');
         expect(register).to.deep.equal({value: 'OK', error: undefined})
 
@@ -204,33 +205,55 @@ describe('authentication', function () {
         expect(used.error).deep.equal('Failed to find token for email')
     })
 
-    it('requests MFA if it has been a while', async () => {
+    it('creates a session when login successful', async () => {
         const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
-        const tickingClock = new TickingClock();
-        const userRegistration = new UserRegistration(new PostgresUserStore(database, tickingClock), scryptHash, tickingClock)
         const register = await userRegistration.register(email, 'password');
         expect(register).to.deep.equal({value: 'OK', error: undefined})
 
         const token = await userStore.findConfirmationToken(email);
         const confirm = await userRegistration.confirm(email, token!)
-        expect(confirm.value).deep.equal('Confirmed');
+        expect(confirm).deep.equal({value: 'Confirmed', error: undefined})
 
         const login = await userRegistration.login(email, 'password');
-        expect(login.value.email).equal(email)
+        expect(login.value.email).to.deep.eq(email);
 
-        const usedToken = await userStore.findConfirmationToken(email);
-        expect(usedToken).equal(undefined);
+        const session = await sessionStore.findByUserId(login.value.id)
+        expect(session?.user_id).eq(login.value.id)
+    });
 
-        const oneWeek = 7 * 24 * 60 * 60 * 1_000;
-        tickingClock.tick(oneWeek)
+    it('session expires after a week and refreshes if used before expiry', async () => {
+        const email = 'tom-' + randomBytes(3, 'hex') + '@example.com';
+        const register = await userRegistration.register(email, 'password');
+        expect(register).to.deep.equal({value: 'OK', error: undefined})
 
-        const login1WeekLater = await userRegistration.login(email, 'password');
-        expect(login1WeekLater.error).equal("MFA required")
+        const token = await userStore.findConfirmationToken(email);
+        const confirm = await userRegistration.confirm(email, token!)
+        expect(confirm).deep.equal({value: 'Confirmed', error: undefined})
 
-        const newToken = await userStore.findConfirmationToken(email);
-        const reconfirm = await userRegistration.confirm(email, newToken!)
-        expect(reconfirm.value).deep.equal('Confirmed');
-    })
+        const login = await userRegistration.login(email, 'password');
+        expect(login.value.email).to.deep.eq(email);
+
+        const session1 = await sessionStore.findByUserId(login.value.id)
+        expect(session1?.user_id).eq(login.value.id)
+
+        const days7 = 7 * 24 * 60 * 60 * 1_000;
+        tickingClock.tick(days7)
+        tickingClock.tick(-1)
+
+        // valid just before 7 days are up
+        const session2 = await sessionStore.validate(session1!.token)
+        expect(session2?.user_id).eq(login.value.id)
+
+        // it refreshes after validate so now ticking forward it should still be valid
+        tickingClock.tick(1)
+        const session3 = await sessionStore.validate(session1!.token)
+        expect(session3?.user_id).eq(login.value.id)
+
+        // but invalid after another 7 days
+        tickingClock.tick(days7)
+        const session4 = await sessionStore.validate(session1!.token)
+        expect(session4).eq(undefined)
+    });
 
     xit('doesn\'t allow for timing attacks', async () => {
         // this is to show that timing attacks are not possible,

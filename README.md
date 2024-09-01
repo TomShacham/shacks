@@ -32,13 +32,14 @@ Design choices:
 ## Todo
 
 - example app (idea is to iterate the library through using it to actually build stuff)
-  - example authentication - create users, sessions, reset password etc
+  - example authentication - sessions, reset password etc
+  - do headers really come through as string[]
+  - move body parameter to the end and make optional in Route.post,put etc
   - static file handler
   - simple json api
   - example monorepo sharing a client across it
   - open telemetry tracing
   - streaming files to db eg csv with manipulation on the fly including totals
-  - streaming files to s3
   - browser testing
   - deploy to cloudflare and use wrangler to test it locally
   - pulumi? or some IaC to define our service
@@ -58,7 +59,6 @@ Design choices:
   - multipart form streaming
   - more realistic scenarios like reading from a db
 - security e.g. header obfuscation like in helmet etc. (node should handle this?)
-- Server sent events
 - content-range
 - trailers
 - does node handle inflate/deflate ?
