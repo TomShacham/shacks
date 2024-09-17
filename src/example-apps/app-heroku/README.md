@@ -12,8 +12,9 @@
   - frontend with http-only cookies etc
   - cors policy
   - csrf
+- confirm password via email
 - forgot, reset password
 - login as, for admin
-- admin users
+- admin users / capabilities e.g. can_edit_users 
 - static file handler, htmx 
 

@@ -1,7 +1,7 @@
 import {DbStore} from "../store/store";
 import {Ok, Result} from "../result/result";
-import {RegistrationError} from "../../dist/user/userStore";
 import {Clock} from "../time/clock";
+import {RegistrationError} from "./registration";
 
 
 export type User = {

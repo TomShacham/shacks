@@ -1,5 +1,5 @@
 import {IncomingHttpHeaders, OutgoingHttpHeaders} from "node:http";
-import stream from "node:stream";
+import * as stream from "node:stream";
 import {h22pStream} from "./body";
 
 export interface HttpHandler<

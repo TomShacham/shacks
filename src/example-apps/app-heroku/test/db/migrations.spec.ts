@@ -6,7 +6,7 @@ import fs from "node:fs";
 import {localPostgresPool} from "./localPostgresPool";
 
 describe("migrations", function () {
-    this.timeout(200_000);
+    this.timeout(20_000);
 
     const database: DbStore = new PostgresStore(localPostgresPool());
 
@@ -18,6 +18,7 @@ describe("migrations", function () {
         await database.query(`
             DROP TABLE IF EXISTS automated_migrations;
             DROP TABLE IF EXISTS tokens;
+            DROP TABLE IF EXISTS sessions;
             DROP TABLE IF EXISTS users;
             DROP TABLE IF EXISTS bar;
         `)
@@ -45,7 +46,7 @@ describe("migrations", function () {
     it('run some migrations and then add a new one', async () => {
         const dbMigrations = new DbMigrations(database,);
         await dbMigrations.migrate()
-        const newMigrationFile = `${__dirname}/../../src/store/migrations/003_create_new_migration.sql`;
+        const newMigrationFile = `${__dirname}/../../src/store/migrations/004_create_new_migration.sql`;
         fs.writeFileSync(newMigrationFile, 'CREATE TABLE IF NOT EXISTS bar(id INT PRIMARY KEY)', 'utf-8')
         try {
             await dbMigrations.migrate()
