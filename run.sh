@@ -41,14 +41,16 @@ function publish() {
           CURR_VERSION=$(awk -F \" '/"version": ".+"/ { print $4; exit; }' package.json)
           NEXT_VERSION=$(echo ${CURR_VERSION} | awk -F. -v OFS=. '{$NF += 1 ; print}')
           sed -i '' "s/\($VERSION_STRING\).*/\1\"$NEXT_VERSION\",/" package.json
-          git commit -am "bump to version ${NEXT_VERSION}"
-            cp package.json tsconfig.json README.md dist &&
-            pnpm publish --access public
-
+          cp package.json tsconfig.json README.md dist &&
           popd
-
       done
 
+      git commit -am "bump to version ${NEXT_VERSION}"
+      for pkg in $packages ; do
+          pushd src/packages/$pkg;
+          pnpm publish --access public
+          popd
+      done
   fi
 }
 
