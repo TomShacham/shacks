@@ -1,8 +1,8 @@
 import {RedirectToHttps} from "./handlers/redirectToHttps";
 import {Env} from "./env/environment";
-import {Res} from "@shacks/h22p";
+import {Body, Req, Res} from "@shacks/h22p";
 import {Route, Router} from "@shacks/h22p-router";
-import {httpServer} from "@shacks/h22p-node";
+import {httpServer, nodeHttpClient} from "@shacks/h22p-node";
 
 async function main() {
     const port = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -13,7 +13,7 @@ async function main() {
 
     const routingHandler = Router.of({
         getResource: Route.get('/path/{id}', async (req) => {
-            return Res.ok({body: `hello, ${req.vars.path.id}`})
+                return Res.ok({body: `hello, ${req.vars.path.id}`})
             }
         ),
         getRoot: Route.get('/', async (req) => {

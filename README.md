@@ -33,7 +33,6 @@ Design choices:
 
 - example app (idea is to iterate the library through using it to actually build stuff)
   - example authentication - sessions, reset password etc
-  - do headers really come through as string[]
   - move body parameter to the end and make optional in Route.post,put etc
   - static file handler
   - simple json api

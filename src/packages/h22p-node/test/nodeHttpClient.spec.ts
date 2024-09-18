@@ -33,4 +33,31 @@ describe('h22p node client', () => {
         });
         await close()
     })
+
+    it('what do headers look like when multiple of the same name', async () => {
+        /*
+            the strange thing is nodejs treats certain headers differently (:
+             - so set-cookie keeps its array structure somewhat
+             - but something arbitrary is turned into a joined string
+         */
+        const {port, close} = await h22pServer({
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                return {status: 200, body: JSON.stringify(req.headers), headers: {}}
+            }
+        });
+        const client = handler(`http://localhost:${port}`);
+        const res = await client.handle(
+            Req.get(`/`, {
+                    // @ts-ignore
+                    "foo": ["bar, baz, quux"],
+                    "set-cookie": ["bar, baz, quux"],
+                }
+            )
+        )
+        expect(res.status).eq(200);
+        const reqHeadersEchoed = await Body.json(res.body!) as any;
+        expect(reqHeadersEchoed["foo"]).deep.eq("bar, baz, quux");
+        expect(reqHeadersEchoed["set-cookie"]).deep.eq(["bar, baz, quux"]);
+        await close()
+    });
 })

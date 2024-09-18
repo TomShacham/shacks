@@ -174,13 +174,37 @@ Upload test file
         }
     })
 
-    it('sends and receives headers (check case sensitivity and array of values)', async () => {
+    it('sends and receives headers (check case sensitivity and array preservation of values)', async () => {
         /*
             header names are down-cased but header values preserve their casing
+
+            certain headers preserve array structure and others do not
+            - set-cookie preserves array structure
+            - cookie joins the string by a semicolon
+            - all the others join with a comma
          */
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const headers = {...req.headers, "location": "/path", "FoO": "BaR"};
+                const headers = {
+                    ...req.headers,
+                    "location": "/path",
+                    "FoO": "BaR",
+                    accept: ["foo", "bar"],
+                    "accept-charset": ["foo", "bar"],
+                    "accept-encoding": ["foo", "bar"],
+                    "accept-language": ["foo", "bar"],
+                    connection: ["foo", "bar"],
+                    cookie: ["foo", "bar"],
+                    dav: ["foo", "bar"],
+                    link: ["foo", "bar"],
+                    prgama: ["foo", "bar"],
+                    "proxy-authenticate": ["foo", "bar"],
+                    "sec-websocket-extensions": ["foo", "bar"],
+                    "sec-websocket-protocol": ["foo", "bar"],
+                    "set-cookie": ["foo", "bar"],
+                    via: ["foo", "bar"],
+                    "www-authenticate": ["foo", "bar"],
+                };
                 return Res.seeOther({headers: headers, body: ''})
             }
         };
@@ -188,6 +212,7 @@ Upload test file
 
         try {
             const response = await nodeHttpClient(`http://localhost:${port}`).handle(
+                // @ts-ignore
                 Req.get(`/`, {"ReQuEsT-HeAdEr": "r1", "array": ["1", "2", "3"]})
             );
             expect(response.status).to.eq(303);
@@ -197,6 +222,20 @@ Upload test file
             expect(response.headers["foo"]).to.eq(`BaR`)
             // gets concatenated together
             expect(response.headers["array"]).to.eq(`1, 2, 3`)
+
+            expect(response.headers["accept"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["accept-charset"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["accept-encoding"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["accept-language"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["connection"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["cookie"]).to.eq(['foo', 'bar'].join('; '))
+            expect(response.headers["dav"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["link"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["prgama"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["proxy-authenticate"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["sec-websocket-extensions"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["sec-websocket-protocol"]).to.eq(['foo', 'bar'].join(', '))
+            expect(response.headers["set-cookie"]).to.deep.eq(['foo', 'bar'])
             expect(await Body.text(response.body)).to.eq(``);
         } finally {
             await close()

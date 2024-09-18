@@ -28,7 +28,8 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
         const {headers, method, url} = nodeReq;
         const res = await handler.handle(Req.of({
             body: nodeReq,
-            headers,
+            // headers type Incoming/OutgoingHttpHeaders is not true - they are always string
+            headers: headers as NodeJS.Dict<string>,
             method: method as Method,
             uri: url
         }));

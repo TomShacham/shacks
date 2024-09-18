@@ -10,6 +10,7 @@ import {
     URI
 } from "@shacks/h22p";
 import * as http from "http";
+import * as https from "https";
 import {IncomingMessage} from "node:http";
 
 export class NodeHttpClient implements HttpHandler {
@@ -19,7 +20,8 @@ export class NodeHttpClient implements HttpHandler {
     handle(req: HttpRequest): Promise<HttpResponse> {
         return new Promise(async resolve => {
             const options = this.nodeRequestFrom(req);
-            const nodeRequest = http.request(options, nodeResponse => {
+            const request = options.protocol.includes("https") ? https.request : http.request;
+            const nodeRequest = request(options, nodeResponse => {
                 // TODO what do headers really look like;do we get the value as `number` as IncomingHttpHeaders suggests
                 nodeResponse.once('readable', () => {
                     resolve(this.h22pResponseFrom(nodeResponse))
@@ -43,6 +45,7 @@ export class NodeHttpClient implements HttpHandler {
     private nodeRequestFrom(req: HttpRequest) {
         const parsedUri = URI.parse(this.baseUrl + req.uri)
         return {
+            protocol: parsedUri.protocol,
             hostname: parsedUri.hostname,
             port: parsedUri.port,
             path: (parsedUri.path ?? '') + (parsedUri.query ?? '') + (parsedUri.fragment ?? ''),

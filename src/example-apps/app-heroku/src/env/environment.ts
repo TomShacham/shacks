@@ -9,6 +9,6 @@ export class Env {
     }
 
     isProduction(envVar: string = "NODE_ENV") {
-        return this.get(envVar) === 'production';
+        return this.env?.[envVar] === 'production';
     }
 }
