@@ -1,6 +1,6 @@
 {
   "name": "@shacks/h22p-fetch",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "scripts": {
     "build": "tsc",
     "test": "tsc; mocha --require ts-node/register '**/*spec.ts'"
