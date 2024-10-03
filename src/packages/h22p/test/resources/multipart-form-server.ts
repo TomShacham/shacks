@@ -1,5 +1,6 @@
-import {HttpRequest, HttpResponse, httpServer, MultipartForm, Res} from "../../src";
+import {HttpRequest, HttpResponse, MultipartForm, Res} from "../../src";
 import * as fs from "fs";
+import {httpServer} from "@shacks/h22p-node";
 
 async function multipartFormServer() {
     let {baselineHeap, heap} = heapStats();

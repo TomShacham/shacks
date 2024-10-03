@@ -1,4 +1,5 @@
-import {h22pServer, HttpRequest, HttpResponse, Res} from "../../src";
+import {HttpRequest, HttpResponse, Res} from "../../src";
+import {h22pServer} from "@shacks/h22p-node";
 
 process.on('uncaughtException', (e) => {
     if ('code' in e && e.code === 'ECONNRESET') {

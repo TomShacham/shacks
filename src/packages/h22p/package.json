@@ -16,6 +16,7 @@
     "puppeteer": "22.10.0",
     "ts-node": "10.9.2",
     "typescript": "5.5.4",
-    "wrangler": "^3.60.2"
+    "wrangler": "^3.60.2",
+    "@shacks/h22p-node": "workspace:*"
   }
 }
