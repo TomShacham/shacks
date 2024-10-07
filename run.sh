@@ -29,10 +29,9 @@ function test() {
   echo $success
 }
 
-function publish() {
+function bump() {
   if [[ $success == false ]]; then
     echo some test fails
-
     else
       # release the packages
       for pkg in $packages ; do
@@ -46,6 +45,14 @@ function publish() {
       done
 
       git commit -am "bump to version ${NEXT_VERSION}"
+  fi
+}
+
+
+function publish() {
+  if [[ $success == false ]]; then
+    echo some test fails
+    else
       for pkg in $packages ; do
           pushd src/packages/$pkg;
           pnpm publish --access public
@@ -54,10 +61,13 @@ function publish() {
   fi
 }
 
+
 test
 
-if [[ $1 != "publish" ]]; then
+if [[ $1 == "" ]]; then
     exit 0
+elif [[ $1 == "bump-version" ]]; then
+  bump
 else
   publish
 fi
