@@ -1,8 +1,8 @@
 import {RedirectToHttps} from "./handlers/redirectToHttps";
 import {Env} from "./env/environment";
-import {Body, Req, Res} from "@shacks/h22p";
+import {Res} from "@shacks/h22p";
 import {Route, Router} from "@shacks/h22p-router";
-import {httpServer, nodeHttpClient} from "@shacks/h22p-node";
+import {httpServer} from "@shacks/h22p-node";
 
 async function main() {
     const port = process.env.PORT ? Number(process.env.PORT) : 3000;
