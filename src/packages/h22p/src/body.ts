@@ -46,17 +46,12 @@ export class Body {
         })
     }
 
-    static async form(msg: HttpRequest): Promise<DictString> {
-        const contentType = msg.headers?.["content-type"];
-        if (contentType?.includes('application/x-www-form-urlencoded')) {
-            if (isStream(msg.body)) await new Promise((resolve) => {
-                (msg.body! as stream.Readable).once('readable', () => resolve(null));
-            })
-            const str = await Body.text(msg.body);
-            return UrlEncodedMessage.parse(str)
-        } else {
-            throw new Error("Content type is not application/x-www-form-urlencoded so bailing on parsing form")
-        }
+    static async form(body: MessageBody): Promise<DictString> {
+        if (isStream(body)) await new Promise((resolve) => {
+            (body! as stream.Readable).once('readable', () => resolve(null));
+        })
+        const str = await Body.text(body);
+        return UrlEncodedMessage.parse(str)
     }
 
     static asMultipartForm(parts: MultipartFormPart<HttpMessageBody>[], boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)): HttpMessageBody {

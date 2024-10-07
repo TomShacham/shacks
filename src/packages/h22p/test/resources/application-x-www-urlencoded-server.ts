@@ -1,10 +1,11 @@
-import {Body, HttpRequest, HttpResponse, httpServer, Res} from "../../src";
+import {Body, HttpRequest, HttpResponse, Res} from "../../src";
+import {httpServer} from "@shacks/h22p-node";
 
 async function applicationXWwwUrlencodedServer() {
     const {server, close} = await httpServer({
         async handle(req: HttpRequest): Promise<HttpResponse> {
             if (req.method === 'POST') {
-                const body = await Body.form(req);
+                const body = await Body.form(req.body);
                 return Res.ok({body, headers: {"content-type": "text/html; charset=utf-8"}})
             }
             if (req.method === 'GET') {

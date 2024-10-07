@@ -1,4 +1,6 @@
-import {HttpRequest, HttpResponse, httpServer, OpenApi, Res, Route, URI} from "../../src";
+import {HttpRequest, HttpResponse, Res, URI} from "@shacks/h22p";
+import {httpServer} from "../../../h22p-node/src";
+import {OpenApi, Route} from "../../src";
 
 
 async function openApiSwaggerServer() {
@@ -53,13 +55,11 @@ openApiSwaggerServer();
 
 function routes() {
     return {
-        getUser: Route.get('/users/{userId}?name', {
-                handle: async (req) => {
-                    if (Math.random() > 0.5) {
-                        return Res.ok({body: 'hello, world'})
-                    } else {
-                        return Res.notFound();
-                    }
+        getUser: Route.get('/users/{userId}?name', async (req) => {
+                if (Math.random() > 0.5) {
+                    return Res.ok({body: 'hello, world'})
+                } else {
+                    return Res.notFound();
                 }
             }, {"content-type": "text/plain"} as const,
             [
@@ -69,13 +69,11 @@ function routes() {
         postUser: Route.post('/users/{userId}/*', {
                 foo: 'bar',
                 gov: {st: "downing", info: {occupied: true, no: 10, who: 'dishy'}}
-            }, {
-                handle: async (req) => {
-                    if (Math.random() > 0.5) {
-                        return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
-                    } else {
-                        return Res.notFound();
-                    }
+            }, async (req) => {
+                if (Math.random() > 0.5) {
+                    return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
+                } else {
+                    return Res.notFound();
                 }
             }, {"content-type": "application/json"} as const,
             [
@@ -85,13 +83,11 @@ function routes() {
                 }),
                 Res.notFound({headers: {"content-type": "text/plain"}}),
             ]),
-        getUserAccount: Route.get('/users/{userId}/account/{accountId}?name&accountType', {
-                handle: async (req) => {
-                    if (Math.random() > 0.5) {
-                        return Res.ok({body: 'hello, world'})
-                    } else {
-                        return Res.notFound();
-                    }
+        getUserAccount: Route.get('/users/{userId}/account/{accountId}?name&accountType', async (req) => {
+                if (Math.random() > 0.5) {
+                    return Res.ok({body: 'hello, world'})
+                } else {
+                    return Res.notFound();
                 }
             }, {"content-type": "text/plain"} as const,
             [

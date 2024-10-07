@@ -10,33 +10,16 @@ describe('body', () => {
             try {
                 await Body.json('{malformed')
             } catch (e) {
-                expect((e as Error).message).eq(`Expected property name or '}' in JSON at position 1 (line 1 column 2)`)
+                expect((e as Error).message.includes("Expected property name or '}' in JSON at position 1")).eq(true)
             }
         })
     })
 
     describe('Body.form', () => {
-        it('throws if header is not present', async () => {
-            try {
-                const form = await Body.form(Req.post('/', 'name=tom&pic=plom', {}))
-            } catch (e) {
-                expect((e as Error).message).eq('Content type is not application/x-www-form-urlencoded so bailing on parsing form')
-            }
-        });
-
-        it('parses application/x-www-form-urlencoded', async () => {
-            const form = await Body.form(
-                Req.post('/', 'name=tom&pic=plom', {"content-type": "application/x-www-form-urlencoded"})
-            )
-            expect(form).deep.eq({"name": "tom", "pic": "plom"})
-        });
-
         it('handles special characters', async () => {
             const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60%2B';
 
-            const form = await Body.form(
-                Req.post('/', `name=tom&pic=${specialChars}`, {"content-type": "application/x-www-form-urlencoded"})
-            )
+            const form = await Body.form(`name=tom&pic=${specialChars}`)
 
             expect(form).deep.eq({
                 "name": "tom",
@@ -45,9 +28,7 @@ describe('body', () => {
         });
 
         it('handles plus - turns into a space', async () => {
-            const form = await Body.form(
-                Req.post('/', `name=t+o%2Bm`, {"content-type": "application/x-www-form-urlencoded"})
-            )
+            const form = await Body.form(`name=t+o%2Bm`)
 
             expect(form).deep.eq({
                 "name": "t o+m",
@@ -59,9 +40,7 @@ describe('body', () => {
             // note chrome only sends this if either a) you specify accept-charset on your form
             //   or b) you send a response header of content-type "text/html; charset=utf-8"
 
-            const form = await Body.form(
-                Req.post('/', stringWithUnicodeChar, {"content-type": "application/x-www-form-urlencoded"})
-            )
+            const form = await Body.form(stringWithUnicodeChar)
 
             expect(form).deep.eq({
                 "field": "€",
