@@ -10,7 +10,7 @@ describe('body', () => {
             try {
                 await Body.json('{malformed')
             } catch (e) {
-                expect((e as Error).message).eq(`Expected property name or '}' in JSON at position 1`)
+                expect((e as Error).message).eq(`Expected property name or '}' in JSON at position 1 (line 1 column 2)`)
             }
         })
     })
