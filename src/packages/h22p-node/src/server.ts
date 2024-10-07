@@ -42,7 +42,7 @@ export async function httpServer(handler: HttpHandler, port = 0, host: string = 
             nodeResponse.write(JSON.stringify(res.body));
             nodeResponse.end();
         } else {
-            nodeResponse.write(res.body);
+            if (res.body) nodeResponse.write(res.body);
             nodeResponse.end();
         }
     })

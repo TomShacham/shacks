@@ -242,6 +242,32 @@ Upload test file
         }
     })
 
+    it('handles an empty body', async () => {
+        const handler = {
+            async handle(req: HttpRequest): Promise<HttpResponse> {
+                return Res.ok({body: undefined})
+            }
+        };
+        const {port, close} = await httpServer(handler);
+
+        try {
+            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
+                method: 'POST',
+                uri: `/`,
+                headers: {},
+                body: 'blah'
+            });
+            expect(response.status).to.eq(200);
+            expect(response.statusText).to.eq("OK");
+            let body = '';
+            for await (const chunk of (response.body as stream.Readable)) {
+                body += chunk
+            }
+            expect(body).to.eq(``);
+        } finally {
+            await close()
+        }
+    })
 })
 
 function data(bytes: number) {
