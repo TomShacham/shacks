@@ -288,7 +288,24 @@ describe('router', () => {
             expect(await Body.text(res.body)).eq(`{"bar":"json"}`);
         })
 
-        it('path param', async () => {
+        it('simple path param', async () => {
+            const rs = {
+                getResource: Route.get('/resource/{id}', async (req) => {
+                        const path = req.vars.path;
+                        return {status: 200, body: `Hello ${path?.id}`, headers: {"foo": "bar"}}
+                    }
+                    , {"content-type": "text/csv"} as const)
+            };
+            const r = Router.of(rs);
+            const res = await r.handle(Req.get('/resource/123/'))
+            expect(res.status).eq(200);
+            expect(await Body.text(res.body)).eq('Hello 123');
+
+            const notFound = await r.handle(Req.get('/admin/resource/123'))
+            expect(notFound.status).eq(404);
+        })
+
+        it('complex path param', async () => {
             const rs = {
                 getResource: Route.get('/resource/{id}/sub/{subId}', async (req) => {
                         const path = req.vars.path;

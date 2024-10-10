@@ -472,12 +472,14 @@ class RouteMatcher {
 
     private static regexToCaptureVars(uriMatcher: string) {
         // replace the path params with a regex capture
-        let s = uriMatcher.replace(/\{(\w+)}/g, '(?<$1>[^\/]+)');
+        let withCaptures = uriMatcher.replace(/\{(\w+)}/g, '(?<$1>[^\/]+)');
         // replace the wildcards with a regex capture
-        for (const wildcard of s.split('*')) {
-            s = s.replace('*', `(?<wildcard_${this.randomString(10)}>.{0,})`)
+        for (const wildcard of withCaptures.split('*')) {
+            withCaptures = withCaptures.replace('*', `(?<wildcard_${this.randomString(10)}>.{0,})`)
         }
-        return new RegExp(s);
+        const optionalEndingSlash = "\/?";
+        const withStartAndEnd = "^" + withCaptures + optionalEndingSlash +  "$";
+        return new RegExp(withStartAndEnd);
     }
 
     private static populateVars(groups: NodeJS.Dict<string>, query: NodeJS.Dict<string>, fragment: string | undefined) {
