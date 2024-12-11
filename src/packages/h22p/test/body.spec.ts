@@ -1,9 +1,35 @@
 import * as stream from "stream";
 import {expect} from "chai";
-import {Body, MultipartForm, Req} from "../src";
+import {Body, h22pStream, MultipartForm, Req} from "../src";
 import * as fs from "fs";
 
 describe('body', () => {
+
+    describe('Body.bytes', () => {
+        it('handles empty body', async () => {
+            const bytes = await Body.bytes(undefined);
+            expect(bytes).deep.eq([]);
+        })
+
+        it('handles empty stream', async () => {
+            const bytes = await Body.bytes(h22pStream.of(undefined));
+            expect(bytes).deep.eq([]);
+        })
+
+        it('handles stream', async () => {
+            const body = h22pStream.of('🤠');
+            body.push('abc')
+            body.push('def')
+            body.push('ghi')
+            const bytes = await Body.bytes(body);
+            expect(bytes).deep.eq(['abc', 'def', 'ghi', '🤠']);
+        })
+
+        it('handles buffer', async () => {
+            const bytes = await Body.bytes(h22pStream.of(Buffer.from('123')));
+            expect(bytes.join('')).deep.eq('123');
+        })
+    })
 
     describe('Body.json', () => {
         it('throws if json parsing fails', async () => {
@@ -310,7 +336,7 @@ describe('body', () => {
             // stream isn't aborted at first
             expect(body.readableAborted).eq(false);
             // emit error so that stream aborts
-            body.emit('error', new Error('test error to be expected'));
+            body.emit('error', new Error('intentional test error here is expected'));
             // reading body shouldn't throw, just returns empty string
             const text = await Body.text(body);
             expect(body.readableAborted).eq(true);

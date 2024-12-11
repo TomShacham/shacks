@@ -1,12 +1,12 @@
 import stream from "node:stream";
-import {HttpRequest} from "./interface";
+import {HttpMessage} from "./interface";
 import {ContentTypes, h22pStream} from "./body";
 
 export class MultipartForm {
     private state: undefined | AsyncGenerator<MultipartFormPart>;
 
     async field(
-        msg: HttpRequest,
+        msg: HttpMessage,
         options: MultipartOptions = {maxHeadersSizeBytes: 2048}
     ): Promise<MultipartFormPart> {
         const iterator = this.state
@@ -18,10 +18,10 @@ export class MultipartForm {
     }
 
     async all(
-        msg: HttpRequest,
+        msg: HttpMessage,
         options: MultipartOptions = {maxHeadersSizeBytes: 2048}
     ): Promise<{ [Symbol.asyncIterator](): AsyncGenerator<MultipartFormPart> }> {
-        const contentType = msg.headers?.["content-type"];
+        const contentType = msg.headers?.["content-type"] as string | undefined;
         if (contentType?.includes('multipart/form-data')) {
             await new Promise((resolve) => {
                 (msg.body! as stream.Readable).once('readable', () => resolve(null));
@@ -67,7 +67,7 @@ export class MultipartForm {
         return (headers.find(h => h.name === 'content-transfer-encoding') as ContentTransferEncodingHeader)?.value;
     }
 
-    private static async parsePart(msg: HttpRequest, maxHeadersSizeBytes: number): Promise<MultipartFormPart> {
+    private static async parsePart(msg: HttpMessage, maxHeadersSizeBytes: number): Promise<MultipartFormPart> {
         /**
          * Multipart form parsing
          *
@@ -82,7 +82,7 @@ export class MultipartForm {
          *         - if it sees the final boundary (two extra dashes at the end) then it pushes null to end the stream
          */
         const contentType = msg.headers?.["content-type"];
-        const boundary = /boundary=(?<boundary>(.+))/.exec(contentType!)?.groups?.boundary
+        const boundary = /boundary=(?<boundary>(.+))/.exec((contentType as string)!)?.groups?.boundary
         const withHyphens = '--' + boundary;
         const inputStream = msg.body! as stream.Readable;
         const outputStream = h22pStream.new();

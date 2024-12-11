@@ -42,7 +42,11 @@ describe('h22p node client', () => {
          */
         const {port, close} = await h22pServer({
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                return {status: 200, body: JSON.stringify(req.headers), headers: {}}
+                return {
+                    status: 200,
+                    body: JSON.stringify(req.headers),
+                    headers: {}
+                }
             }
         });
         const client = handler(`http://localhost:${port}`);

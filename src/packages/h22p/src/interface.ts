@@ -41,6 +41,7 @@ export type WriteMethods = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type Method = ReadMethods | WriteMethods;
 export type HttpRequestHeaders = IncomingHttpHeaders
 export type HttpResponseHeaders = OutgoingHttpHeaders
+export type HttpMessage = HttpRequest | HttpResponse;
 
 export interface HttpRequest<
     Mtd extends Method = Method,

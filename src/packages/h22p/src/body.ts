@@ -1,18 +1,30 @@
-import {
-    BodyType,
-    DictString,
-    HttpMessageBody,
-    HttpRequest,
-    isBuffer,
-    isSimpleBody,
-    isStream,
-    MessageBody
-} from "./interface";
+import {BodyType, DictString, HttpMessageBody, isBuffer, isSimpleBody, isStream, MessageBody} from "./interface";
 import * as stream from "node:stream";
 import {UrlEncodedMessage} from "./urlEncodedMessage";
 import {MultipartFormPart} from "./multipartForm";
 
 export class Body {
+    static async bytes<B extends HttpMessageBody>(body: MessageBody<B>): Promise<B[]> {
+        if (!body) return [];
+        const isStreamDestroyed = isStream(body) && 'destroyed' in body && body.destroyed;
+        if (isStreamDestroyed) {
+            console.warn('Stream destroyed so not trying to read body');
+            return [];
+        }
+        const array = []
+        if (isStream(body)) {
+            for await (const chunk of body) {
+                array.push(chunk);
+            }
+            return array;
+        }
+        if (isBuffer(body)) {
+            return [body]
+        }
+        if (typeof body === 'object') return [body];
+        return [body]; // string
+    }
+
     static async text<B extends HttpMessageBody>(body: MessageBody<B>): Promise<string> {
         let text = '';
         if (!body) return text;
@@ -54,7 +66,11 @@ export class Body {
         return UrlEncodedMessage.parse(str)
     }
 
-    static asMultipartForm(parts: MultipartFormPart<HttpMessageBody>[], boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)): HttpMessageBody {
+    static asMultipartForm(
+        parts: MultipartFormPart<HttpMessageBody>[],
+        transmitSize: number = 65536,
+        boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)
+    ): HttpMessageBody {
         const outputStream = h22pStream.new();
 
         for (let i = 0; i < parts.length; i++) {
@@ -78,7 +94,14 @@ export class Body {
             } else {
                 let chunk;
                 while ((chunk = (part.body as stream.Readable).read())) {
-                    outputStream.push(chunk);
+                    if (chunk.length > transmitSize) {
+                        for (let j = 0; j < chunk.length / transmitSize; j++) {
+                            const chunk1 = chunk.slice(j * transmitSize, (j + 1) * transmitSize);
+                            outputStream.push(chunk1);
+                        }
+                    } else {
+                        outputStream.push(chunk);
+                    }
                 }
                 writeEndOrCRLF(isFinalPart);
             }
@@ -153,7 +176,7 @@ export class h22pStream<B extends HttpMessageBody> extends stream.Readable {
         } else if (typeof arg === 'object') {
             return stream.Readable.from(JSON.stringify(arg))
         } else {
-            return stream.Readable.from([''])
+            return stream.Readable.from([])
         }
     }
 

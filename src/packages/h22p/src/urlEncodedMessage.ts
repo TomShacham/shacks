@@ -4,6 +4,7 @@ export class UrlEncodedMessage {
     static parse<S extends string>(str: S | undefined): queryObject<S> {
         const params: queryObject<S> = {} as queryObject<S>;
         if (typeof str !== 'string') return {} as queryObject<S>;
+        if (str === '') return {} as queryObject<S>;
 
         str = (str.startsWith('?') ? str.slice(1) : str) as S;
         str = (str.replace(new RegExp("\\+", 'g'), " ")) as S;
