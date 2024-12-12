@@ -2,6 +2,7 @@ import {testClientContract} from "../../test-shared/client.contract.spec";
 import {Body, HttpRequest, HttpResponse, Req, URI} from "@shacks/h22p";
 import {expect} from "chai";
 import {h22pServer, nodeHttpClient} from "../src";
+import {randomUUID} from "node:crypto";
 
 describe('h22p node client', () => {
     const handler = nodeHttpClient;
@@ -63,5 +64,12 @@ describe('h22p node client', () => {
         expect(reqHeadersEchoed["foo"]).deep.eq("bar, baz, quux");
         expect(reqHeadersEchoed["set-cookie"]).deep.eq(["bar, baz, quux"]);
         await close()
+    });
+
+    it('dns look up failure just returns service unavailable instead of exploding', async () => {
+        const uuid = randomUUID();
+        const httpResponse = await nodeHttpClient().handle(Req.post("https://" + uuid, {}));
+        expect(httpResponse.status).eq(503)
+        expect(await Body.text(httpResponse.body)).eq(`getaddrinfo ENOTFOUND ${uuid}`)
     });
 })

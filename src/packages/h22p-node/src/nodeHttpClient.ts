@@ -27,6 +27,10 @@ export class NodeHttpClient implements HttpHandler {
                     resolve(this.h22pResponseFrom(nodeResponse))
                 });
             });
+            nodeRequest.on('error', (e: Error) => {
+                const dnsLookupFailed = e.message.includes('ENOTFOUND');
+                if (dnsLookupFailed) resolve(Res.serviceUnavailable({body: e.message}))
+            })
             if (this.isReadMethod(req.method)) {
                 // we do not write a body if it's a GET or HEAD etc. so this just does nothing
             } else if (isStream(req.body)) {
