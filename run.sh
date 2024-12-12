@@ -64,9 +64,10 @@ function publish() {
 
 
 if [[ $1 == "" ]]; then
+    test
     exit 0
 elif [[ $1 == "bump-version" ]]; then
-  bump
-else
-  publish
+    bump
+elif [[ $1 == "publish" ]]; then
+    publish
 fi
