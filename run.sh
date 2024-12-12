@@ -62,7 +62,6 @@ function publish() {
 }
 
 
-test
 
 if [[ $1 == "" ]]; then
     exit 0
