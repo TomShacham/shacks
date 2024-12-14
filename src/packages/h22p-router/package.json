@@ -1,6 +1,6 @@
 {
   "name": "@shacks/h22p-router",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "scripts": {
     "build": "tsc",
     "test": "tsc; mocha --require ts-node/register '**/*spec.ts'"
