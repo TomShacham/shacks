@@ -68,11 +68,9 @@ export class Body {
 
     static asMultipartForm(
         parts: MultipartFormPart<HttpMessageBody>[],
-        transmitSize: number = 65536,
         boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)
     ): HttpMessageBody {
         const outputStream = h22pStream.new();
-
         for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
             const isFinalPart = i === parts.length - 1;
@@ -92,18 +90,16 @@ export class Body {
                 outputStream.push(part.body);
                 writeEndOrCRLF(isFinalPart);
             } else {
-                let chunk;
-                while ((chunk = (part.body as stream.Readable).read())) {
-                    if (chunk.length > transmitSize) {
-                        for (let j = 0; j < chunk.length / transmitSize; j++) {
-                            const chunk1 = chunk.slice(j * transmitSize, (j + 1) * transmitSize);
-                            outputStream.push(chunk1);
-                        }
-                    } else {
+                const readable = part.body! as stream.Readable;
+                readable.on('readable', () => {
+                    let chunk;
+                    while (null !== (chunk = readable.read())) {
                         outputStream.push(chunk);
                     }
-                }
-                writeEndOrCRLF(isFinalPart);
+                });
+                readable.on('end', () => {
+                    writeEndOrCRLF(isFinalPart);
+                })
             }
         }
 

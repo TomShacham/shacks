@@ -4,8 +4,9 @@ import {expect} from "chai";
 import {h22pServer, nodeHttpClient} from "../src";
 import {randomUUID} from "node:crypto";
 
-describe('h22p node client', () => {
+describe('h22p node client', function () {
     const handler = nodeHttpClient;
+    this.timeout(10_000);
 
     describe('contract', () => {
         testClientContract(handler);

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Body, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, MultipartForm, Req, URI} from "../h22p";
+import {Body, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI} from "../h22p";
 import * as stream from "stream";
 import {it} from "mocha";
 import {h22pServer} from "../h22p-node/src";
@@ -149,7 +149,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     fieldName: 'file',
                 }],
                 body: 'tom1'
-            }], 65536, 'custom-boundary'), {});
+            }], 'custom-boundary'), {});
 
             const response = await client.handle(request)
             expect(await Body.text(response.body!)).eq(
@@ -179,7 +179,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     fieldName: 'file',
                 }],
                 body: stream.Readable.from('tom1')
-            }], 65536, 'custom-boundary'), {});
+            }], 'custom-boundary'), {});
 
             const response = await client.handle(request)
             expect(await Body.text(response.body!)).eq(
@@ -189,36 +189,6 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     '',
                     'tom1',
                     '--custom-boundary--'].join('\r\n'));
-            await close()
-        })
-
-        it('can send a multipart/form-data request with stream body larger than specified transmit chunk size', async () => {
-            const boundary = 'custom-boundary';
-            const {port, close} = await h22pServer({
-                async handle(req: HttpRequest): Promise<HttpResponse> {
-                    return {
-                        status: 200,
-                        body: req.body,
-                        headers: {'content-type': 'multipart/form-data; boundary=' + boundary}}
-                }
-            });
-
-            const client = handler(`http://localhost:${port}`);
-            const transmitSize = 1;
-            const request = Req.post(`/`, Body.asMultipartForm([{
-                headers: [{
-                    name: 'content-type',
-                    value: 'text/plain'
-                }, {
-                    name: 'content-disposition',
-                    fieldName: 'file',
-                }],
-                body: stream.Readable.from('tom1')
-            }], transmitSize, boundary), {});
-
-            const response = await client.handle(request)
-            const {headers: h1, body: b1} = await new MultipartForm().field(response);
-            expect(await Body.text(b1)).eq('tom1');
             await close()
         })
 
@@ -262,7 +232,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     }],
                     body: stream.Readable.from(btoa('tom3'),),
 
-                }], 65536, 'custom-boundary'), {});
+                }], 'custom-boundary'), {});
 
             const response = await client.handle(request)
             expect(await Body.text(response.body!)).eq(

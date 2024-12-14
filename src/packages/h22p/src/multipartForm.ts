@@ -1,5 +1,5 @@
 import stream from "node:stream";
-import {HttpMessage} from "./interface";
+import {HttpMessage, MessageBody} from "./interface";
 import {ContentTypes, h22pStream} from "./body";
 
 export class MultipartForm {
@@ -256,7 +256,7 @@ export class MultipartForm {
 
 }
 
-export type MultipartFormPart<T = stream.Readable> = {
+export type MultipartFormPart<T extends MessageBody = stream.Readable> = {
     headers: MultipartFormHeader[],
     body: T
 };
