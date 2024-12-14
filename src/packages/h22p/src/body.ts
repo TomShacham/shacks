@@ -71,36 +71,59 @@ export class Body {
         boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)
     ): HttpMessageBody {
         const outputStream = h22pStream.new();
-        for (let i = 0; i < parts.length; i++) {
+
+        processPart(0)
+
+        function processPart(i: number) {
             const part = parts[i];
+            const morePartsToProcess = i < (parts.length - 1);
             const isFinalPart = i === parts.length - 1;
-            const boundaryAndHeaders = [
-                `--${boundary}`,
-                part.headers.map(h => [
-                    h.name === 'content-disposition' ? `${h.name}: form-data;` : `${h.name}:`,
-                    'value' in h
-                        ? h.value
-                        : `${h.filename ? [`name="${h.fieldName}"; filename="${h.filename}"`].join(' ') : `name="${h.fieldName}"`}`
-                ].join(' ')).join('\r\n'),
-                '',
-                ''
-            ].join('\r\n');
-            outputStream.push(boundaryAndHeaders);
-            if (isSimpleBody(part.body)) {
-                outputStream.push(part.body);
-                writeEndOrCRLF(isFinalPart);
-            } else {
-                const readable = part.body! as stream.Readable;
-                readable.on('readable', () => {
-                    let chunk;
-                    while (null !== (chunk = readable.read())) {
-                        outputStream.push(chunk);
-                    }
-                });
-                readable.on('end', () => {
-                    writeEndOrCRLF(isFinalPart);
-                })
+
+            processHeaders();
+            processBody();
+
+            function processHeaders() {
+                const boundaryAndHeaders = [
+                    `--${boundary}`,
+                    part.headers.map(h => [
+                        h.name === 'content-disposition' ? `${h.name}: form-data;` : `${h.name}:`,
+                        'value' in h
+                            ? h.value
+                            : `${h.filename ? [`name="${h.fieldName}"; filename="${h.filename}"`].join(' ') : `name="${h.fieldName}"`}`
+                    ].join(' ')).join('\r\n'),
+                    '',
+                    ''
+                ].join('\r\n');
+                outputStream.push(boundaryAndHeaders);
             }
+
+            function processBody() {
+                if (isSimpleBody(part.body)) {
+                    outputStream.push(part.body);
+                    writeEndOrCRLF(isFinalPart);
+                    if (morePartsToProcess) processPart(i + 1)
+                } else {
+                    const readable = part.body! as stream.Readable;
+                    console.log('readable', i);
+                    readable.on('readable', () => {
+                        console.log('reading', i);
+                        let chunk;
+                        while (null !== (chunk = readable.read())) {
+                            outputStream.push(chunk);
+                        }
+                    });
+                    readable.on('end', () => {
+                        console.log('ending', i);
+                        writeEndOrCRLF(isFinalPart);
+                        if (!morePartsToProcess) {
+                            return;
+                        }
+                        processPart(i + 1)
+                    })
+                }
+            }
+
+
         }
 
         function writeEndOrCRLF(isFinalPart: boolean) {
