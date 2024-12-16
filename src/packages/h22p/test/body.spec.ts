@@ -8,12 +8,12 @@ describe('body', () => {
     describe('Body.bytes', () => {
         it('handles empty body', async () => {
             const bytes = await Body.bytes(undefined);
-            expect(bytes).deep.eq([]);
+            expect(bytes.toString('utf-8')).deep.eq('');
         })
 
         it('handles empty stream', async () => {
             const bytes = await Body.bytes(h22pStream.of(undefined));
-            expect(bytes).deep.eq([]);
+            expect(bytes.toString('utf-8')).deep.eq('');
         })
 
         it('handles stream', async () => {
@@ -22,12 +22,17 @@ describe('body', () => {
             body.push('def')
             body.push('ghi')
             const bytes = await Body.bytes(body);
-            expect(bytes).deep.eq(['abc', 'def', 'ghi', '🤠']);
+            expect(bytes.toString()).deep.eq('abcdefghi🤠');
         })
 
         it('handles buffer', async () => {
+            const bytes = await Body.bytes(Buffer.from('123'));
+            expect(bytes.toString('utf-8')).deep.eq('123');
+        })
+
+        it('handles buffer in stream', async () => {
             const bytes = await Body.bytes(h22pStream.of(Buffer.from('123')));
-            expect(bytes.join('')).deep.eq('123');
+            expect(bytes.toString('utf-8')).deep.eq('123');
         })
     })
 

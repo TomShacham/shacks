@@ -4,25 +4,21 @@ import {UrlEncodedMessage} from "./urlEncodedMessage";
 import {MultipartFormPart} from "./multipartForm";
 
 export class Body {
-    static async bytes<B extends HttpMessageBody>(body: MessageBody<B>): Promise<B[]> {
-        if (!body) return [];
+    static async bytes<B extends HttpMessageBody>(body: MessageBody<B>): Promise<Buffer> {
+        if (!body) return Buffer.from([]);
         const isStreamDestroyed = isStream(body) && 'destroyed' in body && body.destroyed;
         if (isStreamDestroyed) {
             console.warn('Stream destroyed so not trying to read body');
-            return [];
+            return Buffer.from([]);
         }
-        const array = []
         if (isStream(body)) {
-            for await (const chunk of body) {
-                array.push(chunk);
-            }
-            return array;
+            return Buffer.from(await Body.text(body));
         }
         if (isBuffer(body)) {
-            return [body]
+            return body
         }
-        if (typeof body === 'object') return [body];
-        return [body]; // string
+        if (typeof body === 'object') return Buffer.from(JSON.stringify(body));
+        return Buffer.from(body); // string
     }
 
     static async text<B extends HttpMessageBody>(body: MessageBody<B>): Promise<string> {
@@ -104,16 +100,13 @@ export class Body {
                     if (morePartsToProcess) processPart(i + 1)
                 } else {
                     const readable = part.body! as stream.Readable;
-                    console.log('readable', i);
                     readable.on('readable', () => {
-                        console.log('reading', i);
                         let chunk;
                         while (null !== (chunk = readable.read())) {
                             outputStream.push(chunk);
                         }
                     });
                     readable.on('end', () => {
-                        console.log('ending', i);
                         writeEndOrCRLF(isFinalPart);
                         if (!morePartsToProcess) {
                             return;
