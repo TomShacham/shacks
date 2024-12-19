@@ -62,6 +62,10 @@ export class Body {
         return UrlEncodedMessage.parse(str)
     }
 
+    static async sse<B extends stream.Readable>(body: MessageBody<B>): Promise<AsyncGenerator<ServerSentEvent>> {
+        return sseIterator(body);
+    }
+
     static asMultipartForm(
         parts: MultipartFormPart<HttpMessageBody>[],
         boundary: string = '------' + 'MultipartFormBoundary' + this.randomString(10)
@@ -209,4 +213,45 @@ export function createReadableStream(arg: HttpMessageBody): ReadableStream<any> 
             controller.close();
         }
     });
+}
+
+type ServerSentEvent = {
+    data: string,
+    event?: string, // name of the event
+    id?: string, // id of the event
+    retry?: number, // retry after time
+}
+
+async function* sseIterator(body: stream.Readable): AsyncGenerator<ServerSentEvent> {
+    const decoder = new TextDecoder();
+    let buffer: string = '';
+
+    for await (const chunk of body) {
+        const chunkString = typeof chunk === 'string' ? chunk : decoder.decode(chunk);
+        buffer += chunkString;
+
+        const hasOneOrMoreEvent = /\r?\n\r?\n/.exec(buffer) !== null;
+        if (hasOneOrMoreEvent) {
+            const events: string[] = buffer.split(/\r?\n\r?\n/);
+            buffer = events[events.length - 1]
+            for (const eventText of events.slice(0, events.length - 1)) {
+                const lines = eventText.split(/\r?\n/) ?? [];
+                let serverSentEvent: ServerSentEvent = {data: ''};
+                let data = [];
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        data.push(line.slice(6));
+                    } else if (line.startsWith('event: ')) {
+                        serverSentEvent.event = line.slice(7);
+                    } else if (line.startsWith('id: ')) {
+                        serverSentEvent.id = line.slice(4);
+                    } else if (line.startsWith('retry: ')) {
+                        serverSentEvent.retry = Number(line.slice(7));
+                    }
+                }
+                serverSentEvent.data = data.join('\n');
+                yield serverSentEvent;
+            }
+        }
+    }
 }

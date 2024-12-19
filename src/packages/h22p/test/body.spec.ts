@@ -79,6 +79,89 @@ describe('body', () => {
         });
     })
 
+    describe('Server sent events', () => {
+        it('single event', async () => {
+            const events = await Body.sse(h22pStream.of('event: foo\ndata: bar\nid: 123\nretry: 5000\n\n'));
+            let all = []
+            for await (const event of events) {
+                all.push(event);
+            }
+            expect(all).deep.eq([{event: 'foo', data: 'bar', id: '123', retry: 5000}])
+        })
+
+        it('multiple events', async () => {
+            const events = await Body.sse(h22pStream.of('event: foo\ndata: bar\n\nevent: baz\ndata: quux\n\n'));
+            let all = []
+            for await (const event of events) {
+                all.push(event);
+            }
+            expect(all).deep.eq([{event: 'foo', data: 'bar'},{event: 'baz', data: 'quux'}])
+        })
+
+        it('multiple chunks one event', async () => {
+            const body = h22pStream.of('');
+            body.push('event: baz\ndata')
+            body.push(': quux\n\n')
+            body.push(null);
+            const events = await Body.sse(body);
+            let all = []
+            for await (const event of events) {
+                all.push(event);
+            }
+            expect(all).deep.eq([{event: 'baz', data: 'quux'}])
+        })
+
+        it('multiple chunks multiple events', async () => {
+            const body = h22pStream.of('');
+            body.push('event: baz\ndata')
+            body.push(': quux\n\nevent: foo')
+            body.push('\ndata:')
+            body.push(' bar\n\n')
+            body.push(null);
+            const events = await Body.sse(body);
+            let all = []
+            for await (const event of events) {
+                all.push(event);
+            }
+            expect(all).deep.eq([
+                {event: 'baz', data: 'quux'},
+                {event: 'foo', data: 'bar'},
+            ])
+        })
+
+        it('multiple chunks multiple events - chunk ends on event boundary', async () => {
+            const body = h22pStream.of('');
+            body.push('event: baz\ndata')
+            body.push(': quux\n\nevent: foo\ndata: bar\n\n')
+            body.push(null);
+            const events = await Body.sse(body);
+            let all = []
+            for await (const event of events) {
+                all.push(event);
+            }
+            expect(all).deep.eq([
+                {event: 'baz', data: 'quux'},
+                {event: 'foo', data: 'bar'},
+            ])
+        })
+
+        it('multiple chunks multiple data parts', async () => {
+            const body = h22pStream.of('');
+            body.push('event: baz\ndata')
+            body.push(': quux\n\nevent: foo\ndata: bar\ndata: baz\n\n')
+            body.push(null);
+            const events = await Body.sse(body);
+            let all = []
+            for await (const event of events) {
+                all.push(event);
+            }
+            expect(all).deep.eq([
+                {event: 'baz', data: 'quux'},
+                {event: 'foo', data: 'bar\nbaz'},
+            ])
+        })
+    })
+
     describe('MultipartForm', () => {
         /*
         *  the standard line end for headers and boundaries etc is CRLF (/r/n)
@@ -669,5 +752,6 @@ describe('body', () => {
         })
 
     })
+
 })
 
