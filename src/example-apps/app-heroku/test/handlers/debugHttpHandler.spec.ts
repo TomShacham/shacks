@@ -9,7 +9,7 @@ describe('debug https', () => {
     it('gives timings and overview', async () => {
         const router = Router.of({
             getRoot: Route.get('/', async () => Res.ok({body: 'hello, world'})),
-            postRoot: Route.post('/', {}, async () => Res.created({body: 'hello, post'}))
+            postRoot: Route.post('/', async () => Res.created({body: 'hello, post'}))
         });
         const loggerInMemory = new LoggerInMemory();
         const debugHandler = new DebugHttpHandler(router, loggerInMemory);

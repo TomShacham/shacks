@@ -16,12 +16,7 @@ describe('openapi', () => {
                     Res.ok({body: 'hello, world', headers: {"content-type": "text/plain"}}),
                     Res.notFound({headers: {"content-type": "text/plain"}}),
                 ]),
-            postUser: Route.post('/users/{userId}', {
-                    gov: {
-                        st: "downing",
-                        info: {occupied: true, no: 10, who: 'dishy'}
-                    }
-                }, async (req) => {
+            postUser: Route.post('/users/{userId}', async (req) => {
                     if (Math.random() > 0.5) {
                         return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                     } else {
@@ -152,49 +147,15 @@ function expectedOpenapiSpec() {
                     "requestBody": {
                         "required": true,
                         "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "gov": {
-                                            "type": "object",
-                                            "properties": {
-                                                "st": {
-                                                    "type": "string",
-                                                    "example": "downing"
-                                                },
-                                                "info": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "no": {
-                                                            "type": "integer"
-                                                        },
-                                                        "occupied": {
-                                                            "type": "boolean"
-                                                        },
-                                                        "who": {
-                                                            "type": "string",
-                                                            "example": "dishy"
-                                                        },
-                                                    },
-                                                },
-                                            }
-                                        },
-                                    },
-                                },
+                            "text/plain": {
                                 "examples": {
                                     "example1": {
-                                        "value": {
-                                            "gov": {
-                                                "st": "downing",
-                                                "info": {
-                                                    "occupied": true,
-                                                    "no": 10,
-                                                    "who": "dishy"
-                                                }
-                                            }
-                                        }
+                                        "value": "string"
                                     }
+                                },
+                                "schema": {
+                                    "example": "any",
+                                    "type": "string"
                                 }
                             }
                         }

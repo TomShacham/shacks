@@ -56,7 +56,7 @@ describe('open telemetry', () => {
             getRoot: Route.get('/', async (req) => {
                 return Res.ok({body: JSON.stringify(req.headers)});
             }),
-            postRoot: Route.post('/', {}, async () => Res.created({body: 'hello, post'}))
+            postRoot: Route.post('/', async () => Res.created({body: 'hello, post'}))
         });
         let uuid = 1;
         const uuidGenerator = () => (uuid++).toString();

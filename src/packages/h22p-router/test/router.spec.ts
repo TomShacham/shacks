@@ -1,6 +1,5 @@
 import {expect} from "chai";
-import {Body, h22pStream, Req, Res} from "@shacks/h22p";
-import stream from "stream";
+import {Body, Req, Res} from "@shacks/h22p";
 import {doesNotTypeCheck} from "../../test-shared/helpers";
 import {it} from "mocha";
 import {Route, Router} from "../src";
@@ -19,33 +18,6 @@ describe('router', () => {
                     return {status: 200, body: {bar: 'json'}, headers: {"foo": "bar"}}
                 }
                 , {"content-type": "text/csv"} as const),
-            postJsonResource: Route.post('/resource/{id}', {foo: {baz: 'json'}}, async (req) => {
-                    const s = await Body.json(req.body);
-                    s.foo.baz
-                    return {status: 200, body: {quux: 'json'}, headers: {}}
-                }
-            ),
-            postStringResource: Route.post('/resource/{id}', '', async (req) => {
-                    const s = await Body.text(req.body);
-                    s.slice
-                    return {status: 200, body: 'some response string', headers: {}}
-                }
-            ),
-            postStreamResource: Route.post('/resource/{id}', stream.Readable.from(''), async (req) => {
-                    const s = await Body.json(req.body);
-                    // @ts-expect-error - I can't preserve a stream type and an h22pStream type cos theyre both stream.Readable ;(
-                    s.read
-
-                    return {status: 200, body: stream.Readable.from('123'), headers: {}}
-                }
-            ),
-            postH22pStreamResource: Route.post('/resource/{id}', h22pStream.of({"a": 123}), async (req) => {
-                    const s = await Body.json(req.body);
-                    s.a
-
-                    return {status: 200, body: stream.Readable.from('123'), headers: {}}
-                }
-            ),
         };
 
         it('handle an in-memory type-safe request and response', async () => {
@@ -140,62 +112,6 @@ describe('router', () => {
             );
         });
 
-        it('handle json body', async () => {
-            await routes.postJsonResource.handle({
-                method: 'POST',
-                uri: '/resource/123/',
-                // @ts-expect-error -- not a string body
-                body: {foo: {bar: 'json'}},
-                headers: {"content-type": "text/csv"},
-            });
-            const response = await routes.postJsonResource.handle(Req.post(
-                '/resource/123/',
-                {foo: {baz: 'json'}},
-                {"content-type": "text/csv"},
-            ));
-            response.body.quux
-            // @ts-expect-error -- foo does not exist on type body
-            response.body.foo
-        });
-
-        it('handle string body', async () => {
-            await routes.postStringResource.handle({
-                method: 'POST',
-                uri: '/resource/123/',
-                // @ts-expect-error -- not a string body
-                body: {foo: {bar: 'json'}},
-                headers: {"content-type": "text/csv"},
-            });
-            const response = await routes.postStringResource.handle({
-                method: 'POST',
-                uri: '/resource/123/',
-                // @ts-expect-error -- not a string body
-                body: 'any thing',
-                headers: {"content-type": "text/csv"},
-            });
-            response.body.slice
-            // @ts-expect-error -- foo does not exist on type body
-            response.body.foo
-        });
-
-        it('handle stream body', async () => {
-            await routes.postStreamResource.handle({
-                method: 'POST',
-                uri: '/resource/123/',
-                // @ts-expect-error -- not a stream body
-                body: '{"a": 123}',
-                headers: {"content-type": "text/csv"},
-            });
-            const response = await routes.postStreamResource.handle(Req.post(
-                '/resource/123/',
-                stream.Readable.from('{"a": 123}'),
-                {"content-type": "text/csv"}
-            ))
-            response.body.read
-            // @ts-expect-error -- foo does not exist on type body
-            response.body.foo
-        });
-
         it('wildcard match', async () => {
             const routes = {
                 wildcard: Route.get('*/resource/{id}/sub/{subId}/*', async (req) => {
@@ -233,7 +149,7 @@ describe('router', () => {
 
         it('can perform type narrow of responses', async () => {
             const routes = {
-                postUser: Route.post('/users/{userId}', {example: 'payload'}, async (req) => {
+                postUser: Route.post('/users/{userId}', async (req) => {
                         if (Math.random() > 0.5) {
                             return Res.created({body: {user: {name: 'tom', worksAt: 'Evil Corp'}}})
                         } else {
@@ -418,10 +334,10 @@ describe('router', () => {
                 head: Route.head('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
                 options: Route.options('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
                 trace: Route.trace('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
-                post: Route.post('/id/{id}/*/?q1', {}, async (req) => Res.ok({body: req.vars})),
-                put: Route.put('/id/{id}/*/?q1', {}, async (req) => Res.ok({body: req.vars})),
-                patch: Route.patch('/id/{id}/*/?q1', {}, async (req) => Res.ok({body: req.vars})),
-                delete: Route.delete('/id/{id}/*/?q1', {}, async (req) => Res.ok({body: req.vars})),
+                post: Route.post('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
+                put: Route.put('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
+                patch: Route.patch('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
+                delete: Route.delete('/id/{id}/*/?q1', async (req) => Res.ok({body: req.vars})),
             }
 
             const get = await routes.get.handle(Req.get('/id/123/wild/?q1=v1'));
@@ -455,6 +371,9 @@ describe('router', () => {
                 path: {"id": "123"}, query: {"q1": "v1"}, wildcards: ["wild"]
             });
             expect(await Body.json(patch.body)).deep.eq({
+                path: {"id": "123"}, query: {"q1": "v1"}, wildcards: ["wild"]
+            });
+            expect(await Body.json(del.body)).deep.eq({
                 path: {"id": "123"}, query: {"q1": "v1"}, wildcards: ["wild"]
             });
         });

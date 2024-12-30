@@ -238,9 +238,9 @@ function post<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse,
->(uri: Uri, body: ReqB, handle: routedHandler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+>(uri: Uri, handle: routedHandler<'POST', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : RouteDefinition<'POST', Uri, ReqB, ReqHds, Res> {
-    const matcher = {method: 'POST' as const, uri, body, headers: headers ?? {} as ReqHds};
+    const matcher = {method: 'POST' as const, body: 'any' as any, uri, headers: headers ?? {} as ReqHds};
     return {
         route: (req: RoutedHttpRequest<'POST', Uri, ReqB, ReqHds>) => {
             Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
@@ -269,9 +269,9 @@ function put<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse,
->(uri: Uri, body: ReqB, handle: routedHandler<'PUT', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+>(uri: Uri, handle: routedHandler<'PUT', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : RouteDefinition<'PUT', Uri, ReqB, ReqHds, Res> {
-    const matcher = {method: 'PUT' as const, uri, body, headers: headers ?? {} as ReqHds};
+    const matcher = {method: 'PUT' as const, uri, body: 'any' as any, headers: headers ?? {} as ReqHds};
     return {
         route: (req: RoutedHttpRequest<'PUT', Uri, ReqB, ReqHds>) => {
             Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
@@ -300,9 +300,9 @@ function patch<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse,
->(uri: Uri, body: ReqB, handle: routedHandler<'PATCH', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+>(uri: Uri, handle: routedHandler<'PATCH', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : RouteDefinition<'PATCH', Uri, ReqB, ReqHds, Res> {
-    const matcher = {method: 'PATCH' as const, uri, body, headers: headers ?? {} as ReqHds};
+    const matcher = {method: 'PATCH' as const, uri, body: 'any' as any, headers: headers ?? {} as ReqHds};
     return {
         route: (req: RoutedHttpRequest<'PATCH', Uri, ReqB, ReqHds>) => {
             Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
@@ -331,9 +331,9 @@ function del<
     ReqB extends HttpMessageBody,
     ReqHds extends HttpRequestHeaders,
     Res extends HttpResponse,
->(uri: Uri, body: ReqB, handle: routedHandler<'DELETE', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
+>(uri: Uri, handle: routedHandler<'DELETE', Uri, ReqB, ReqHds, Res>, headers?: ReqHds, responses?: Res[])
     : RouteDefinition<'DELETE', Uri, ReqB, ReqHds, Res> {
-    const matcher = {method: 'DELETE' as const, uri, body, headers: headers ?? {} as ReqHds};
+    const matcher = {method: 'DELETE' as const, uri, body:'any' as any, headers: headers ?? {} as ReqHds};
     return {
         route: (req: RoutedHttpRequest<'DELETE', Uri, ReqB, ReqHds>) => {
             Object.defineProperty(req, 'body', {value: h22pStream.of(req.body)})
