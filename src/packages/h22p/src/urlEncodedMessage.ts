@@ -11,7 +11,12 @@ export class UrlEncodedMessage {
         const keyValuePairs = str.split('&');
         for (const pair of keyValuePairs) {
             const [key, value] = pair.split('=');
-            params[decodeURIComponent(key) as getQueryKey<queriesFromString<S>>] = decodeURIComponent(value || '');
+            const k = decodeURIComponent(key) as getQueryKey<queriesFromString<S>>;
+            params[k] = params[k]
+                ? typeof params[k] === 'string'
+                    ? [params[k], decodeURIComponent(value || '')]
+                    : [...params[k], decodeURIComponent(value || '')]
+                : decodeURIComponent(value || '');
         }
 
         return params as queryObject<S>;
@@ -22,7 +27,9 @@ export class UrlEncodedMessage {
 
         for (const key in params) {
             const value = params[key as getQueryKey<queriesFromString<S>>];
-            queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+            typeof value === 'string' ?
+                queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+                : value.forEach(v => queryStringParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`))
         }
 
         return queryStringParts.join('&') as S;

@@ -28,10 +28,10 @@ describe('query', () => {
         expect(parsedParams).to.deep.equal({});
     });
 
-    it('handle duplicate keys by taking the last occurrence', () => {
-        const queryString = "name=John&age=30&name=Jane";
+    it('handle duplicate keys by making a list of occurrences in order they appear', () => {
+        const queryString = "name=John&age=30&name=Jane&name=Jill";
         const expectedParams = {
-            name: "Jane",
+            name: ["John", "Jane", "Jill"],
             age: "30"
         };
         const parsedParams = UrlEncodedMessage.parse(queryString);
@@ -40,11 +40,11 @@ describe('query', () => {
 
     it('stringify a parsed query object into a query string', () => {
         const parsedParams = {
-            name: "John",
+            name: ["John", "Jane", "Jill"],
             age: "30",
             city: "New York"
         };
-        const expectedQueryString = "name=John&age=30&city=New%20York";
+        const expectedQueryString = "name=John&name=Jane&name=Jill&age=30&city=New%20York";
         const queryString = UrlEncodedMessage.stringify(parsedParams);
         expect(queryString).to.equal(expectedQueryString);
     });

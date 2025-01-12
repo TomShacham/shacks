@@ -47,6 +47,12 @@ describe('body', () => {
     })
 
     describe('Body.form', () => {
+        it('handles multiple fields with same name', async () => {
+            const form = await Body.form(`name=tom&name=dan`)
+
+            expect(form).deep.eq({"name": ["tom", "dan"]})
+        });
+
         it('handles special characters', async () => {
             const specialChars = '%21%40%C2%A3%24%25%5E*%E2%82%AC%7D%7B%5B%5D%22%3A%3C%3E%7E%60%2B';
 

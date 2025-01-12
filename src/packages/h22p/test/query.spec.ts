@@ -25,7 +25,7 @@ describe('query', () => {
         it('should handle query strings with multiple values for the same key', function() {
             const queryString = 'color=blue&color=red';
             const result = Query.parse(queryString);
-            expect(result).to.deep.equal({ color: 'red' }); // Should return last occurrence
+            expect(result).to.deep.equal({ color: ['blue', 'red'] });
         });
     });
 

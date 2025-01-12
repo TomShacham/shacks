@@ -109,7 +109,7 @@ export type queryParameters<Path extends string> = Path extends ''
 export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
 export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
 export type toObj<union extends string> = {
-    [Key in union]: string;
+    [Key in union]: string | string[];
 };
 export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
 export type expandPathParameterOrWildcard<Part extends string> = Part extends `{${infer Name}}`
