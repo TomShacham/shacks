@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {UrlEncodedMessage} from "../src/urlEncodedMessage";
+import {UrlEncodedMessage} from "../src";
 
 describe('query', () => {
     it('parse a simple query string with key-value pairs', () => {

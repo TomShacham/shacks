@@ -2,7 +2,6 @@ import {expect} from "chai";
 import {Query} from "../src/query";
 
 describe('query', () => {
-
     describe('parse', function() {
         it('should parse a simple query string into an object', function() {
             const queryString = 'name=John&age=30';

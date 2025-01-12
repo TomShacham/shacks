@@ -105,10 +105,13 @@ export type emptyToString<S extends string> = S extends '' ? string : S;
 export type queriesFromString<Part> = Part extends `${infer Name}&${infer Rest}` ? Name | queriesFromString<Rest> : Part;
 export type queryParameters<Path extends string> = Path extends ''
     ? { [key: string]: string }
-    : toObj<queriesFromString<withoutFragment<Path>>>
+    : toObjStrOrArray<queriesFromString<withoutFragment<Path>>>
 export type getQueryKey<Part> = Part extends `${infer k}=${infer v}` ? k : never;
-export type queryObject<Part> = toObj<getQueryKey<queriesFromString<Part>>>
+export type queryObject<Part> = toObjStrOrArray<getQueryKey<queriesFromString<Part>>>
 export type toObj<union extends string> = {
+    [Key in union]: string;
+};
+export type toObjStrOrArray<union extends string> = {
     [Key in union]: string | string[];
 };
 export type withoutFragment<Path> = Path extends `${infer PartA}#${infer PartB}` ? PartA : Path;
