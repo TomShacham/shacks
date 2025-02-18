@@ -1,8 +1,14 @@
 import {createReadableStream, h22pStream, HttpHandler, HttpRequest, HttpResponse, Res} from "@shacks/h22p";
 import stream from "node:stream";
 
+export type HttpClientOptions = { baseUrl?: string, timeout?: number };
+
 export class FetchClient implements HttpHandler {
-    constructor(public baseUrl: string = '') {
+    constructor(
+        public options: HttpClientOptions = {baseUrl: '', timeout: 30_000}
+    ) {
+        this.options.baseUrl = this.options.baseUrl ?? ''
+        this.options.timeout = this.options.timeout ?? 30_000
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
@@ -15,17 +21,23 @@ export class FetchClient implements HttpHandler {
             delete req.headers['transfer-encoding']
         }
 
-        return fetch(
-            `${this.baseUrl}${req.uri}`,
-            {
-                headers: req.headers as Record<string, string>,
-                body,
-                method: req.method,
-                redirect: "follow",
-                // @ts-ignore
-                duplex: "half"
-            })
+        const controller = new AbortController();
+        const signal = controller.signal;
+        const timeout = setTimeout(() => controller.abort(), this.options.timeout ?? 30_000);
+
+        const options = {
+            headers: req.headers as Record<string, string>,
+            body,
+            method: req.method.toUpperCase(),
+            redirect: "follow",
+            // @ts-ignore
+            duplex: "half",
+            signal
+        } as RequestInit;
+        const uri = `${this.options.baseUrl}${req.uri}`;
+        return fetch(uri, options)
             .then(res => {
+                clearTimeout(timeout);
                 const responseBody = this.convertBodyToNodeReadableStream(res);
                 const resHeaders: { [key: string]: string } = {};
                 res.headers.forEach((v, k) => {
@@ -39,6 +51,13 @@ export class FetchClient implements HttpHandler {
                     status: res.status,
                     statusText: res.statusText
                 })
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') {
+                    return Res.gatewayTimeout({body: `Client timed out after ${this.options.timeout}ms`})
+                } else {
+                    throw err;
+                }
             })
     }
 

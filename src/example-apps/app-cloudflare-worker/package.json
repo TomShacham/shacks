@@ -2,8 +2,8 @@
   "name": "cloudflare-worker-example",
   "version": "1.0.0",
   "engines": {
-    "node": "=20.12.2",
-    "pnpm": "=9.0.6"
+    "node": "=23.1.0",
+    "pnpm": "=10.2.1"
   },
   "description": "",
   "main": "index.ts",

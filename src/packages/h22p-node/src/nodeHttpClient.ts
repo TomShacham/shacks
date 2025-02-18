@@ -13,21 +13,36 @@ import * as http from "http";
 import * as https from "https";
 import {IncomingMessage} from "node:http";
 
+export type HttpClientOptions = { baseUrl?: string, timeout?: number };
+
 export class NodeHttpClient implements HttpHandler {
-    constructor(public baseUrl: string = '') {
+    constructor(
+        public options: HttpClientOptions = {},
+    ) {
+        this.options.baseUrl = this.options.baseUrl ?? "";
+        this.options.timeout = this.options.timeout ?? 30_000;
     }
 
     handle(req: HttpRequest): Promise<HttpResponse> {
         return new Promise(async resolve => {
-            const options = this.nodeRequestFrom(req);
+            const controller = new AbortController();
+            const signal = controller.signal;
+            const timeout = setTimeout(() => controller.abort(), this.options.timeout);
+            if (this.options.timeout === 0) controller.abort();
+            const options = this.nodeRequestFrom(req, signal);
             const request = options.protocol.includes("https") ? https.request : http.request;
             const nodeRequest = request(options, nodeResponse => {
-                // TODO what do headers really look like;do we get the value as `number` as IncomingHttpHeaders suggests
+                // TODO what do headers really look like; do we get the value as `number` as IncomingHttpHeaders suggests
                 nodeResponse.once('readable', () => {
                     resolve(this.h22pResponseFrom(nodeResponse))
                 });
             });
+            nodeRequest.on('socket', () => {
+                clearTimeout(timeout)
+            })
             nodeRequest.on('error', (e: Error) => {
+                const timedOut = e.name === 'AbortError';
+                if (timedOut) resolve(Res.gatewayTimeout({body: e.message}));
                 const dnsLookupFailed = e.message.includes('ENOTFOUND');
                 if (dnsLookupFailed) resolve(Res.serviceUnavailable({body: e.message}))
             })
@@ -46,8 +61,8 @@ export class NodeHttpClient implements HttpHandler {
         })
     }
 
-    private nodeRequestFrom(req: HttpRequest) {
-        const parsedUri = URI.parse(this.baseUrl + req.uri)
+    private nodeRequestFrom(req: HttpRequest, signal: AbortSignal) {
+        const parsedUri = URI.parse(this.options.baseUrl + req.uri)
         return {
             protocol: parsedUri.protocol,
             hostname: parsedUri.hostname,
@@ -56,7 +71,8 @@ export class NodeHttpClient implements HttpHandler {
             username: parsedUri.username ?? undefined,
             password: parsedUri.password ?? undefined,
             method: req.method,
-            headers: this.removeUndefinedHeaders(req.headers)
+            headers: this.removeUndefinedHeaders(req.headers),
+            signal
         };
     }
 
@@ -83,6 +99,6 @@ export class NodeHttpClient implements HttpHandler {
     }
 }
 
-export function nodeHttpClient(baseUrl: string = ''): NodeHttpClient {
-    return new NodeHttpClient(baseUrl)
+export function nodeHttpClient(options: HttpClientOptions = {baseUrl: ''}): NodeHttpClient {
+    return new NodeHttpClient(options)
 }

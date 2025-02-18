@@ -16,7 +16,7 @@ describe('client / server', function () {
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient({baseUrl: `http://localhost:${port}`}).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -55,7 +55,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient({baseUrl: `http://localhost:${port}`}).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -77,7 +77,7 @@ describe('client / server', function () {
 
         const handler = {
             async handle(req: HttpRequest): Promise<HttpResponse> {
-                const responseFromProxy = await nodeHttpClient(`http://localhost:${proxyPort}`).handle({
+                const responseFromProxy = await nodeHttpClient({baseUrl: `http://localhost:${proxyPort}`}).handle({
                     method: "POST",
                     uri: `/`,
                     body: req.body, // file read stream
@@ -111,7 +111,7 @@ describe('client / server', function () {
             const size = 10 * 1024 * 1024;
             fs.writeFileSync(filePath, data(size), {encoding: 'utf-8'});
             const fileStream = fs.createReadStream(filePath)
-            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient({baseUrl: `http://localhost:${port}`}).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},
@@ -160,7 +160,7 @@ Upload test file
 --${boundary}--
 
 `
-            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient({baseUrl: `http://localhost:${port}`}).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {'content-type': `multipart/form-data; boundary=${boundary}`},
@@ -211,7 +211,7 @@ Upload test file
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await nodeHttpClient(`http://localhost:${port}`).handle(
+            const response = await nodeHttpClient({baseUrl: `http://localhost:${port}`}).handle(
                 // @ts-ignore
                 Req.get(`/`, {"ReQuEsT-HeAdEr": "r1", "array": ["1", "2", "3"]})
             );
@@ -251,7 +251,7 @@ Upload test file
         const {port, close} = await httpServer(handler);
 
         try {
-            const response = await nodeHttpClient(`http://localhost:${port}`).handle({
+            const response = await nodeHttpClient({baseUrl: `http://localhost:${port}`}).handle({
                 method: 'POST',
                 uri: `/`,
                 headers: {},

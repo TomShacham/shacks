@@ -3,9 +3,10 @@ import {Body, HttpRequest, HttpResponse, Req, URI} from "@shacks/h22p";
 import {expect} from "chai";
 import {h22pServer, nodeHttpClient} from "../src";
 import {randomUUID} from "node:crypto";
+import {HttpClientOptions} from "../src/nodeHttpClient";
 
 describe('h22p node client', function () {
-    const handler = nodeHttpClient;
+    const handler = (options: HttpClientOptions) => nodeHttpClient(options);
     this.timeout(10_000);
 
     describe('contract', () => {
@@ -23,7 +24,7 @@ describe('h22p node client', function () {
                 return {status: 200, body: JSON.stringify(uri), headers: {}}
             }
         });
-        const client = handler(`http://localhost:${port}`);
+        const client = handler({baseUrl: `http://localhost:${port}`});
         const res = await client.handle(
             Req.get(`/path/name?query1=value1&query2=value2#fragment`)
         )
@@ -51,7 +52,7 @@ describe('h22p node client', function () {
                 }
             }
         });
-        const client = handler(`http://localhost:${port}`);
+        const client = handler({baseUrl: `http://localhost:${port}`});
         const res = await client.handle(
             Req.get(`/`, {
                     // @ts-ignore

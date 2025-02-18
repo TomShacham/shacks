@@ -3,8 +3,9 @@ import {Body, HttpHandler, HttpMessageBody, HttpRequest, HttpResponse, Req, URI}
 import * as stream from "stream";
 import {it} from "mocha";
 import {h22pServer} from "../h22p-node/src";
+import {HttpClientOptions} from "../h22p-node/src/nodeHttpClient";
 
-export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
+export function testClientContract(handler: (options: HttpClientOptions) => HttpHandler) {
     describe('http contract', function () {
         this.timeout(500);
 
@@ -14,7 +15,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     return {status: 200, body: 'OPTIONS', headers: {"allow": "GET"}}
                 }
             });
-            const client = handler(`http://localhost:${port}`);
+            const client = handler({baseUrl: `http://localhost:${port}`});
             const res = await client.handle(Req.options(`/`));
 
             expect(res.status).eq(200);
@@ -38,15 +39,13 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                 }
             });
 
-            const client = handler(``);
-            const repsonse = await client.handle(
-                Req.head(`http://localhost:${port}/`)
-            )
-            expect(repsonse.status).eq(200);
-            expect(await Body.text(repsonse.body!)).not.eq('THIS DOES GET SENT');
-            expect(await Body.text(repsonse.body!)).eq('');
-            expect(repsonse.headers["content-type"]).eq('text/plain');
-            expect(repsonse.headers?.["content-length"]).eq('18');
+            const client = handler({});
+            const response = await client.handle(Req.head(`http://localhost:${port}/`))
+            expect(response.status).eq(200);
+            expect(await Body.text(response.body!)).not.eq('THIS DOES GET SENT');
+            expect(await Body.text(response.body!)).eq('');
+            expect(response.headers["content-type"]).eq('text/plain');
+            expect(response.headers?.["content-length"]).eq('18');
 
 
             /*
@@ -76,7 +75,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
             });
 
 
-            const client = handler(`http://localhost:${port}`);
+            const client = handler({baseUrl: `http://localhost:${port}`});
             const bodyString = 'hello, world!';
             const bodyJson = {"hello": "world"};
             const bodyBuffer = Buffer.from(bodyString);
@@ -132,6 +131,20 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
             await close()
         })
 
+        it('can timeout', async () => {
+            const {port, close} = await h22pServer({
+                async handle(req: HttpRequest): Promise<HttpResponse> {
+                    await new Promise(res => setTimeout(res, 250));
+                    return {status: 200, body: req.body, headers: {method: req.method}}
+                }
+            });
+
+            const client = handler({baseUrl: `http://localhost:${port}`, timeout: 0});
+            const response = await client.handle(Req.post(`/`, 'hello, world!', {}))
+
+            expect(response.status).eq(504);
+        })
+
         it('can send a multipart/form-data request with simple body', async () => {
             const {port, close} = await h22pServer({
                 async handle(req: HttpRequest): Promise<HttpResponse> {
@@ -139,7 +152,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                 }
             });
 
-            const client = handler(`http://localhost:${port}`);
+            const client = handler({baseUrl: `http://localhost:${port}`});
             const request = Req.post(`/`, Body.asMultipartForm([{
                 headers: [{
                     name: 'content-type',
@@ -169,7 +182,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                 }
             });
 
-            const client = handler(`http://localhost:${port}`);
+            const client = handler({baseUrl: `http://localhost:${port}`});
             const request = Req.post(`/`, Body.asMultipartForm([{
                 headers: [{
                     name: 'content-type',
@@ -199,7 +212,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                 }
             });
 
-            const client = handler(`http://localhost:${port}`);
+            const client = handler({baseUrl: `http://localhost:${port}`});
             const request = Req.post(`/`, Body.asMultipartForm([
                 {
                     headers: [{
@@ -261,7 +274,7 @@ export function testClientContract(handler: (baseUrl: string) => HttpHandler) {
                     return {status: 200, body: 'OPTIONS', headers: {"allow": "GET"}}
                 }
             });
-            const client = handler(`http://localhost:${port}`);
+            const client = handler({baseUrl: `http://localhost:${port}`});
             // header of foo: undefined
             const res = await client.handle(Req.options(`/`, {foo: undefined}));
 

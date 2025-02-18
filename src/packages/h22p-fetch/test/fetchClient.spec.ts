@@ -3,9 +3,10 @@ import {Body, HttpRequest, HttpResponse, Req, URI} from "@shacks/h22p";
 import {expect} from "chai";
 import {FetchClient} from "../src";
 import {h22pServer} from "../../h22p-node/src";
+import {HttpClientOptions} from "../src/fetchClient";
 
 describe('fetch client', () => {
-    const handler = (baseUrl: string) => new FetchClient(baseUrl);
+    const handler = (options: HttpClientOptions) => new FetchClient(options);
 
     describe('contract', () => {
         testClientContract(handler);
@@ -22,7 +23,7 @@ describe('fetch client', () => {
                 return {status: 200, body: JSON.stringify(uri), headers: {}}
             }
         });
-        const client = handler(`http://localhost:${port}`);
+        const client = handler({baseUrl: `http://localhost:${port}`});
         const res = await client.handle(
             Req.get(`/path/name?query1=value1&query2=value2#fragment`)
         )
